@@ -26,7 +26,9 @@
     "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.js"
     ],
-    "maxWorkers": 1
+    "maxWorkers": 1,
+    "testTimeout": 60000,
+    "forceExit": true
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1120.0",

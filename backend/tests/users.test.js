@@ -1,4 +1,4 @@
-const { request, createAdminSession, uniqueEmail } = require('./helpers');
+const { request, app, createAdminSession, uniqueEmail } = require('./helpers');
 
 describe('Users CRUD + lifecycle', () => {
   let admin;

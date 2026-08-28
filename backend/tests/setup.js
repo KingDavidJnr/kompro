@@ -13,6 +13,7 @@ const prisma = new PrismaClient();
 
 async function wipe() {
   // Delete children before parents to avoid foreign-key violations.
+  await prisma.auditLog.deleteMany({});
   await prisma.assessmentEvidence.deleteMany({});
   await prisma.assessment.deleteMany({});
   await prisma.evidence.deleteMany({});

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { request, createAdminSession } = require('./helpers');
+const { request, app, createAdminSession } = require('./helpers');
 
 describe('Evidence file storage', () => {
   let admin;

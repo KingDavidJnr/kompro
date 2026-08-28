@@ -1,4 +1,4 @@
-const { request, createAdminSession, uniqueEmail, getInviteToken } = require('./helpers');
+const { request, app, createAdminSession, uniqueEmail, getInviteToken } = require('./helpers');
 
 describe('User invite + accept', () => {
   let admin;

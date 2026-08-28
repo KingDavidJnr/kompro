@@ -1,4 +1,4 @@
-const { request, createAdminSession, uniqueEmail, getInviteToken, getResetToken } = require('./helpers');
+const { request, app, createAdminSession, uniqueEmail, getInviteToken, getResetToken } = require('./helpers');
 
 describe('Password reset', () => {
   let admin;
