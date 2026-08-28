@@ -25,6 +25,7 @@ model User {
   roleId       String?
   role         Role?     @relation(fields: [roleId], references: [id])
   sessions     Session[]
+  assessments  Assessment[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -85,6 +86,7 @@ model Control {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   evidences   Evidence[]
+  assessments Assessment[]
 
   @@index([category])
   @@index([status])
@@ -119,8 +121,35 @@ model Evidence {
   updatedAt   DateTime  @updatedAt
   control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
   policy      Policy?    @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  assessmentLinks AssessmentEvidence[]
 
   @@index([controlId])
   @@index([policyId])
   @@index([source])
+}
+
+model Assessment {
+  id             String             @id @default(cuid())
+  controlId      String
+  result         String
+  notes          String?
+  assessorId     String?
+  assessmentDate DateTime?          @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  control        Control            @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  assessor       User?              @relation(fields: [assessorId], references: [id], onDelete: SetNull)
+  evidenceLinks  AssessmentEvidence[]
+
+  @@index([controlId])
+  @@index([result])
+}
+
+model AssessmentEvidence {
+  assessmentId String
+  evidenceId   String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  evidence     Evidence   @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([assessmentId, evidenceId])
 }
