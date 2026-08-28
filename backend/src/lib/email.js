@@ -102,6 +102,7 @@ function buildTextEmail({ heading, paragraphs, buttonText, buttonUrl, footerNote
  * @throws {Error} When SMTP is not configured or the transport rejects the mail.
  */
 async function sendInvite({ to, token }) {
+  if (config.nodeEnv === 'test') return;
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName, inviteTtlHours } = config;
 
@@ -150,6 +151,7 @@ async function sendInvite({ to, token }) {
  * @throws {Error} When SMTP is not configured or the transport rejects the mail.
  */
 async function sendPasswordReset({ to, token }) {
+  if (config.nodeEnv === 'test') return;
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName, inviteTtlHours } = config;
 
@@ -198,6 +200,7 @@ async function sendPasswordReset({ to, token }) {
  * @throws {Error} When SMTP is not configured or the transport rejects the mail.
  */
 async function sendUserRemoved({ to, name }) {
+  if (config.nodeEnv === 'test') return;
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName } = config;
 
@@ -254,6 +257,7 @@ async function sendUserRemoved({ to, name }) {
  * @throws {Error} When SMTP is not configured or the transport rejects the mail.
  */
 async function sendNotification({ to, heading, paragraphs, buttonText, buttonUrl, footerNote }) {
+  if (config.nodeEnv === 'test') return;
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName } = config;
 

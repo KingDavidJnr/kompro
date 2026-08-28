@@ -57,6 +57,12 @@ async function createAdminSession(label = 'admin') {
   if (reg.status !== 201) {
     throw new Error(`Admin register failed: ${JSON.stringify(reg.body)}`);
   }
+  // Guarantee the admin role so the session has every permission, regardless of
+  // whether this is the very first user in the (shared) test database.
+  const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } });
+  if (adminRole) {
+    await prisma.user.update({ where: { email }, data: { roleId: adminRole.id, active: true } });
+  }
   const cookie = await loginCookie(email, PASSWORD);
   return { email, cookie };
 }

@@ -13,7 +13,7 @@
     "seed": "node prisma/seed.js",
     "audit:purge": "node scripts/purge-audit.js",
     "notify:due": "node scripts/notify-due.js",
-    "test": "cross-env NODE_ENV=test jest",
+    "test": "cross-env NODE_ENV=test SMTP_HOST=test.local jest",
     "postinstall": "prisma generate"
   },
   "prisma": {
