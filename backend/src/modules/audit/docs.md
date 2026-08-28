@@ -137,6 +137,12 @@ Response 200 (json):
 Response 200 (csv): a `text/csv` attachment with columns id, createdAt, action,
 entity, entityId, actorId, actorEmail, before, after, ip.
 
+### Export email
+
+When an admin triggers an export, the acting admin (`req.user.email`) is emailed
+a confirmation that the audit log was exported, via `sendNotification`. This is
+best-effort and is skipped silently when SMTP is not configured.
+
 ### Retention
 
 Audit entries accumulate without bound. Run `npm run audit:purge [days]` (for

@@ -6,6 +6,8 @@
  */
 
 const auditService = require('./audit.service');
+const emailService = require('../../lib/email');
+const config = require('../../config');
 
 /**
  * Handles GET /api/audit.
@@ -91,6 +93,22 @@ async function exportAudit(req, res, next) {
       from: req.query.from,
       to: req.query.to,
     });
+
+    // Best-effort security notice to the administrator who exported the trail.
+    if (req.user && config.smtp.host) {
+      try {
+        await emailService.sendNotification({
+          to: req.user.email,
+          heading: `Audit log exported on ${config.orgName}`,
+          paragraphs: [
+            `Hi ${req.user.name || 'there'},`,
+            `The ${config.orgName} audit log was just exported. If this wasn't you, please review account activity and reset your password.`,
+          ],
+        });
+      } catch (err) {
+        console.error(`Failed to send audit-export email: ${err.message}`);
+      }
+    }
 
     if (req.query.format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
