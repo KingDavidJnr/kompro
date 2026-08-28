@@ -17,6 +17,17 @@ database-backed session enables instant revocation when a user is disabled.
 - Every protected request runs requireAuth, which verifies the JWT signature
   and confirms the session is still active and the user is active.
 - Logout marks the session as revoked.
+- Every successful login writes an `audit` entry (action `login`). If the login
+  comes from an IP that has never been seen for that account before, the user is
+  emailed a "new sign-in" alert via `sendNotification` (see `isNewLoginIp`).
+- Completing a password reset (`/reset-password`) emails the account a
+  "your password was changed" notice, and revokes all other sessions.
+
+## Notifications
+
+- New sign-in from a new IP: alert sent to the account email, listing the time
+  and the new IP.
+- Password changed via reset: confirmation sent to the account email.
 
 ## API
 

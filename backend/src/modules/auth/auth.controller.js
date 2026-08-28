@@ -54,7 +54,7 @@ async function register(req, res, next) {
  */
 async function login(req, res, next) {
   try {
-    const { token, user } = await authService.login(req.body);
+    const { token, user } = await authService.login({ ...req.body, ip: req.ip });
     res.cookie('token', token, cookieOptions());
     res.json({ message: 'Login successful', data: { user } });
   } catch (err) {

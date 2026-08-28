@@ -12,6 +12,7 @@ const prisma = require('../../lib/prisma');
 const { signSession } = require('../../lib/jwt');
 const config = require('../../config');
 const emailService = require('../../lib/email');
+const auditService = require('../audit/audit.service');
 const { ValidationError, UnauthorizedError, publicUser } = require('../../utils/errors');
 
 /**
@@ -45,12 +46,30 @@ async function register({ email, password, name }) {
 }
 
 /**
+ * Determines whether a sign-in IP has been seen before for an account.
+ * @param {string} userId - User id.
+ * @param {string} ip - Incoming request IP.
+ * @returns {Promise<boolean>} True when this IP has NOT been used before but
+ *   at least one earlier sign-in exists (i.e. a new device/location).
+ */
+async function isNewLoginIp(userId, ip) {
+  const priorSameIp = await prisma.auditLog.count({
+    where: { actorId: userId, action: 'login', ip },
+  });
+  const priorAny = await prisma.auditLog.count({
+    where: { actorId: userId, action: 'login' },
+  });
+  return priorSameIp === 0 && priorAny > 0;
+}
+
+/**
  * Authenticates a user and creates a session.
- * @param {object} input - { email, password }.
+ * @param {object} input - { email, password, ip }.
+ * @param {string} [input.ip] - Request IP, used for new-device detection.
  * @returns {object} { token, user } where user is sanitized.
  * @throws {UnauthorizedError} On invalid credentials or inactive user.
  */
-async function login({ email, password }) {
+async function login({ email, password, ip }) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.active) {
     throw new UnauthorizedError('Invalid credentials');
@@ -68,6 +87,33 @@ async function login({ email, password }) {
   });
 
   const token = signSession({ sub: user.id, sid: session.id });
+
+  // Record the sign-in (audit trail + new-device detection). Checked before
+  // inserting so the just-created row does not mask a genuinely new IP.
+  const newIp = ip ? await isNewLoginIp(user.id, ip) : false;
+  await auditService.recordAudit({
+    actorId: user.id,
+    action: 'login',
+    entity: 'user',
+    entityId: user.id,
+    ip: ip || null,
+  });
+
+  if (newIp && config.smtp.host) {
+    try {
+      await emailService.sendNotification({
+        to: user.email,
+        heading: `New sign-in to your ${config.orgName} account`,
+        paragraphs: [
+          `We noticed a sign-in to your ${config.orgName} account from a new IP address: ${ip}.`,
+          'If this was you, no action is needed. If you did not sign in, please reset your password and contact your administrator.',
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send new-login alert to ${user.email}: ${err.message}`);
+    }
+  }
+
   return { token, user: publicUser(user) };
 }
 
@@ -184,7 +230,24 @@ async function resetPassword({ token, password }) {
     });
   });
 
+  // Confirm the change to the account owner (sessions were just revoked).
+  if (config.smtp.host) {
+    try {
+      await emailService.sendNotification({
+        to: record.user.email,
+        heading: `Your ${config.orgName} password was changed`,
+        paragraphs: [
+          `Hi ${record.user.name || 'there'},`,
+          `The password for your ${config.orgName} account (${record.user.email}) was just changed. If this was you, no action is needed.`,
+          'If you did not make this change, please contact your administrator immediately.',
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send password-changed email to ${record.user.email}: ${err.message}`);
+    }
+  }
+
   return publicUser(record.user);
 }
 
-module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword };
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, isNewLoginIp };
