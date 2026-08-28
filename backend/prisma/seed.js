@@ -27,6 +27,10 @@ const PERMISSIONS = [
   { name: 'controls:create', description: 'Create controls' },
   { name: 'controls:update', description: 'Update controls' },
   { name: 'controls:delete', description: 'Delete controls' },
+  { name: 'policies:read', description: 'View policies' },
+  { name: 'policies:create', description: 'Create policies' },
+  { name: 'policies:update', description: 'Update policies' },
+  { name: 'policies:delete', description: 'Delete policies' },
 ];
 
 // Default roles and the permissions each one grants.

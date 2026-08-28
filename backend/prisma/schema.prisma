@@ -88,3 +88,17 @@ model Control {
   @@index([category])
   @@index([status])
 }
+
+model Policy {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  content     String?
+  status      String   @default("draft")
+  rules       Json?
+  owner       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
