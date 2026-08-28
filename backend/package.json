@@ -12,6 +12,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
     "audit:purge": "node scripts/purge-audit.js",
+    "notify:due": "node scripts/notify-due.js",
     "test": "cross-env NODE_ENV=test jest",
     "postinstall": "prisma generate"
   },

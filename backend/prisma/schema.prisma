@@ -27,6 +27,7 @@ model User {
   role         Role?     @relation(fields: [roleId], references: [id])
   sessions     Session[]
   invites      Invite[]
+  evidenceUploads Evidence[]
   passwordResets PasswordReset[]
   auditLogs     AuditLog[]
   assessments  Assessment[]
@@ -151,18 +152,23 @@ model Evidence {
   content     String?
   filePath    String?
   mimeType    String?
+  status      String    @default("submitted")
   collectedAt DateTime?
   controlId   String?
   policyId    String?
+  uploadedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
   policy      Policy?    @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  uploadedBy  User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   assessmentLinks AssessmentEvidence[]
 
   @@index([controlId])
   @@index([policyId])
   @@index([source])
+  @@index([status])
+  @@index([uploadedById])
 }
 
 model Assessment {
@@ -172,6 +178,8 @@ model Assessment {
   notes          String?
   assessorId     String?
   assessmentDate DateTime?          @default(now())
+  dueDate        DateTime?
+  overdueNotified Boolean           @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   control        Control            @relation(fields: [controlId], references: [id], onDelete: Cascade)
@@ -180,6 +188,7 @@ model Assessment {
 
   @@index([controlId])
   @@index([result])
+  @@index([dueDate])
 }
 
 model AssessmentEvidence {

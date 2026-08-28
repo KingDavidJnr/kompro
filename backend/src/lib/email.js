@@ -237,4 +237,64 @@ async function sendUserRemoved({ to, name }) {
   });
 }
 
-module.exports = { sendInvite, sendPasswordReset, sendUserRemoved };
+/**
+ * Sends a generic branded notification email.
+ *
+ * Used by the various event notifications (account/security, assessments,
+ * evidence, policies, audit exports). When `to` is an array the message is sent
+ * as a single BCC email to all recipients.
+ * @param {object} opts - { to, heading, paragraphs, buttonText, buttonUrl, footerNote }.
+ * @param {string|string[]} opts.to - Recipient address(es).
+ * @param {string} opts.heading - Email subject and main heading (HTML-safe text).
+ * @param {string[]} opts.paragraphs - Body paragraphs (may contain simple HTML).
+ * @param {string} [opts.buttonText] - Optional CTA label.
+ * @param {string} [opts.buttonUrl] - Optional CTA URL.
+ * @param {string} [opts.footerNote] - Optional footer note (defaults to OSS notice).
+ * @returns {Promise<void>} Resolves when the server accepts the message.
+ * @throws {Error} When SMTP is not configured or the transport rejects the mail.
+ */
+async function sendNotification({ to, heading, paragraphs, buttonText, buttonUrl, footerNote }) {
+  const nodemailer = require('nodemailer');
+  const { smtp, appUrl, orgName } = config;
+
+  if (!smtp.host) {
+    throw new Error('SMTP is not configured (set SMTP_HOST)');
+  }
+
+  const content = {
+    heading,
+    paragraphs,
+    buttonText: buttonText || 'Visit Kompro',
+    buttonUrl: buttonUrl || appUrl,
+    footerNote:
+      footerNote ||
+      'Kompro is free, open-source software (AGPL-3.0), self-hosted by your organization.',
+  };
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: smtp.user ? { user: smtp.user, pass: smtp.pass } : undefined,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+  });
+
+  const mail = {
+    from: smtp.from,
+    subject: heading,
+    text: buildTextEmail(content),
+    html: buildBrandedEmail(content),
+  };
+  if (Array.isArray(to)) {
+    mail.bcc = to;
+    mail.to = smtp.from;
+  } else {
+    mail.to = to;
+  }
+
+  await transporter.sendMail(mail);
+}
+
+module.exports = { sendInvite, sendPasswordReset, sendUserRemoved, sendNotification };
