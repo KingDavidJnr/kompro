@@ -39,6 +39,10 @@ const PERMISSIONS = [
   { name: 'assessments:create', description: 'Create assessments' },
   { name: 'assessments:update', description: 'Update assessments' },
   { name: 'assessments:delete', description: 'Delete assessments' },
+  { name: 'frameworks:read', description: 'View frameworks, requirements and mappings' },
+  { name: 'frameworks:create', description: 'Create frameworks and requirements' },
+  { name: 'frameworks:update', description: 'Update frameworks, requirements and mappings' },
+  { name: 'frameworks:delete', description: 'Delete frameworks and requirements' },
 ];
 
 // Default roles and the permissions each one grants.
@@ -47,9 +51,16 @@ const ROLES = [
   {
     name: 'auditor',
     description: 'Read-only compliance and audit access',
-    permissions: ['org:read', 'users:read', 'roles:read', 'audit:read'],
+    permissions: ['org:read', 'users:read', 'roles:read', 'audit:read', 'controls:read', 'policies:read', 'evidence:read', 'assessments:read', 'frameworks:read'],
   },
   { name: 'member', description: 'Basic member access', permissions: ['org:read'] },
+];
+
+// Seeded compliance frameworks. Requirements and mappings are added via the API.
+const FRAMEWORKS = [
+  { name: 'ISO 27001', description: 'Information security management system standard' },
+  { name: 'SOC 2', description: 'Service organization control trust principles' },
+  { name: 'GDPR', description: 'General Data Protection Regulation' },
 ];
 
 /**
@@ -91,6 +102,16 @@ async function main() {
     await prisma.organization.create({ data: { name: config.orgName } });
     console.log('Seeded organization');
   }
+
+  // Seed the bundled compliance frameworks (disabled until enabled via API).
+  for (const fw of FRAMEWORKS) {
+    await prisma.framework.upsert({
+      where: { name: fw.name },
+      update: {},
+      create: { name: fw.name, description: fw.description, enabled: false },
+    });
+  }
+  console.log(`Seeded ${FRAMEWORKS.length} frameworks`);
 
   // Bootstrap an admin when credentials are provided and none exists yet.
   if (config.initialAdminEmail && config.initialAdminPassword) {
