@@ -11,9 +11,9 @@
     "migrate": "prisma migrate dev --name init",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-    "audit:purge": "node scripts/purge-audit.js",
     "notify:due": "node scripts/notify-due.js",
     "test": "cross-env NODE_ENV=test SMTP_HOST=test.local jest",
+    "pretest": "node prisma/seed.js",
     "postinstall": "prisma generate"
   },
   "prisma": {

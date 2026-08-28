@@ -43,6 +43,7 @@ const PERMISSIONS = [
   { name: 'frameworks:create', description: 'Create frameworks and requirements' },
   { name: 'frameworks:update', description: 'Update frameworks, requirements and mappings' },
   { name: 'frameworks:delete', description: 'Delete frameworks and requirements' },
+  { name: 'audit:purge', description: 'Purge audit log entries' },
 ];
 
 // Default roles and the permissions each one grants.
@@ -86,7 +87,12 @@ async function main() {
     const permissionIds = role.permissions.map((name) => byName.get(name)).filter(Boolean);
     await prisma.role.upsert({
       where: { name: role.name },
-      update: { description: role.description },
+      update: {
+        description: role.description,
+        // Replace the permission set so newly added permissions are linked even
+        // when the role already exists from a previous seed run.
+        permissions: { set: permissionIds.map((id) => ({ id })) },
+      },
       create: {
         name: role.name,
         description: role.description,
