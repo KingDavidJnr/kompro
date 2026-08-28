@@ -84,6 +84,7 @@ model Control {
   owner       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  evidences   Evidence[]
 
   @@index([category])
   @@index([status])
@@ -99,6 +100,27 @@ model Policy {
   owner       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  evidences   Evidence[]
 
   @@index([status])
+}
+
+model Evidence {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  source      String?
+  content     String?
+  filePath    String?
+  collectedAt DateTime?
+  controlId   String?
+  policyId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
+  policy      Policy?    @relation(fields: [policyId], references: [id], onDelete: SetNull)
+
+  @@index([controlId])
+  @@index([policyId])
+  @@index([source])
 }

@@ -19,6 +19,7 @@ const usersRoutes = require('./modules/users/users.routes');
 const rolesRoutes = require('./modules/roles/roles.routes');
 const controlsRoutes = require('./modules/controls/controls.routes');
 const policiesRoutes = require('./modules/policies/policies.routes');
+const evidenceRoutes = require('./modules/evidence/evidence.routes');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/controls', controlsRoutes);
 app.use('/api/policies', policiesRoutes);
+app.use('/api/evidence', evidenceRoutes);
 
 // Unknown routes return a 404 with a useful message.
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));

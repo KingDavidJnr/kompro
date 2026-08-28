@@ -31,6 +31,10 @@ const PERMISSIONS = [
   { name: 'policies:create', description: 'Create policies' },
   { name: 'policies:update', description: 'Update policies' },
   { name: 'policies:delete', description: 'Delete policies' },
+  { name: 'evidence:read', description: 'View evidence' },
+  { name: 'evidence:create', description: 'Create evidence' },
+  { name: 'evidence:update', description: 'Update evidence' },
+  { name: 'evidence:delete', description: 'Delete evidence' },
 ];
 
 // Default roles and the permissions each one grants.
