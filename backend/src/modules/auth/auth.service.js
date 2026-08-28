@@ -6,10 +6,12 @@
  * user becomes an admin; later users get the member role by default.
  */
 
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const prisma = require('../../lib/prisma');
 const { signSession } = require('../../lib/jwt');
 const config = require('../../config');
+const emailService = require('../../lib/email');
 const { ValidationError, UnauthorizedError, publicUser } = require('../../utils/errors');
 
 /**
@@ -123,4 +125,66 @@ async function acceptInvite({ token, password }) {
   return publicUser(user);
 }
 
-module.exports = { register, login, logout, me, acceptInvite };
+/**
+ * Initiates a password reset for an account.
+ * @param {object} input - { email }.
+ * @returns {Promise<object>} { userExists, emailed, token } where token is only
+ *   present when no SMTP is configured and the account exists.
+ * @throws {Error} When SMTP is configured but the reset email cannot be sent.
+ */
+async function forgotPassword({ email }) {
+  if (!email) {
+    return { userExists: false };
+  }
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    // Stay silent to avoid account enumeration.
+    return { userExists: false };
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
+  await prisma.passwordReset.create({
+    data: { token, email: user.email, userId: user.id, expiresAt },
+  });
+
+  // With SMTP, email the link and reveal nothing. Without SMTP, hand the link
+  // back so the user can use it (self-hosted, no mail server).
+  if (config.smtp.host) {
+    await emailService.sendPasswordReset({ to: user.email, token });
+    return { userExists: true, emailed: true };
+  }
+  return { userExists: true, emailed: false, token };
+}
+
+/**
+ * Completes a password reset using a one-time token.
+ * @param {object} input - { token, password }.
+ * @returns {Promise<object>} Sanitized user whose password was reset.
+ * @throws {ValidationError} When the token is invalid, used or expired.
+ */
+async function resetPassword({ token, password }) {
+  const record = await prisma.passwordReset.findUnique({ where: { token }, include: { user: true } });
+  if (!record || record.usedAt) {
+    throw new ValidationError('Reset link is invalid or already used');
+  }
+  if (record.expiresAt < new Date()) {
+    await prisma.passwordReset.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    throw new ValidationError('Reset link has expired');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    await tx.passwordReset.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    // Force a fresh login by revoking every active session for this user.
+    await tx.session.updateMany({
+      where: { userId: record.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  });
+
+  return publicUser(record.user);
+}
+
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword };

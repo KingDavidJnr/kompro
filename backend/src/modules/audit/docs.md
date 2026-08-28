@@ -111,6 +111,37 @@ Sample response:
 ## Notes
 
 - Audit entries are read only. There is no create, update or delete endpoint.
+- Every entry records the actor id, the source IP address, and the before/after
+  state of the affected record so changes are fully traceable.
+- Action names follow the entity domain. For users the actions are `create`
+  (self registration), `invite` (admin invited or resent an invite), `update`,
+  `deactivate`, `reactivate`, `reset` (password reset) and `remove` (account
+  deleted). Other entities use `create`, `update` and `delete`.
+
+## Export and retention
+
+### GET /api/audit/export
+
+Exports matching audit entries. Requires audit:read. Supports the same filters
+as the list endpoint (`entity`, `entityId`, `actorId`, `action`, `from`, `to`)
+plus `format` (`json` default, or `csv` for a downloadable file).
+
+Response 200 (json):
+```json
+{
+  "message": "Audit export",
+  "data": { "entries": [ { "id": "clr...", "action": "invite", "entity": "user", "entityId": "clr...", "actorId": "clr...", "ip": "127.0.0.1", "createdAt": "2026-08-28T10:00:00.000Z" } ], "total": 1 }
+}
+```
+
+Response 200 (csv): a `text/csv` attachment with columns id, createdAt, action,
+entity, entityId, actorId, actorEmail, before, after, ip.
+
+### Retention
+
+Audit entries accumulate without bound. Run `npm run audit:purge [days]` (for
+example on a nightly cron) to delete entries older than `AUDIT_RETENTION_DAYS`
+(default 365). The script reads the same backend `.env`.
 - Deleting or disabling a user does not remove their existing audit entries. The
   actor snapshot is stored inline so history remains readable.
 - The `actor` field may be `null` for entries created by system actions that

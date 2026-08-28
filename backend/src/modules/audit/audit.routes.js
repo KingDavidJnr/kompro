@@ -11,6 +11,7 @@ const requireAuth = require('../../middleware/requireAuth');
 const requirePermission = require('../../middleware/requirePermission');
 
 router.get('/', requireAuth, requirePermission('audit:read'), controller.list);
+router.get('/export', requireAuth, requirePermission('audit:read'), controller.exportAudit);
 router.get('/:id', requireAuth, requirePermission('audit:read'), controller.get);
 
 module.exports = router;

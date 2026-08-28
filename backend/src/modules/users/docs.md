@@ -164,6 +164,34 @@ Response 404:
 { "message": "User not found" }
 ```
 
+### POST /api/users/:id/deactivate
+
+Disables a user and immediately revokes all of their active sessions. Requires
+users:update. The account cannot log in afterwards; re-enable with reactivate.
+
+Response 200:
+```json
+{ "message": "User deactivated", "data": { "user": { "id": "clr...", "active": false } } }
+```
+
+### POST /api/users/:id/reactivate
+
+Re-enables a previously disabled user. Requires users:update.
+
+Response 200:
+```json
+{ "message": "User reactivated", "data": { "user": { "id": "clr...", "active": true } } }
+```
+
+### DELETE /api/users/:id
+
+Deletes a user. Requires users:delete. The last administrator cannot be
+deleted; attempting to do so returns 400:
+
+```json
+{ "message": "Cannot delete the last admin" }
+```
+
 ### POST /api/users/:id/resend-invite
 
 Re-sends the invitation email for a user who has not yet accepted. Requires

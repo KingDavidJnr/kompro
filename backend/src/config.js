@@ -70,6 +70,12 @@ module.exports = {
   // Maximum accepted upload size in bytes (derived from megabytes).
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 10) * 1024 * 1024,
 
+  // Maximum JSON request body size (derived from megabytes).
+  bodyLimitBytes: Number(process.env.BODY_LIMIT_MB || 1) * 1024 * 1024,
+
+  // How many days audit entries are retained before purge (audit:purge).
+  auditRetentionDays: Number(process.env.AUDIT_RETENTION_DAYS || 365),
+
   // S3-compatible storage. When bucket and region are set, evidence files are
   // stored in S3; otherwise the local uploadDir is used. All keys are optional.
   s3: {

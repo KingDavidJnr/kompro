@@ -102,6 +102,60 @@ Responses:
 { "message": "Unauthorized" }
 ```
 
+### POST /api/auth/forgot-password
+
+Public endpoint to start a password reset. Rate limited per email address
+(not per IP) to protect shared corporate networks.
+
+Request body:
+```json
+{ "email": "jane@org.com" }
+```
+
+Responses:
+
+- 200 OK (always a generic message to avoid account enumeration)
+```json
+{ "message": "If that account exists, a reset link has been sent." }
+```
+
+- 200 OK when SMTP is not configured and the account exists (link returned so
+  it can be delivered manually):
+```json
+{
+  "message": "Reset link generated.",
+  "data": { "resetUrl": "http://localhost:5173/reset-password?token=one-time-token" }
+}
+```
+
+### POST /api/auth/reset-password
+
+Public endpoint to set a new password using the token from the reset link.
+All active sessions for the account are revoked so the reset forces re-login.
+
+Request body:
+```json
+{
+  "token": "one-time-token-from-email",
+  "password": "new-secret-password"
+}
+```
+
+Responses:
+
+- 200 OK
+```json
+{
+  "message": "Password has been reset. You can now log in.",
+  "data": { "user": { "id": "clr...", "email": "jane@org.com", "active": true } }
+}
+```
+
+- 400 Bad or expired token
+```json
+{ "message": "Reset link has expired" }
+```
+
 ### POST /api/auth/accept-invite
 
 Public endpoint used by an invited user to set their password and activate the

@@ -110,4 +110,53 @@ async function acceptInvite(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, me, acceptInvite };
+/**
+ * Handles POST /api/auth/forgot-password.
+ * @param {object} req - Public request with { email }.
+ * @param {object} res - Express response; when SMTP is off and the account
+ *   exists, includes resetUrl in data so it can be used manually.
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function forgotPassword(req, res, next) {
+  try {
+    const result = await authService.forgotPassword(req.body);
+    const data = {};
+    if (result.userExists && !result.emailed && result.token) {
+      data.resetUrl = `${config.appUrl}/reset-password?token=${result.token}`;
+    }
+    const message = result.emailed
+      ? 'If that account exists, a reset link has been sent.'
+      : result.userExists
+        ? 'Reset link generated.'
+        : 'If that account exists, a reset link has been sent.';
+    res.json({ message, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Handles POST /api/auth/reset-password.
+ * @param {object} req - Public request with { token, password }.
+ * @param {object} res - Express response ({ message, data: { user } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function resetPassword(req, res, next) {
+  try {
+    const user = await authService.resetPassword(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'reset',
+      entity: 'user',
+      entityId: user.id,
+      before: null,
+      after: user,
+    });
+    res.json({ message: 'Password has been reset. You can now log in.', data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword };

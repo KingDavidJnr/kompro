@@ -38,7 +38,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: config.bodyLimitBytes }));
 app.use(cookieParser());
 
 // Simple liveness checks.

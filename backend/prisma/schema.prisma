@@ -47,6 +47,20 @@ model Invite {
   @@index([email])
 }
 
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+}
+
 model Session {
   id        String   @id @default(cuid())
   userId    String
@@ -85,6 +99,7 @@ model AuditLog {
   entityId  String?
   before    Json?
   after     Json?
+  ip        String?
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])

@@ -151,4 +151,52 @@ async function resendInvite(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove, resendInvite };
+/**
+ * Handles POST /api/users/:id/deactivate.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: { user } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function deactivate(req, res, next) {
+  try {
+    const before = await userService.getUserById(req.params.id);
+    const user = await userService.deactivateUser(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'deactivate',
+      entity: 'user',
+      entityId: user.id,
+      before,
+      after: user,
+    });
+    res.json({ message: 'User deactivated', data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Handles POST /api/users/:id/reactivate.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: { user } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function reactivate(req, res, next) {
+  try {
+    const before = await userService.getUserById(req.params.id);
+    const user = await userService.reactivateUser(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'reactivate',
+      entity: 'user',
+      entityId: user.id,
+      before,
+      after: user,
+    });
+    res.json({ message: 'User reactivated', data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, create, update, remove, resendInvite, deactivate, reactivate };

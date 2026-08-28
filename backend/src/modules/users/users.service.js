@@ -246,14 +246,69 @@ async function updateUser(id, { name, roleId, active, password }) {
  * @param {string} id - User id.
  * @returns {boolean} True when deleted.
  * @throws {NotFoundError} When the user does not exist.
+ * @throws {ValidationError} When deleting the last administrator.
  */
 async function deleteUser(id) {
+  const existing = await prisma.user.findUnique({ where: { id }, include: { role: true } });
+  if (!existing) {
+    throw new NotFoundError('User not found');
+  }
+  // Protect the last administrator so the deployment is never orphaned.
+  if (existing.role && existing.role.name === 'admin') {
+    const otherAdmins = await prisma.user.count({
+      where: { id: { not: id }, role: { name: 'admin' } },
+    });
+    if (otherAdmins === 0) {
+      throw new ValidationError('Cannot delete the last admin');
+    }
+  }
+  await prisma.user.delete({ where: { id } });
+  return true;
+}
+
+/**
+ * Disables a user and revokes all of their active sessions immediately.
+ * @param {string} id - User id.
+ * @returns {object} Sanitized (now inactive) user.
+ * @throws {NotFoundError} When the user does not exist.
+ */
+async function deactivateUser(id) {
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('User not found');
   }
-  await prisma.user.delete({ where: { id } });
-  return true;
+  if (!existing.active) {
+    return sanitize(existing);
+  }
+  await prisma.session.updateMany({
+    where: { userId: id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  const user = await prisma.user.update({
+    where: { id },
+    data: { active: false },
+    include: { role: true },
+  });
+  return sanitize(user);
+}
+
+/**
+ * Re-enables a previously disabled user.
+ * @param {string} id - User id.
+ * @returns {object} Sanitized (now active) user.
+ * @throws {NotFoundError} When the user does not exist.
+ */
+async function reactivateUser(id) {
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing) {
+    throw new NotFoundError('User not found');
+  }
+  const user = await prisma.user.update({
+    where: { id },
+    data: { active: true },
+    include: { role: true },
+  });
+  return sanitize(user);
 }
 
 module.exports = {
@@ -263,4 +318,6 @@ module.exports = {
   resendInvite,
   updateUser,
   deleteUser,
+  deactivateUser,
+  reactivateUser,
 };
