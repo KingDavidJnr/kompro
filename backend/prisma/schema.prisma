@@ -74,3 +74,17 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
 }
+
+model Control {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String?
+  status      String   @default("not_implemented")
+  owner       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
