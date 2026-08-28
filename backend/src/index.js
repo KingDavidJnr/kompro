@@ -15,6 +15,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const orgRoutes = require('./modules/organization/org.routes');
+const usersRoutes = require('./modules/users/users.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.get('/api/health', (req, res) => res.json({ message: 'ok', data: { status: '
 
 app.use('/api/auth', authRoutes);
 app.use('/api/org', orgRoutes);
+app.use('/api/users', usersRoutes);
 
 // Unknown routes return a 404 with a useful message.
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
