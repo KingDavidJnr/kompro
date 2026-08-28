@@ -148,3 +148,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Local standards file (never committed to origin)
+standards.md
