@@ -85,4 +85,11 @@ module.exports = {
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
     endpoint: process.env.S3_ENDPOINT,
   },
+
+  // Email branding. Defaults to the Kompro wordmark and brand color; self-hosted
+  // deployments may override these to white-label their instance emails.
+  mailLogoUrl:
+    process.env.MAIL_LOGO_URL ||
+    'https://res.cloudinary.com/dtvwrtbwa/image/upload/v1787888015/kompro-brand-logo-resized-bg_p8rsnc.png',
+  brandColor: process.env.MAIL_BRAND_COLOR || '#6c07c7',
 };
