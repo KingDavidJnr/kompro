@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  displayName String?
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  active       Boolean   @default(true)
+  roleId       String?
+  role         Role?     @relation(fields: [roleId], references: [id])
+  sessions     Session[]
+  invites      Invite[]
+  evidenceUploads Evidence[]
+  passwordResets PasswordReset[]
+  auditLogs     AuditLog[]
+  assessments  Assessment[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([roleId])
+}
+
+model Invite {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  users       User[]
+  permissions Permission[] @relation("RolePermissions")
+
+  @@index([name])
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  roles       Role[] @relation("RolePermissions")
+
+  @@index([name])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model Control {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String?
+  status      String   @default("not_implemented")
+  owner       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  evidences   Evidence[]
+  assessments Assessment[]
+  frameworkMappings Mapping[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model Policy {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  content     String?
+  status      String   @default("draft")
+  rules       Json?
+  owner       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  evidences   Evidence[]
+
+  @@index([status])
+}
+
+model Evidence {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  source      String?
+  content     String?
+  filePath    String?
+  mimeType    String?
+  status      String    @default("submitted")
+  collectedAt DateTime?
+  controlId   String?
+  policyId    String?
+  uploadedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
+  policy      Policy?    @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  uploadedBy  User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  assessmentLinks AssessmentEvidence[]
+
+  @@index([controlId])
+  @@index([policyId])
+  @@index([source])
+  @@index([status])
+  @@index([uploadedById])
+}
+
+model Assessment {
+  id             String             @id @default(cuid())
+  controlId      String
+  result         String
+  notes          String?
+  assessorId     String?
+  assessmentDate DateTime?          @default(now())
+  dueDate        DateTime?
+  overdueNotified Boolean           @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  control        Control            @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  assessor       User?              @relation(fields: [assessorId], references: [id], onDelete: SetNull)
+  evidenceLinks  AssessmentEvidence[]
+
+  @@index([controlId])
+  @@index([result])
+  @@index([dueDate])
+}
+
+model AssessmentEvidence {
+  assessmentId String
+  evidenceId   String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  evidence     Evidence   @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([assessmentId, evidenceId])
+}
+
+model Framework {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  requirements FrameworkRequirement[]
+
+  @@index([enabled])
+}
+
+model FrameworkRequirement {
+  id          String   @id @default(cuid())
+  frameworkId String
+  code        String?
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  controlMappings Mapping[]
+
+  @@index([frameworkId])
+}
+
+model Mapping {
+  requirementId String
+  controlId     String
+  notes         String?
+  requirement   FrameworkRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  control       Control             @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, controlId])
+}
