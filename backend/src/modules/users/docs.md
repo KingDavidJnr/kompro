@@ -96,12 +96,23 @@ Response 201 (direct creation):
 }
 ```
 
-Response 201 (invitation, no password):
+Response 201 (invitation, no password, SMTP configured):
 ```json
 {
   "message": "User invited",
   "data": {
     "user": { "id": "clr...", "email": "jane@org.com", "name": "Jane", "active": false, "roleId": "clr...", "role": { "id": "clr...", "name": "member" }, "createdAt": "2026-08-28T00:00:00.000Z", "updatedAt": "2026-08-28T00:00:00.000Z" }
+  }
+}
+```
+
+Response 201 (invitation, no password, SMTP NOT configured):
+```json
+{
+  "message": "User invited",
+  "data": {
+    "user": { "id": "clr...", "email": "jane@org.com", "name": "Jane", "active": false, "roleId": "clr...", "role": { "id": "clr...", "name": "member" }, "createdAt": "2026-08-28T00:00:00.000Z", "updatedAt": "2026-08-28T00:00:00.000Z" },
+    "inviteUrl": "http://localhost:5173/accept-invite?token=one-time-token"
   }
 }
 ```
@@ -159,9 +170,22 @@ Re-sends the invitation email for a user who has not yet accepted. Requires
 users:create. The user must still be inactive (already-active users cannot be
 re-invited). Any outstanding invite for that user is invalidated first.
 
+When SMTP is configured the email is sent and the response is:
+
 Response 200:
 ```json
 { "message": "Invitation resent", "data": {} }
+```
+
+When SMTP is NOT configured the new invitation link is returned in the response
+so the admin can forward it manually:
+
+Response 200:
+```json
+{
+  "message": "Invitation link generated",
+  "data": { "inviteUrl": "http://localhost:5173/accept-invite?token=one-time-token" }
+}
 ```
 
 Response 400 (already active):
@@ -205,6 +229,7 @@ Response 400 (invalid, used or expired token):
 { "message": "Invitation is invalid or already used" }
 ```
 
-Note: SMTP must be configured (SMTP_HOST and friends in backend/.env) for
-invitation emails to be sent. If it is not, inviting a user fails and no
-account is created.
+Note: SMTP is optional. When SMTP_HOST is set, invitation emails are sent
+automatically. When it is not set, the API still creates the invited (inactive)
+account and returns the invitation link in `inviteUrl` so the admin can send it
+manually. The link expires after INVITE_TTL_HOURS (default 72).

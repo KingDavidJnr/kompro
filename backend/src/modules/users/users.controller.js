@@ -8,6 +8,7 @@
 
 const userService = require('./users.service');
 const auditService = require('../audit/audit.service');
+const config = require('../../config');
 
 /**
  * Handles GET /api/users.
@@ -54,7 +55,7 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const invited = !req.body.password;
-    const user = await userService.createUser(req.body);
+    const { user, inviteToken } = await userService.createUser(req.body);
     await auditService.recordFromRequest(req, {
       action: 'invite',
       entity: 'user',
@@ -62,7 +63,12 @@ async function create(req, res, next) {
       before: null,
       after: user,
     });
-    res.status(201).json({ message: invited ? 'User invited' : 'User created', data: { user } });
+    const data = { user };
+    // When SMTP is off the link is returned so the admin can send it manually.
+    if (invited && inviteToken) {
+      data.inviteUrl = `${config.appUrl}/accept-invite?token=${inviteToken}`;
+    }
+    res.status(201).json({ message: invited ? 'User invited' : 'User created', data });
   } catch (err) {
     next(err);
   }
@@ -126,7 +132,7 @@ async function remove(req, res, next) {
  */
 async function resendInvite(req, res, next) {
   try {
-    await userService.resendInvite(req.params.id);
+    const { emailSent, inviteToken } = await userService.resendInvite(req.params.id);
     await auditService.recordFromRequest(req, {
       action: 'invite',
       entity: 'user',
@@ -134,7 +140,12 @@ async function resendInvite(req, res, next) {
       before: null,
       after: null,
     });
-    res.json({ message: 'Invitation resent', data: {} });
+    const data = {};
+    // When SMTP is off the link is returned so the admin can send it manually.
+    if (!emailSent && inviteToken) {
+      data.inviteUrl = `${config.appUrl}/accept-invite?token=${inviteToken}`;
+    }
+    res.json({ message: emailSent ? 'Invitation resent' : 'Invitation link generated', data });
   } catch (err) {
     next(err);
   }

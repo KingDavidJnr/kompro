@@ -105,10 +105,13 @@ async function createDirectUser({ email, password, name, roleId, active = true }
 
 /**
  * Invites a user: creates an inactive account and emails a one-time link.
+ * When SMTP is not configured the token is returned so the admin can share the
+ * link manually instead of failing the request.
  * @param {object} input - { email, name, roleId }.
- * @returns {Promise<object>} Sanitized created (pending) user.
- * @throws {Error} When the invitation email cannot be sent; the account is
- *   rolled back so an un-notified user is never left behind.
+ * @returns {Promise<object>} { user, inviteToken } where inviteToken is null
+ *   when the email was sent, or the raw token when no SMTP is configured.
+ * @throws {Error} When SMTP is configured but the email cannot be sent; the
+ *   account is rolled back so an un-notified user is never left behind.
  */
 async function inviteUser({ email, name, roleId }) {
   // A throwaway hash; the real password is set when the invite is accepted.
@@ -122,29 +125,35 @@ async function inviteUser({ email, name, roleId }) {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
     const invite = await tx.invite.create({ data: { token, email, userId: user.id, expiresAt } });
-    return { user, invite };
+    return { user, invite, token };
   });
+
+  // Without SMTP there is nothing to send; hand the token back to the caller.
+  if (!config.smtp.host) {
+    return { user: sanitize(created.user), inviteToken: created.token };
+  }
 
   // Send the email after the transaction commits; roll back on failure.
   try {
-    await emailService.sendInvite({ to: email, token: created.invite.token });
+    await emailService.sendInvite({ to: email, token: created.token });
   } catch (err) {
     await prisma.invite.deleteMany({ where: { userId: created.user.id } });
     await prisma.user.delete({ where: { id: created.user.id } });
     throw err;
   }
 
-  return sanitize(created.user);
+  return { user: sanitize(created.user), inviteToken: null };
 }
 
 /**
  * Creates a user. With a password the account is active immediately; without
- * one the user is invited by email.
+ * one the user is invited by email (or the link is returned when SMTP is off).
  * @param {object} input - { email, password, name, roleId, active }.
- * @returns {Promise<object>} Sanitized created user.
+ * @returns {Promise<object>} { user, inviteToken } (inviteToken null when no
+ *   invite was created or the email was sent).
  * @throws {ValidationError} On missing email or unknown role.
  * @throws {ApiError} 409 when the email already exists (Prisma constraint).
- * @throws {Error} When an invitation email cannot be sent.
+ * @throws {Error} When an invitation email cannot be sent despite SMTP being set.
  */
 async function createUser({ email, password, name, roleId, active = true }) {
   if (!email) {
@@ -153,18 +162,21 @@ async function createUser({ email, password, name, roleId, active = true }) {
   await assertRole(roleId);
 
   if (password) {
-    return createDirectUser({ email, password, name, roleId, active });
+    const user = await createDirectUser({ email, password, name, roleId, active });
+    return { user, inviteToken: null };
   }
   return inviteUser({ email, name, roleId });
 }
 
 /**
- * Resends a pending invitation for an inactive user.
+ * Resends a pending invitation for an inactive user. When SMTP is not
+ * configured the new token is returned so the admin can share the link.
  * @param {string} userId - User id to re-invite.
- * @returns {Promise<boolean>} True when the new invite was sent.
+ * @returns {Promise<object>} { emailSent, inviteToken } where inviteToken is
+ *   the raw token only when email was not sent.
  * @throws {NotFoundError} When the user does not exist.
  * @throws {ValidationError} When the user is already active.
- * @throws {Error} When the invitation email cannot be sent.
+ * @throws {Error} When SMTP is configured but the email cannot be sent.
  */
 async function resendInvite(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -181,8 +193,13 @@ async function resendInvite(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
   await prisma.invite.create({ data: { token, email: user.email, userId, expiresAt } });
+
+  if (!config.smtp.host) {
+    return { emailSent: false, inviteToken: token };
+  }
+
   await emailService.sendInvite({ to: user.email, token });
-  return true;
+  return { emailSent: true, inviteToken: null };
 }
 
 /**
