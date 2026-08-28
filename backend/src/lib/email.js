@@ -126,6 +126,9 @@ async function sendInvite({ to, token }) {
     port: smtp.port,
     secure: smtp.secure,
     auth: smtp.user ? { user: smtp.user, pass: smtp.pass } : undefined,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 
   await transporter.sendMail({
@@ -171,6 +174,9 @@ async function sendPasswordReset({ to, token }) {
     port: smtp.port,
     secure: smtp.secure,
     auth: smtp.user ? { user: smtp.user, pass: smtp.pass } : undefined,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 
   await transporter.sendMail({
