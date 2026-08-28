@@ -99,8 +99,49 @@ Responses:
 
 - 401 Unauthorized
 ```json
-{ "message": "Invalid credentials" }
+{ "message": "Unauthorized" }
 ```
+
+### POST /api/auth/accept-invite
+
+Public endpoint used by an invited user to set their password and activate the
+account. The token comes from the invitation email link.
+
+Request body:
+```json
+{
+  "token": "one-time-token-from-email",
+  "password": "new-secret-password"
+}
+```
+
+Responses:
+
+- 200 OK
+```json
+{
+  "message": "Invitation accepted. You can now log in.",
+  "data": {
+    "user": {
+      "id": "clr...",
+      "email": "jane@org.com",
+      "name": "Jane",
+      "active": true,
+      "roleId": "clr...",
+      "createdAt": "2026-08-28T00:00:00.000Z",
+      "updatedAt": "2026-08-28T00:00:00.000Z"
+    }
+  }
+}
+```
+
+- 400 Validation failed or bad token
+```json
+{ "message": "Invitation is invalid or already used" }
+```
+
+Note: an invitation can only be used once and expires after INVITE_TTL_HOURS
+(default 72). Expired or used tokens are rejected.
 
 ### POST /api/auth/logout
 

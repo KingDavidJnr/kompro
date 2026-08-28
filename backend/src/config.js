@@ -46,4 +46,20 @@ module.exports = {
 
   // Default organization name used when seeding the single-tenant org.
   orgName: process.env.ORG_NAME || 'My Organization',
+
+  // Public base URL used to build invitation links.
+  appUrl: process.env.APP_URL || 'http://localhost:5173',
+
+  // How long an invitation link stays valid, in hours.
+  inviteTtlHours: Number(process.env.INVITE_TTL_HOURS || 72),
+
+  // SMTP configuration for sending invitation emails.
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    secure: process.env.SMTP_SECURE === 'true',
+    from: process.env.MAIL_FROM || 'no-reply@kompro.local',
+  },
 };

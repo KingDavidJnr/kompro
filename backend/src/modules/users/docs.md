@@ -13,8 +13,13 @@ each user a role from the IAM system.
 - Disabling a user (active = false) or deleting them revokes access instantly:
   requireAuth re-checks the user and their session on every request, so the
   next call fails even if an old JWT is still present.
+- Creating a user with a password makes the account active immediately. Creating
+  a user without a password sends an invitation email containing a one-time link
+  (see the Invitations section). The new account stays inactive until the invite
+  is accepted, so the invited person cannot log in beforehand.
 - The user's role is returned as a small summary ({ id, name }) and never
   includes the password hash.
+- User creation is audited as the "invite" action and deletion as "remove".
 
 ## API
 
@@ -77,12 +82,26 @@ Request body:
 }
 ```
 
-Response 201:
+If a password is supplied the account is created active and the response
+message is "User created". If no password is supplied the user is invited by
+email and the response message is "User invited" with an inactive user.
+
+Response 201 (direct creation):
 ```json
 {
   "message": "User created",
   "data": {
     "user": { "id": "clr...", "email": "jane@org.com", "name": "Jane", "active": true, "roleId": "clr...", "role": { "id": "clr...", "name": "member" }, "createdAt": "2026-08-28T00:00:00.000Z", "updatedAt": "2026-08-28T00:00:00.000Z" }
+  }
+}
+```
+
+Response 201 (invitation, no password):
+```json
+{
+  "message": "User invited",
+  "data": {
+    "user": { "id": "clr...", "email": "jane@org.com", "name": "Jane", "active": false, "roleId": "clr...", "role": { "id": "clr...", "name": "member" }, "createdAt": "2026-08-28T00:00:00.000Z", "updatedAt": "2026-08-28T00:00:00.000Z" }
   }
 }
 ```
@@ -133,3 +152,59 @@ Response 404:
 ```json
 { "message": "User not found" }
 ```
+
+### POST /api/users/:id/resend-invite
+
+Re-sends the invitation email for a user who has not yet accepted. Requires
+users:create. The user must still be inactive (already-active users cannot be
+re-invited). Any outstanding invite for that user is invalidated first.
+
+Response 200:
+```json
+{ "message": "Invitation resent", "data": {} }
+```
+
+Response 400 (already active):
+```json
+{ "message": "User is already active" }
+```
+
+Response 404:
+```json
+{ "message": "User not found" }
+```
+
+### Accepting an invitation
+
+The invited person opens the link emailed to them, which points at
+`/accept-invite?token=...` on the frontend. The frontend calls the public
+endpoint below to set a password and activate the account.
+
+`POST /api/auth/accept-invite`
+
+Request body:
+```json
+{
+  "token": "one-time-token-from-email",
+  "password": "new-secret-password"
+}
+```
+
+Response 200:
+```json
+{
+  "message": "Invitation accepted. You can now log in.",
+  "data": {
+    "user": { "id": "clr...", "email": "jane@org.com", "name": "Jane", "active": true, "roleId": "clr...", "role": { "id": "clr...", "name": "member" }, "createdAt": "2026-08-28T00:00:00.000Z", "updatedAt": "2026-08-28T00:00:00.000Z" }
+  }
+}
+```
+
+Response 400 (invalid, used or expired token):
+```json
+{ "message": "Invitation is invalid or already used" }
+```
+
+Note: SMTP must be configured (SMTP_HOST and friends in backend/.env) for
+invitation emails to be sent. If it is not, inviting a user fails and no
+account is created.

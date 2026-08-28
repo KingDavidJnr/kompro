@@ -93,4 +93,34 @@ function me(user) {
   return publicUser(user);
 }
 
-module.exports = { register, login, logout, me };
+/**
+ * Accepts a user invitation by setting the account password and activating it.
+ * @param {object} input - { token, password }.
+ * @returns {Promise<object>} Sanitized user that accepted the invite.
+ * @throws {ValidationError} When the token is invalid, used or expired.
+ */
+async function acceptInvite({ token, password }) {
+  const invite = await prisma.invite.findUnique({ where: { token }, include: { user: true } });
+  if (!invite || invite.usedAt) {
+    throw new ValidationError('Invitation is invalid or already used');
+  }
+  if (invite.expiresAt < new Date()) {
+    // Mark expired invites so they cannot be reused.
+    await prisma.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+    throw new ValidationError('Invitation has expired');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: invite.userId },
+      data: { passwordHash, active: true },
+    });
+    await tx.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+    return updated;
+  });
+
+  return publicUser(user);
+}
+
+module.exports = { register, login, logout, me, acceptInvite };

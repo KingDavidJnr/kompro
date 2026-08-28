@@ -53,15 +53,16 @@ async function get(req, res, next) {
  */
 async function create(req, res, next) {
   try {
+    const invited = !req.body.password;
     const user = await userService.createUser(req.body);
     await auditService.recordFromRequest(req, {
-      action: 'create',
+      action: 'invite',
       entity: 'user',
       entityId: user.id,
       before: null,
       after: user,
     });
-    res.status(201).json({ message: 'User created', data: { user } });
+    res.status(201).json({ message: invited ? 'User invited' : 'User created', data: { user } });
   } catch (err) {
     next(err);
   }
@@ -104,7 +105,7 @@ async function remove(req, res, next) {
     const before = await userService.getUserById(req.params.id);
     await userService.deleteUser(req.params.id);
     await auditService.recordFromRequest(req, {
-      action: 'delete',
+      action: 'remove',
       entity: 'user',
       entityId: req.params.id,
       before,
@@ -116,4 +117,27 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove };
+/**
+ * Handles POST /api/users/:id/resend-invite.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: {} }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function resendInvite(req, res, next) {
+  try {
+    await userService.resendInvite(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'invite',
+      entity: 'user',
+      entityId: req.params.id,
+      before: null,
+      after: null,
+    });
+    res.json({ message: 'Invitation resent', data: {} });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, create, update, remove, resendInvite };

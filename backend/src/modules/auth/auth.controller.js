@@ -7,6 +7,7 @@
 
 const authService = require('./auth.service');
 const config = require('../../config');
+const auditService = require('../audit/audit.service');
 
 /**
  * Builds the cookie options for the session token.
@@ -31,6 +32,13 @@ function cookieOptions() {
 async function register(req, res, next) {
   try {
     const user = await authService.register(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'user',
+      entityId: user.id,
+      before: null,
+      after: user,
+    });
     res.status(201).json({ message: 'User registered successfully', data: { user } });
   } catch (err) {
     next(err);
@@ -86,4 +94,20 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, me };
+/**
+ * Handles POST /api/auth/accept-invite.
+ * @param {object} req - Public request with { token, password }.
+ * @param {object} res - Express response ({ message, data: { user } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function acceptInvite(req, res, next) {
+  try {
+    const user = await authService.acceptInvite(req.body);
+    res.json({ message: 'Invitation accepted. You can now log in.', data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, me, acceptInvite };

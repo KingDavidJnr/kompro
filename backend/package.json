@@ -25,7 +25,8 @@
     "express": "^4.21.2",
     "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.1"
   },
   "devDependencies": {
     "prisma": "^5.22.0"

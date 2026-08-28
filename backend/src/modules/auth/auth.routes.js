@@ -30,6 +30,15 @@ router.post(
   controller.login
 );
 
+// Public invitation acceptance; sets the password and activates the account.
+router.post(
+  '/accept-invite',
+  body('token').isString().notEmpty().withMessage('Token required'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  validate,
+  controller.acceptInvite
+);
+
 // Protected routes.
 router.post('/logout', requireAuth, controller.logout);
 router.get('/me', requireAuth, controller.me);

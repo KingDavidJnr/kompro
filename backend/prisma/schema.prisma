@@ -25,11 +25,26 @@ model User {
   roleId       String?
   role         Role?     @relation(fields: [roleId], references: [id])
   sessions     Session[]
+  invites      Invite[]
   assessments  Assessment[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([roleId])
+}
+
+model Invite {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
 }
 
 model Session {

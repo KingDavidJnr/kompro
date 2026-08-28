@@ -4,10 +4,18 @@
  * Provides listing, lookup, creation, update and removal of users. Passwords
  * are hashed with bcrypt. Setting active to false (or deleting a user) revokes
  * access immediately because requireAuth re-checks the user on every request.
+ *
+ * Creating a user without a password starts an invitation: the account is
+ * created inactive with a random password and a one-time invite token is
+ * emailed to the address. Supplying a password creates an active account
+ * directly with no email.
  */
 
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const prisma = require('../../lib/prisma');
+const emailService = require('../../lib/email');
+const config = require('../../config');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -57,31 +65,124 @@ async function getUserById(id) {
 }
 
 /**
- * Creates a user.
- * @param {object} input - { email, password, name, roleId, active }.
- * @returns {object} Sanitized created user.
- * @throws {ValidationError} On missing fields or unknown role.
- * @throws {ApiError} 409 when the email already exists (Prisma unique constraint).
+ * Sanitizes a user record returned by Prisma.
+ * @param {object} user - Raw user record with role relation.
+ * @returns {object} User without passwordHash, with role summary.
  */
-async function createUser({ email, password, name, roleId, active = true }) {
-  if (!email || !password) {
-    throw new ValidationError('Email and password are required');
-  }
-  if (roleId) {
-    const role = await prisma.role.findUnique({ where: { id: roleId } });
-    if (!role) {
-      throw new ValidationError('Role not found');
-    }
-  }
+function sanitize(user) {
+  const { passwordHash, role, ...rest } = user;
+  return { ...rest, role: role ? { id: role.id, name: role.name } : null };
+}
 
+/**
+ * Validates that a role id (if provided) references an existing role.
+ * @param {string|null|undefined} roleId - Role id to validate.
+ * @returns {Promise<void>}
+ * @throws {ValidationError} When the role does not exist.
+ */
+async function assertRole(roleId) {
+  if (roleId === undefined) return;
+  if (roleId === null) return;
+  const role = await prisma.role.findUnique({ where: { id: roleId } });
+  if (!role) {
+    throw new ValidationError('Role not found');
+  }
+}
+
+/**
+ * Creates a user directly with a password (active account, no email).
+ * @param {object} input - { email, password, name, roleId, active }.
+ * @returns {Promise<object>} Sanitized created user.
+ */
+async function createDirectUser({ email, password, name, roleId, active = true }) {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: { email, name, passwordHash, roleId: roleId || null, active },
     include: { role: true },
   });
+  return sanitize(user);
+}
 
-  const { passwordHash: ph, role, ...rest } = user;
-  return { ...rest, role: role ? { id: role.id, name: role.name } : null };
+/**
+ * Invites a user: creates an inactive account and emails a one-time link.
+ * @param {object} input - { email, name, roleId }.
+ * @returns {Promise<object>} Sanitized created (pending) user.
+ * @throws {Error} When the invitation email cannot be sent; the account is
+ *   rolled back so an un-notified user is never left behind.
+ */
+async function inviteUser({ email, name, roleId }) {
+  // A throwaway hash; the real password is set when the invite is accepted.
+  const tempHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: { email, name, passwordHash: tempHash, roleId: roleId || null, active: false },
+      include: { role: true },
+    });
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
+    const invite = await tx.invite.create({ data: { token, email, userId: user.id, expiresAt } });
+    return { user, invite };
+  });
+
+  // Send the email after the transaction commits; roll back on failure.
+  try {
+    await emailService.sendInvite({ to: email, token: created.invite.token });
+  } catch (err) {
+    await prisma.invite.deleteMany({ where: { userId: created.user.id } });
+    await prisma.user.delete({ where: { id: created.user.id } });
+    throw err;
+  }
+
+  return sanitize(created.user);
+}
+
+/**
+ * Creates a user. With a password the account is active immediately; without
+ * one the user is invited by email.
+ * @param {object} input - { email, password, name, roleId, active }.
+ * @returns {Promise<object>} Sanitized created user.
+ * @throws {ValidationError} On missing email or unknown role.
+ * @throws {ApiError} 409 when the email already exists (Prisma constraint).
+ * @throws {Error} When an invitation email cannot be sent.
+ */
+async function createUser({ email, password, name, roleId, active = true }) {
+  if (!email) {
+    throw new ValidationError('Email is required');
+  }
+  await assertRole(roleId);
+
+  if (password) {
+    return createDirectUser({ email, password, name, roleId, active });
+  }
+  return inviteUser({ email, name, roleId });
+}
+
+/**
+ * Resends a pending invitation for an inactive user.
+ * @param {string} userId - User id to re-invite.
+ * @returns {Promise<boolean>} True when the new invite was sent.
+ * @throws {NotFoundError} When the user does not exist.
+ * @throws {ValidationError} When the user is already active.
+ * @throws {Error} When the invitation email cannot be sent.
+ */
+async function resendInvite(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+  if (user.active) {
+    throw new ValidationError('User is already active');
+  }
+
+  // Invalidate any outstanding invites for this user.
+  await prisma.invite.deleteMany({ where: { userId, usedAt: null } });
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
+  await prisma.invite.create({ data: { token, email: user.email, userId, expiresAt } });
+  await emailService.sendInvite({ to: user.email, token });
+  return true;
 }
 
 /**
@@ -120,8 +221,7 @@ async function updateUser(id, { name, roleId, active, password }) {
   }
 
   const user = await prisma.user.update({ where: { id }, data, include: { role: true } });
-  const { passwordHash, role, ...rest } = user;
-  return { ...rest, role: role ? { id: role.id, name: role.name } : null };
+  return sanitize(user);
 }
 
 /**
@@ -139,4 +239,11 @@ async function deleteUser(id) {
   return true;
 }
 
-module.exports = { listUsers, getUserById, createUser, updateUser, deleteUser };
+module.exports = {
+  listUsers,
+  getUserById,
+  createUser,
+  resendInvite,
+  updateUser,
+  deleteUser,
+};

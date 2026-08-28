@@ -22,12 +22,20 @@ router.post(
   requireAuth,
   requirePermission('users:create'),
   body('email').isEmail().withMessage('Valid email required'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('name').optional().isString(),
   body('roleId').optional().isString(),
   body('active').optional().isBoolean(),
   validate,
   controller.create
+);
+
+// Resend an invitation (re-issues the email) and requires users:create.
+router.post(
+  '/:id/resend-invite',
+  requireAuth,
+  requirePermission('users:create'),
+  controller.resendInvite
 );
 
 // Updates require users:update.

@@ -115,3 +115,6 @@ Sample response:
   actor snapshot is stored inline so history remains readable.
 - The `actor` field may be `null` for entries created by system actions that
   have no authenticated user.
+- Action names follow the entity domain. For users the actions are `create`
+  (self registration), `invite` (admin invited or resent an invite) and `remove`
+  (account deleted). Other entities use `create`, `update` and `delete`.
