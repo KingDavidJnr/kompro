@@ -17,6 +17,24 @@ permissions to users.
   orphaned users with no usable role.
 - All routes require authentication and the matching roles:* permission.
 
+## Default roles
+
+The seed script creates three roles out of the box. They are a starting point:
+administrators can rename, edit or delete them and create new ones. Their
+intended meaning is:
+
+- **admin** - Full access. Connected to every seeded permission, so it can
+  manage users, roles, the organization, controls, policies, evidence,
+  assessments, frameworks and audit logs (including purging entries). The
+  bootstrap admin account created from environment variables gets this role.
+- **auditor** - Read-only compliance and audit access. Granted the read
+  permissions for organization, users, roles, audit, controls, policies,
+  evidence, assessments and frameworks. An auditor can review the entire
+  compliance posture and export the audit log, but cannot change anything.
+- **member** - Basic member access. Granted `org:read` only, so a member can
+  see the organization's name and settings but has no administrative or
+  compliance-editing rights by default.
+
 ## API
 
 All responses use the shape `{ "message": string, "data": object }`.
