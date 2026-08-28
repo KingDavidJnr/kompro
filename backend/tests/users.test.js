@@ -71,4 +71,58 @@ describe('Users CRUD + lifecycle', () => {
     expect(spy).toHaveBeenCalledWith({ to: email, name: 'Remove' });
     spy.mockRestore();
   });
+
+  it('emails the user when their account is deactivated', async () => {
+    const email = uniqueEmail('deactmail');
+    const create = await request(app)
+      .post('/api/users')
+      .set('Cookie', admin.cookie)
+      .send({ email, password: 'Temp1234!a', name: 'Deact' });
+    const id = create.body.data.user.id;
+
+    const spy = jest.spyOn(emailService, 'sendNotification');
+    const res = await request(app).post(`/api/users/${id}/deactivate`).set('Cookie', admin.cookie);
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('emails the user when their role changes', async () => {
+    const email = uniqueEmail('rolemail');
+    const create = await request(app)
+      .post('/api/users')
+      .set('Cookie', admin.cookie)
+      .send({ email, password: 'Temp1234!a', name: 'Role' });
+    const id = create.body.data.user.id;
+
+    const rolesRes = await request(app).get('/api/roles').set('Cookie', admin.cookie);
+    const otherRole = rolesRes.body.data.roles.find((r) => r.name !== 'admin');
+
+    const spy = jest.spyOn(emailService, 'sendNotification');
+    const res = await request(app)
+      .patch(`/api/users/${id}`)
+      .set('Cookie', admin.cookie)
+      .send({ roleId: otherRole.id });
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('emails the user when their password changes', async () => {
+    const email = uniqueEmail('pwmail');
+    const create = await request(app)
+      .post('/api/users')
+      .set('Cookie', admin.cookie)
+      .send({ email, password: 'Temp1234!a', name: 'Pw' });
+    const id = create.body.data.user.id;
+
+    const spy = jest.spyOn(emailService, 'sendNotification');
+    const res = await request(app)
+      .patch(`/api/users/${id}`)
+      .set('Cookie', admin.cookie)
+      .send({ password: 'NewPass!456' });
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });

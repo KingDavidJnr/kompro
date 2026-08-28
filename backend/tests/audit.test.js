@@ -1,4 +1,5 @@
 const { request, app, createAdminSession, uniqueEmail } = require('./helpers');
+const emailService = require('../src/lib/email');
 
 describe('Audit log', () => {
   let admin;
@@ -28,5 +29,16 @@ describe('Audit log', () => {
       .query({ format: 'csv' });
     expect(exp.status).toBe(200);
     expect(exp.headers['content-type']).toMatch(/text\/csv/);
+  });
+
+  it('emails the admin when the audit log is exported', async () => {
+    const spy = jest.spyOn(emailService, 'sendNotification');
+    const exp = await request(app)
+      .get('/api/audit/export')
+      .set('Cookie', admin.cookie)
+      .query({ format: 'json' });
+    expect(exp.status).toBe(200);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
