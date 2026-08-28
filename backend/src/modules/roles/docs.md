@@ -35,6 +35,56 @@ intended meaning is:
   see the organization's name and settings but has no administrative or
   compliance-editing rights by default.
 
+## Permissions
+
+Permissions are the fixed building blocks seeded into the database. They follow a
+`resource:action` naming scheme. The actions are:
+
+- **read** - View/list the resource and its detail.
+- **create** - Create new records of the resource.
+- **update** - Modify existing records of the resource.
+- **delete** - Remove records of the resource.
+
+The full seeded set:
+
+| Permission | Signifies |
+| --- | --- |
+| `org:read` | View the organization's name and settings. |
+| `org:update` | Change the organization's name and settings. |
+| `users:read` | List users and view any user's profile. |
+| `users:create` | Create users and send invitations. |
+| `users:update` | Update users, change roles, activate/deactivate, and generate reset links. |
+| `users:delete` | Delete user accounts. |
+| `roles:read` | View roles and their attached permissions. |
+| `roles:create` | Create new roles. |
+| `roles:update` | Edit roles, including which permissions they grant. |
+| `roles:delete` | Delete roles that are not assigned to any user. |
+| `audit:read` | View and export the audit log. |
+| `audit:purge` | Delete audit log entries older than a given age. |
+| `controls:read` | View compliance controls. |
+| `controls:create` | Create controls. |
+| `controls:update` | Update controls. |
+| `controls:delete` | Delete controls. |
+| `policies:read` | View policies. |
+| `policies:create` | Create policies. |
+| `policies:update` | Update policies, including publishing. |
+| `policies:delete` | Delete policies. |
+| `evidence:read` | View evidence and its status. |
+| `evidence:create` | Upload/create evidence. |
+| `evidence:update` | Update evidence, including accepting or rejecting it. |
+| `evidence:delete` | Delete evidence. |
+| `assessments:read` | View assessments and their results. |
+| `assessments:create` | Create assessments. |
+| `assessments:update` | Update assessments, assign assessors and record results. |
+| `assessments:delete` | Delete assessments. |
+| `frameworks:read` | View frameworks, their requirements and control mappings. |
+| `frameworks:create` | Create frameworks and requirements. |
+| `frameworks:update` | Update frameworks, requirements and mappings. |
+| `frameworks:delete` | Delete frameworks and requirements. |
+
+New permissions should be added to the `PERMISSIONS` array in
+`prisma/seed.js`; the seed connects them to the `admin` role automatically.
+
 ## API
 
 All responses use the shape `{ "message": string, "data": object }`.
