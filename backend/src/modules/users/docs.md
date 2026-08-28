@@ -21,6 +21,19 @@ each user a role from the IAM system.
   includes the password hash.
 - User creation is audited as the "invite" action and deletion as "remove".
 
+## Notifications
+
+All of these emails are best-effort: if SMTP is not configured, or the user has
+no email address, the notification is skipped silently and the action still
+succeeds.
+
+- Account removed (`DELETE`): the former account email is sent `sendUserRemoved`.
+- Deactivated / reactivated: the affected user is emailed about the change.
+- Role changed (PATCH with a new `roleId`): the affected user is emailed about
+  their new role.
+- Password changed (PATCH with a new `password`): the affected user is emailed a
+  "your password was changed" notice.
+
 ## API
 
 All responses use the shape `{ "message": string, "data": object }`.

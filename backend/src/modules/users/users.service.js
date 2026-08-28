@@ -238,6 +238,36 @@ async function updateUser(id, { name, roleId, active, password }) {
   }
 
   const user = await prisma.user.update({ where: { id }, data, include: { role: true } });
+
+  if (config.smtp.host) {
+    try {
+      if (password) {
+        await emailService.sendNotification({
+          to: existing.email,
+          heading: `Your ${config.orgName} password was changed`,
+          paragraphs: [
+            `Hi ${existing.name || 'there'},`,
+            `The password for your ${config.orgName} account (${existing.email}) was just changed. If this was you, no action is needed.`,
+            'If you did not make this change, please reset your password and contact your administrator.',
+          ],
+        });
+      }
+      if (roleId !== undefined && roleId !== existing.roleId) {
+        const newRole = await prisma.role.findUnique({ where: { id: roleId } });
+        await emailService.sendNotification({
+          to: existing.email,
+          heading: `Your ${config.orgName} role was changed`,
+          paragraphs: [
+            `Hi ${existing.name || 'there'},`,
+            `Your role on ${config.orgName} was updated to "${newRole ? newRole.name : roleId}". Your permissions have changed accordingly.`,
+          ],
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to send account-change email to ${existing.email}: ${err.message}`);
+    }
+  }
+
   return sanitize(user);
 }
 
@@ -300,6 +330,22 @@ async function deactivateUser(id) {
     data: { active: false },
     include: { role: true },
   });
+
+  if (config.smtp.host) {
+    try {
+      await emailService.sendNotification({
+        to: existing.email,
+        heading: `Your ${config.orgName} account was deactivated`,
+        paragraphs: [
+          `Hi ${existing.name || 'there'},`,
+          `Your ${config.orgName} account has been deactivated by an administrator. You will not be able to sign in until it is reactivated.`,
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send deactivation email to ${existing.email}: ${err.message}`);
+    }
+  }
+
   return sanitize(user);
 }
 
@@ -319,6 +365,22 @@ async function reactivateUser(id) {
     data: { active: true },
     include: { role: true },
   });
+
+  if (config.smtp.host) {
+    try {
+      await emailService.sendNotification({
+        to: existing.email,
+        heading: `Your ${config.orgName} account was reactivated`,
+        paragraphs: [
+          `Hi ${existing.name || 'there'},`,
+          `Your ${config.orgName} account has been reactivated. You can sign in again.`,
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send reactivation email to ${existing.email}: ${err.message}`);
+    }
+  }
+
   return sanitize(user);
 }
 
