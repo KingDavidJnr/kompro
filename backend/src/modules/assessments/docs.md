@@ -22,6 +22,17 @@ specific evidence records that support them.
 - Listing supports filtering by controlId and result, plus pagination. Results
   are newest first and include an evidence link count.
 
+## Notifications
+
+- When an assessment is assigned to an assessor (on create, or when the
+  assessor is changed on update), the assessor receives an email via
+  `notifyAssessmentAssigned`. The creator is the default assessor, so the
+  assignment email fires on creation unless a different assessorId is supplied.
+- `dueDate` is an optional target completion date. A scheduled job
+  (`npm run notify:due`, see scripts/notify-due.js) scans assessments whose
+  dueDate has passed, emails the assessor once, and records `overdueNotified` so
+  each overdue assessment is only flagged a single time.
+
 ## API
 
 All responses use the shape `{ "message": string, "data": object }`.
@@ -107,7 +118,9 @@ Request body:
   "result": "satisfied",
   "notes": "Verified with screenshot",
   "evidenceIds": ["clr..."],
-  "assessmentDate": "2026-08-28T00:00:00.000Z"
+  "assessmentDate": "2026-08-28T00:00:00.000Z",
+  "assessorId": "clr...",
+  "dueDate": "2026-09-30T00:00:00.000Z"
 }
 ```
 
@@ -148,7 +161,9 @@ Request body:
 ```json
 {
   "result": "needs_review",
-  "evidenceIds": []
+  "evidenceIds": [],
+  "assessorId": "clr...",
+  "dueDate": "2026-09-30T00:00:00.000Z"
 }
 ```
 

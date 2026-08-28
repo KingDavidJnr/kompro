@@ -8,6 +8,8 @@
  */
 
 const prisma = require('../../lib/prisma');
+const emailService = require('../../lib/email');
+const config = require('../../config');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -89,12 +91,37 @@ async function replaceEvidenceLinks(assessmentId, evidenceIds) {
 }
 
 /**
+ * Emails the assigned assessor about a new or updated assessment.
+ * @param {object} assessment - Assessment with control and assessor relations.
+ * @returns {Promise<void>}
+ */
+async function notifyAssessmentAssigned(assessment) {
+  if (!assessment.assessor || !config.smtp.host) return;
+  const dueText = assessment.dueDate
+    ? `This assessment is due by ${new Date(assessment.dueDate).toUTCString()}.`
+    : 'Please complete it at your earliest convenience.';
+  try {
+    await emailService.sendNotification({
+      to: assessment.assessor.email,
+      heading: `You've been assigned an assessment on ${config.orgName}`,
+      paragraphs: [
+        `Hi ${assessment.assessor.name || 'there'},`,
+        `You have been assigned to assess the control "${assessment.control.title}" on ${config.orgName}.`,
+        dueText,
+      ],
+    });
+  } catch (err) {
+    console.error(`Failed to send assessment assignment email: ${err.message}`);
+  }
+}
+
+/**
  * Creates an assessment.
- * @param {object} input - { controlId, result, notes, assessorId, evidenceIds, assessmentDate }.
+ * @param {object} input - { controlId, result, notes, assessorId, evidenceIds, assessmentDate, dueDate }.
  * @returns {object} Created assessment with relations.
  * @throws {ValidationError} On missing control, invalid result, or unknown evidence.
  */
-async function createAssessment({ controlId, result, notes, assessorId, evidenceIds, assessmentDate }) {
+async function createAssessment({ controlId, result, notes, assessorId, evidenceIds, assessmentDate, dueDate }) {
   if (!controlId) {
     throw new ValidationError('controlId is required');
   }
@@ -120,6 +147,7 @@ async function createAssessment({ controlId, result, notes, assessorId, evidence
     notes: notes || null,
     assessorId: assessorId || null,
     assessmentDate: assessmentDate ? new Date(assessmentDate) : null,
+    dueDate: dueDate ? new Date(dueDate) : null,
   };
 
   const assessment = await prisma.assessment.create({
@@ -134,18 +162,20 @@ async function createAssessment({ controlId, result, notes, assessorId, evidence
     await replaceEvidenceLinks(assessment.id, evidenceIds);
   }
 
+  await notifyAssessmentAssigned(assessment);
+
   return getAssessment(assessment.id);
 }
 
 /**
  * Updates an assessment.
  * @param {string} id - Assessment id.
- * @param {object} input - Updatable fields.
+ * @param {object} input - Updatable fields (including assessorId and dueDate).
  * @returns {object} Updated assessment with relations.
  * @throws {NotFoundError} When the assessment does not exist.
  * @throws {ValidationError} On invalid result or unknown evidence.
  */
-async function updateAssessment(id, { result, notes, evidenceIds, assessmentDate }) {
+async function updateAssessment(id, { result, notes, evidenceIds, assessmentDate, assessorId, dueDate }) {
   const existing = await prisma.assessment.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Assessment not found');
@@ -159,11 +189,25 @@ async function updateAssessment(id, { result, notes, evidenceIds, assessmentDate
   if (result) data.result = result;
   if (notes !== undefined) data.notes = notes;
   if (assessmentDate !== undefined) data.assessmentDate = assessmentDate ? new Date(assessmentDate) : null;
+  if (assessorId !== undefined) {
+    if (assessorId) {
+      const assessor = await prisma.user.findUnique({ where: { id: assessorId } });
+      if (!assessor) throw new ValidationError('Assessor not found');
+    }
+    data.assessorId = assessorId || null;
+  }
+  if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
 
   await prisma.assessment.update({ where: { id }, data });
 
   if (Array.isArray(evidenceIds)) {
     await replaceEvidenceLinks(id, evidenceIds);
+  }
+
+  // Notify only when the assignee actually changed.
+  if (assessorId !== undefined && assessorId && assessorId !== existing.assessorId) {
+    const fresh = await getAssessment(id);
+    await notifyAssessmentAssigned(fresh);
   }
 
   return getAssessment(id);
