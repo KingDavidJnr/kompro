@@ -199,4 +199,35 @@ async function reactivate(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove, resendInvite, deactivate, reactivate };
+/**
+ * Handles POST /api/users/:id/reset-link.
+ *
+ * Generates a password-reset link for the target user without emailing it. For
+ * deployments without SMTP an administrator uses this to deliver the link out of
+ * band. The action is recorded in the audit log so abuse of this privilege is
+ * visible.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: { email, resetUrl } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function generateResetLink(req, res, next) {
+  try {
+    const result = await userService.generateResetLink(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'generate_reset_link',
+      entity: 'user',
+      entityId: result.email,
+      before: null,
+      after: { email: result.email },
+    });
+    res.json({
+      message: 'Reset link generated',
+      data: { email: result.email, resetUrl: result.resetUrl },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, create, update, remove, resendInvite, deactivate, reactivate, generateResetLink };

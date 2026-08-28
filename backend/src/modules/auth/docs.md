@@ -134,11 +134,12 @@ Responses:
 { "message": "If that account exists, a reset link has been sent." }
 ```
 
-  When SMTP is not configured the link cannot be emailed, so it is written to
-  the server log (for example `[password-reset] SMTP not configured. Manual
-  reset link for jane@org.com: http://localhost:5173/reset-password?token=...`)
-  for a self-hosted operator to deliver out of band. It is never returned to the
-  caller, so guessing an email cannot yield a usable reset link.
+  When SMTP is not configured the link cannot be emailed, and no token is
+  created here. A reset can only be issued by an administrator through
+  `POST /api/users/:id/reset-link` (requires users:update), which returns the
+  link to the administrator and records the action in the audit log. The public
+  endpoint never creates or returns a token, so guessing an email cannot yield a
+  usable reset link.
 
 ### POST /api/auth/reset-password
 

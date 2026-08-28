@@ -176,7 +176,8 @@ async function acceptInvite({ token, password }) {
  * @param {object} input - { email }.
  * @returns {Promise<object>} { userExists, emailed } where emailed reflects
  *   whether the link was emailed. The token is never returned to the caller;
- *   when SMTP is absent it is written to the server log for out-of-band delivery.
+ *   when SMTP is absent a reset must be issued by an administrator via the
+ *   audited admin endpoint.
  * @throws {Error} When SMTP is configured but the reset email cannot be sent.
  */
 async function forgotPassword({ email }) {
@@ -189,25 +190,21 @@ async function forgotPassword({ email }) {
     return { userExists: false };
   }
 
+  // With an SMTP server we email a reset link and reveal nothing to the caller.
+  // Without SMTP there is no mail transport, so a reset can only be issued by an
+  // administrator through the dedicated, fully-audited admin endpoint. We do not
+  // create or disclose a token here.
+  if (!config.smtp.host) {
+    return { userExists: true, emailed: false };
+  }
+
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
   await prisma.passwordReset.create({
     data: { token, email: user.email, userId: user.id, expiresAt },
   });
-
-  // With SMTP, email the link and reveal nothing to the caller. Without SMTP we
-  // cannot deliver it, but we must NOT return the token either: that would let
-  // anyone who guesses an email take over the account (and confirms it exists).
-  // Instead log it server-side so a self-hosted operator can deliver it out of
-  // band.
-  if (config.smtp.host) {
-    await emailService.sendPasswordReset({ to: user.email, token });
-    return { userExists: true, emailed: true };
-  }
-  console.log(
-    `[password-reset] SMTP not configured. Manual reset link for ${user.email}: ${config.appUrl}/reset-password?token=${token}`
-  );
-  return { userExists: true, emailed: false };
+  await emailService.sendPasswordReset({ to: user.email, token });
+  return { userExists: true, emailed: true };
 }
 
 /**

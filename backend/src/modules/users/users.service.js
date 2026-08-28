@@ -384,6 +384,33 @@ async function reactivateUser(id) {
   return sanitize(user);
 }
 
+/**
+ * Generates a password-reset link for a user without emailing it.
+ *
+ * Used by administrators in deployments without SMTP: the admin copies the link
+ * and delivers it to the user out of band. The caller is expected to audit this
+ * action for visibility. Does not require or rely on SMTP.
+ * @param {string} userId - Target user id.
+ * @returns {Promise<{ token: string, resetUrl: string, email: string }>}
+ * @throws {NotFoundError} When the user does not exist.
+ */
+async function generateResetLink(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
+  await prisma.passwordReset.create({
+    data: { token, email: user.email, userId: user.id, expiresAt },
+  });
+  return {
+    token,
+    email: user.email,
+    resetUrl: `${config.appUrl}/reset-password?token=${token}`,
+  };
+}
+
 module.exports = {
   listUsers,
   getUserById,
@@ -393,4 +420,5 @@ module.exports = {
   deleteUser,
   deactivateUser,
   reactivateUser,
+  generateResetLink,
 };

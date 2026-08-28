@@ -65,6 +65,9 @@ router.patch(
   controller.update
 );
 
+// Manually generate a reset link (no email) for out-of-band delivery.
+router.post('/:id/reset-link', requireAuth, requirePermission('users:update'), controller.generateResetLink);
+
 // Deletion requires users:delete.
 router.delete('/:id', requireAuth, requirePermission('users:delete'), controller.remove);
 
