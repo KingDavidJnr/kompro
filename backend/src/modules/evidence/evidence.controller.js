@@ -61,7 +61,11 @@ async function create(req, res, next) {
     const file = req.file
       ? { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype }
       : null;
-    const evidence = await evidenceService.createEvidence({ ...req.body, file });
+    const evidence = await evidenceService.createEvidence({
+      ...req.body,
+      file,
+      uploadedById: req.user.id,
+    });
     await auditService.recordFromRequest(req, {
       action: 'create',
       entity: 'evidence',
@@ -144,4 +148,34 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove, download };
+/**
+ * Handles POST /api/evidence/request.
+ * @param {object} req - Authenticated request with { title, description, source, controlId, policyId, requestedFromUserId }.
+ * @param {object} res - Express response ({ message, data: { evidence } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function request(req, res, next) {
+  try {
+    const evidence = await evidenceService.requestEvidence({
+      title: req.body.title,
+      description: req.body.description,
+      source: req.body.source,
+      controlId: req.body.controlId,
+      policyId: req.body.policyId,
+      requestedFromUserId: req.body.requestedFromUserId,
+    });
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'evidence',
+      entityId: evidence.id,
+      before: null,
+      after: evidence,
+    });
+    res.status(201).json({ message: 'Evidence requested', data: { evidence } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, create, request, update, remove, download };

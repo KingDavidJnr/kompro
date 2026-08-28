@@ -26,6 +26,16 @@ control or policy keeps the evidence but clears the link.
   is stored as metadata only.
 - Listing supports filtering by controlId, policyId and source, plus
   pagination. Evidence is returned newest first.
+- Every evidence record has a `status` of `submitted` (the default when a user
+  uploads), `accepted` or `rejected`. The uploader is recorded in
+  `uploadedById`. When an admin sets the status to `accepted` or `rejected`, the
+  uploader is emailed via `notifyEvidenceStatus`.
+
+## Notifications
+
+- `POST /api/evidence/request` lets an admin request evidence from a specific
+  user. It creates a `status: "requested"` placeholder (owned by the requested
+  user) and emails that user. The recipient then uploads the real file.
 
 ## API
 
@@ -124,6 +134,36 @@ Response 404:
 { "message": "This evidence has no file attached" }
 ```
 
+### POST /api/evidence/request
+
+Requests evidence from a user. Requires evidence:create. The requesting admin
+supplies a title (and optional description/source) plus the
+`requestedFromUserId`. Kompro creates a `status: "requested"` evidence record
+owned by that user and emails them a request to upload it.
+
+Request body:
+```json
+{
+  "title": "Please provide the firewall configuration export",
+  "requestedFromUserId": "clr..."
+}
+```
+
+Response 201:
+```json
+{
+  "message": "Evidence requested",
+  "data": {
+    "evidence": { "id": "clr...", "title": "Please provide the firewall configuration export", "status": "requested", "source": "request", "uploadedById": "clr...", "controlId": null, "policyId": null }
+  }
+}
+```
+
+Response 404 (unknown recipient):
+```json
+{ "message": "Recipient not found" }
+```
+
 ### PATCH /api/evidence/:id
 
 Updates evidence. Requires evidence:update. All fields optional.
@@ -131,9 +171,13 @@ Updates evidence. Requires evidence:update. All fields optional.
 Request body:
 ```json
 {
-  "source": "automated_check"
+  "source": "automated_check",
+  "status": "accepted"
 }
 ```
+
+Setting `status` to `accepted` or `rejected` emails the uploader
+(`notifyEvidenceStatus`).
 
 Response 200:
 ```json

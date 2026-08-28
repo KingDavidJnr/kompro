@@ -10,6 +10,8 @@
 
 const prisma = require('../../lib/prisma');
 const storage = require('../../lib/storage');
+const emailService = require('../../lib/email');
+const config = require('../../config');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -72,13 +74,39 @@ async function getEvidence(id) {
 }
 
 /**
+ * Notifies the uploader when their evidence is accepted or rejected.
+ * @param {object} evidence - Evidence record (must carry uploadedById).
+ * @param {string} status - New status (accepted|rejected).
+ * @returns {Promise<void>}
+ */
+async function notifyEvidenceStatus(evidence, status) {
+  if (!evidence.uploadedById || !config.smtp.host) return;
+  const uploader = await prisma.user.findUnique({ where: { id: evidence.uploadedById } });
+  if (!uploader) return;
+  const verb = status === 'accepted' ? 'accepted' : 'rejected';
+  try {
+    await emailService.sendNotification({
+      to: uploader.email,
+      heading: `Your evidence was ${verb} on ${config.orgName}`,
+      paragraphs: [
+        `Hi ${uploader.name || 'there'},`,
+        `Your evidence "${evidence.title}" was ${verb} by a ${config.orgName} reviewer.`,
+      ],
+    });
+  } catch (err) {
+    console.error(`Failed to send evidence status email: ${err.message}`);
+  }
+}
+
+/**
  * Creates an evidence record, optionally storing an uploaded file.
- * @param {object} input - { title, description, source, content, filePath, collectedAt, controlId, policyId, file }.
+ * @param {object} input - { title, description, source, content, filePath, collectedAt, controlId, policyId, file, uploadedById }.
  * @param {object} [input.file] - Uploaded file ({ buffer, originalname, mimetype }).
+ * @param {string} [input.uploadedById] - User who submitted the evidence (for notifications).
  * @returns {object} Created evidence.
  * @throws {ValidationError} On missing title, invalid source, or unknown control/policy.
  */
-async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, file }) {
+async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, file, uploadedById }) {
   if (!title) {
     throw new ValidationError('Evidence title is required');
   }
@@ -118,12 +146,74 @@ async function createEvidence({ title, description, source, content, filePath, c
       content: content || null,
       filePath: storedPath,
       mimeType,
+      status: 'submitted',
       collectedAt: collectedAt ? new Date(collectedAt) : null,
       controlId: controlId || null,
       policyId: policyId || null,
+      uploadedById: uploadedById || null,
     },
     include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
   });
+}
+
+/**
+ * Requests evidence from a user without an upload.
+ * @param {object} input - { title, description, source, controlId, policyId, requestedFromUserId }.
+ * @returns {Promise<object>} Created evidence placeholder (status "requested").
+ * @throws {ValidationError} On missing title or unknown recipient/control/policy.
+ */
+async function requestEvidence({ title, description, source, controlId, policyId, requestedFromUserId }) {
+  if (!title) {
+    throw new ValidationError('Evidence title is required');
+  }
+  if (!requestedFromUserId) {
+    throw new ValidationError('requestedFromUserId is required');
+  }
+  const recipient = await prisma.user.findUnique({ where: { id: requestedFromUserId } });
+  if (!recipient) throw new ValidationError('Recipient user not found');
+  if (controlId) {
+    const control = await prisma.control.findUnique({ where: { id: controlId } });
+    if (!control) throw new ValidationError('Linked control not found');
+  }
+  if (policyId) {
+    const policy = await prisma.policy.findUnique({ where: { id: policyId } });
+    if (!policy) throw new ValidationError('Linked policy not found');
+  }
+
+  const evidence = await prisma.evidence.create({
+    data: {
+      title,
+      description: description || null,
+      source: source || null,
+      status: 'requested',
+      controlId: controlId || null,
+      policyId: policyId || null,
+      uploadedById: requestedFromUserId,
+    },
+    include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
+  });
+
+  if (config.smtp.host) {
+    const where = evidence.control
+      ? ` for control "${evidence.control.title}"`
+      : evidence.policy
+        ? ` for policy "${evidence.policy.title}"`
+        : '';
+    try {
+      await emailService.sendNotification({
+        to: recipient.email,
+        heading: `Evidence requested on ${config.orgName}`,
+        paragraphs: [
+          `Hi ${recipient.name || 'there'},`,
+          `You've been asked to provide evidence "${evidence.title}"${where}. Please upload it in Kompro at your earliest convenience.`,
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send evidence request email: ${err.message}`);
+    }
+  }
+
+  return evidence;
 }
 
 /**
@@ -151,7 +241,7 @@ async function getEvidenceFile(id) {
  * @throws {NotFoundError} When the evidence does not exist.
  * @throws {ValidationError} On invalid source or unknown control/policy.
  */
-async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId }) {
+async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId, status }) {
   const existing = await prisma.evidence.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Evidence not found');
@@ -179,12 +269,20 @@ async function updateEvidence(id, { title, description, source, content, filePat
   if (collectedAt !== undefined) data.collectedAt = collectedAt ? new Date(collectedAt) : null;
   if (controlId !== undefined) data.controlId = controlId;
   if (policyId !== undefined) data.policyId = policyId;
+  if (status !== undefined) data.status = status;
 
-  return prisma.evidence.update({
+  const updated = await prisma.evidence.update({
     where: { id },
     data,
     include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
   });
+
+  // Notify the uploader when a reviewer accepts or rejects their evidence.
+  if (status && status !== existing.status && (status === 'accepted' || status === 'rejected')) {
+    await notifyEvidenceStatus({ ...updated, uploadedById: existing.uploadedById }, status);
+  }
+
+  return updated;
 }
 
 /**
@@ -211,6 +309,7 @@ module.exports = {
   getEvidence,
   getEvidenceFile,
   createEvidence,
+  requestEvidence,
   updateEvidence,
   deleteEvidence,
   EVIDENCE_SOURCES,

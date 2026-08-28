@@ -25,6 +25,21 @@ router.get('/', requireAuth, requirePermission('evidence:read'), controller.list
 router.get('/:id', requireAuth, requirePermission('evidence:read'), controller.get);
 router.get('/:id/file', requireAuth, requirePermission('evidence:read'), controller.download);
 
+// Requesting evidence from a user requires evidence:create.
+router.post(
+  '/request',
+  requireAuth,
+  requirePermission('evidence:create'),
+  body('title').isString().withMessage('Evidence title is required'),
+  body('requestedFromUserId').isString().withMessage('requestedFromUserId is required'),
+  body('description').optional().isString(),
+  body('source').optional().isIn(EVIDENCE_SOURCES).withMessage(`Source must be one of: ${EVIDENCE_SOURCES.join(', ')}`),
+  body('controlId').optional().isString(),
+  body('policyId').optional().isString(),
+  validate,
+  controller.request
+);
+
 // Creation requires evidence:create. A file attachment is optional.
 router.post(
   '/',
