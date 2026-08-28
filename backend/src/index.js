@@ -62,6 +62,12 @@ app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 
 app.use(errorHandler);
 
-app.listen(config.port, () => {
-  console.log(`Kompro backend listening on port ${config.port}`);
-});
+// Export the app so tests can drive it with Supertest without binding a port.
+// The server only listens when this file is run directly (not when required).
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(config.port, () => {
+    console.log(`Kompro backend listening on port ${config.port}`);
+  });
+}
