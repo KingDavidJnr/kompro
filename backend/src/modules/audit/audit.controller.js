@@ -123,4 +123,34 @@ async function exportAudit(req, res, next) {
   }
 }
 
-module.exports = { list, get, exportAudit };
+/**
+ * Handles POST /api/audit/purge.
+ *
+ * Deletes audit entries older than the given number of days (default
+ * AUDIT_RETENTION_DAYS) and records the action itself so that the purge is
+ * visible in the audit log.
+ * @param {object} req - Authenticated request. Body may include `days`.
+ * @param {object} res - Express response ({ message, data: { deleted } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function purge(req, res, next) {
+  try {
+    const days = req.body && Number.isFinite(Number(req.body.days))
+      ? Number(req.body.days)
+      : config.auditRetentionDays;
+    const deleted = await auditService.purgeOld(days);
+    await auditService.recordFromRequest(req, {
+      action: 'purge',
+      entity: 'audit',
+      entityId: 'audit',
+      before: { olderThanDays: days },
+      after: { deleted },
+    });
+    res.json({ message: 'Audit entries purged', data: { deleted } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, exportAudit, purge };

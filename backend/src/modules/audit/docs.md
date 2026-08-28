@@ -110,13 +110,15 @@ Sample response:
 
 ## Notes
 
-- Audit entries are read only. There is no create, update or delete endpoint.
+- Audit entries are append only. There is no update endpoint; the only mutation
+  is the audited purge described below.
 - Every entry records the actor id, the source IP address, and the before/after
   state of the affected record so changes are fully traceable.
 - Action names follow the entity domain. For users the actions are `create`
   (self registration), `invite` (admin invited or resent an invite), `update`,
-  `deactivate`, `reactivate`, `reset` (password reset) and `remove` (account
-  deleted). Other entities use `create`, `update` and `delete`.
+  `deactivate`, `reactivate`, `reset` (password reset), `generate_reset_link`
+  and `remove` (account deleted). Other entities use `create`, `update`,
+  `delete` and `purge` (audit purge).
 
 ## Export and retention
 
@@ -145,13 +147,23 @@ best-effort and is skipped silently when SMTP is not configured.
 
 ### Retention
 
-Audit entries accumulate without bound. Run `npm run audit:purge [days]` (for
-example on a nightly cron) to delete entries older than `AUDIT_RETENTION_DAYS`
-(default 365). The script reads the same backend `.env`.
+Audit entries accumulate without bound. Administrators with the `audit:purge`
+permission can remove old entries through an endpoint rather than a script, so
+the action is itself captured in the audit log for visibility:
+
+`POST /api/audit/purge` (requires `audit:purge`)
+
+Body (optional):
+```json
+{ "days": 365 }
+```
+
+`days` defaults to `AUDIT_RETENTION_DAYS` (default 365). Entries created before
+`now - days` are deleted. The purge records an audit entry with `action: purge`,
+`entity: audit` and `after: { deleted }` so the removal is traceable. The delete
+is best-effort and permanent.
+
 - Deleting or disabling a user does not remove their existing audit entries. The
   actor snapshot is stored inline so history remains readable.
 - The `actor` field may be `null` for entries created by system actions that
   have no authenticated user.
-- Action names follow the entity domain. For users the actions are `create`
-  (self registration), `invite` (admin invited or resent an invite) and `remove`
-  (account deleted). Other entities use `create`, `update` and `delete`.

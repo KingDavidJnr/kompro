@@ -174,8 +174,10 @@ async function acceptInvite({ token, password }) {
 /**
  * Initiates a password reset for an account.
  * @param {object} input - { email }.
- * @returns {Promise<object>} { userExists, emailed, token } where token is only
- *   present when no SMTP is configured and the account exists.
+ * @returns {Promise<object>} { userExists, emailed } where emailed reflects
+ *   whether the link was emailed. The token is never returned to the caller;
+ *   when SMTP is absent a reset must be issued by an administrator via the
+ *   audited admin endpoint.
  * @throws {Error} When SMTP is configured but the reset email cannot be sent.
  */
 async function forgotPassword({ email }) {
@@ -188,19 +190,21 @@ async function forgotPassword({ email }) {
     return { userExists: false };
   }
 
+  // With an SMTP server we email a reset link and reveal nothing to the caller.
+  // Without SMTP there is no mail transport, so a reset can only be issued by an
+  // administrator through the dedicated, fully-audited admin endpoint. We do not
+  // create or disclose a token here.
+  if (!config.smtp.host) {
+    return { userExists: true, emailed: false };
+  }
+
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + config.inviteTtlHours * 60 * 60 * 1000);
   await prisma.passwordReset.create({
     data: { token, email: user.email, userId: user.id, expiresAt },
   });
-
-  // With SMTP, email the link and reveal nothing. Without SMTP, hand the link
-  // back so the user can use it (self-hosted, no mail server).
-  if (config.smtp.host) {
-    await emailService.sendPasswordReset({ to: user.email, token });
-    return { userExists: true, emailed: true };
-  }
-  return { userExists: true, emailed: false, token };
+  await emailService.sendPasswordReset({ to: user.email, token });
+  return { userExists: true, emailed: true };
 }
 
 /**

@@ -120,17 +120,11 @@ async function acceptInvite(req, res, next) {
  */
 async function forgotPassword(req, res, next) {
   try {
-    const result = await authService.forgotPassword(req.body);
-    const data = {};
-    if (result.userExists && !result.emailed && result.token) {
-      data.resetUrl = `${config.appUrl}/reset-password?token=${result.token}`;
-    }
-    const message = result.emailed
-      ? 'If that account exists, a reset link has been sent.'
-      : result.userExists
-        ? 'Reset link generated.'
-        : 'If that account exists, a reset link has been sent.';
-    res.json({ message, data });
+    await authService.forgotPassword(req.body);
+    // Always return a generic message to avoid account enumeration, whether the
+    // link was emailed or (when SMTP is absent) written to the server log. The
+    // reset token is never returned to the caller.
+    res.json({ message: 'If that account exists, a reset link has been sent.' });
   } catch (err) {
     next(err);
   }

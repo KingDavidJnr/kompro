@@ -1,4 +1,4 @@
-const { request, app, createAdminSession, uniqueEmail } = require('./helpers');
+const { request, app, createAdminSession, uniqueEmail, prisma } = require('./helpers');
 const emailService = require('../src/lib/email');
 
 describe('Users CRUD + lifecycle', () => {
@@ -124,5 +124,24 @@ describe('Users CRUD + lifecycle', () => {
     expect(res.status).toBe(200);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  it('lets an admin generate a reset link (audited) without email', async () => {
+    const email = uniqueEmail('resetlink');
+    const create = await request(app)
+      .post('/api/users')
+      .set('Cookie', admin.cookie)
+      .send({ email, password: 'Temp1234!a', name: 'ResetLink' });
+    const id = create.body.data.user.id;
+
+    const res = await request(app).post(`/api/users/${id}/reset-link`).set('Cookie', admin.cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.resetUrl).toMatch(/reset-password\?token=/);
+    expect(res.body.data.email).toBe(email);
+
+    const audit = await prisma.auditLog.findFirst({
+      where: { action: 'generate_reset_link', entity: 'user', entityId: email },
+    });
+    expect(audit).toBeTruthy();
   });
 });

@@ -239,6 +239,27 @@ Response 404:
 { "message": "User not found" }
 ```
 
+### POST /api/users/:id/reset-link
+
+Generates a password-reset link for the target user without emailing it.
+Requires users:update. This is the supported path for deployments without SMTP:
+an administrator copies the link and delivers it to the user out of band. The
+action is recorded in the audit log with `action: generate_reset_link` so that
+abuse of this privilege is visible.
+
+Response 200:
+```json
+{
+  "message": "Reset link generated",
+  "data": { "email": "user@example.com", "resetUrl": "http://localhost:5173/reset-password?token=one-time-token" }
+}
+```
+
+Response 404:
+```json
+{ "message": "User not found" }
+```
+
 ### Accepting an invitation
 
 The invited person opens the link emailed to them, which points at

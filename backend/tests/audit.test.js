@@ -1,4 +1,4 @@
-const { request, app, createAdminSession, uniqueEmail } = require('./helpers');
+const { request, app, createAdminSession, uniqueEmail, prisma } = require('./helpers');
 const emailService = require('../src/lib/email');
 
 describe('Audit log', () => {
@@ -40,5 +40,40 @@ describe('Audit log', () => {
     expect(exp.status).toBe(200);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  it('lets an admin purge old entries (audited)', async () => {
+    const adminUser = await prisma.user.findUnique({ where: { email: admin.email } });
+    const oldEntry = await prisma.auditLog.create({
+      data: {
+        action: 'system',
+        entity: 'audit',
+        entityId: 'purge-test-old',
+        actorId: adminUser.id,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    });
+    const recentEntry = await prisma.auditLog.create({
+      data: {
+        action: 'system',
+        entity: 'audit',
+        entityId: 'purge-test-recent',
+        actorId: adminUser.id,
+      },
+    });
+
+    const res = await request(app).post('/api/audit/purge').set('Cookie', admin.cookie).send({ days: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body.data.deleted).toBeGreaterThanOrEqual(1);
+
+    const oldGone = await prisma.auditLog.findUnique({ where: { id: oldEntry.id } });
+    expect(oldGone).toBeNull();
+    const recentStill = await prisma.auditLog.findUnique({ where: { id: recentEntry.id } });
+    expect(recentStill).toBeTruthy();
+
+    const purgeEntry = await prisma.auditLog.findFirst({
+      where: { action: 'purge', entity: 'audit' },
+    });
+    expect(purgeEntry).toBeTruthy();
   });
 });
