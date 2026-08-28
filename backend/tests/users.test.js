@@ -1,4 +1,5 @@
 const { request, app, createAdminSession, uniqueEmail } = require('./helpers');
+const emailService = require('../src/lib/email');
 
 describe('Users CRUD + lifecycle', () => {
   let admin;
@@ -54,5 +55,20 @@ describe('Users CRUD + lifecycle', () => {
     const react = await request(app).post(`/api/users/${id}/reactivate`).set('Cookie', admin.cookie);
     expect(react.status).toBe(200);
     expect(react.body.data.user.active).toBe(true);
+  });
+
+  it('emails the removed user when their account is deleted', async () => {
+    const email = uniqueEmail('remove');
+    const create = await request(app)
+      .post('/api/users')
+      .set('Cookie', admin.cookie)
+      .send({ email, password: 'Temp1234!a', name: 'Remove' });
+    const id = create.body.data.user.id;
+
+    const spy = jest.spyOn(emailService, 'sendUserRemoved');
+    const del = await request(app).delete(`/api/users/${id}`).set('Cookie', admin.cookie);
+    expect(del.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith({ to: email, name: 'Remove' });
+    spy.mockRestore();
   });
 });

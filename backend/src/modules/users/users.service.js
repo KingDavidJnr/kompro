@@ -263,6 +263,17 @@ async function deleteUser(id) {
     }
   }
   await prisma.user.delete({ where: { id } });
+
+  // Best-effort notification: the account is already removed, so a failed or
+  // unconfigured email must not abort the deletion.
+  if (config.smtp.host) {
+    try {
+      await emailService.sendUserRemoved({ to: existing.email, name: existing.name });
+    } catch (err) {
+      console.error(`Failed to send removal email to ${existing.email}: ${err.message}`);
+    }
+  }
+
   return true;
 }
 

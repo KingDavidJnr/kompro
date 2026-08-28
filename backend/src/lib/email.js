@@ -50,14 +50,15 @@ function buildBrandedEmail({ heading, paragraphs, buttonText, buttonUrl, footerN
             </tr>
             <tr>
               <td>
-                <h1 style="margin:0 0 16px;color:#18181b;font-size:20px;font-weight:700;font-family:inherit;">${heading}</h1>
+                 <h1 style="margin:0 0 16px;color:#18181b;font-size:20px;font-weight:700;font-family:inherit;">${heading}</h1>
                 ${bodyParagraphs}
+                ${buttonText && buttonUrl ? `
                 <p style="margin:0 0 24px;text-align:center;">
                   <a href="${buttonUrl}" style="background:${brand};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 28px;border-radius:8px;display:inline-block;font-family:inherit;">${buttonText}</a>
                 </p>
                 <p style="margin:0;color:#71717a;font-size:13px;line-height:1.5;word-break:break-all;font-family:inherit;">
                   Or paste this link: <a href="${buttonUrl}" style="color:${brand};text-decoration:underline;">${buttonUrl}</a>
-                </p>
+                </p>` : ''}
               </td>
             </tr>
             <tr>
@@ -188,4 +189,52 @@ async function sendPasswordReset({ to, token }) {
   });
 }
 
-module.exports = { sendInvite, sendPasswordReset };
+/**
+ * Notifies a user that their account has been removed.
+ * @param {object} opts - { to, name }.
+ * @param {string} opts.to - Recipient email address (the removed account).
+ * @param {string} [opts.name] - Recipient display name, used for a personal greeting.
+ * @returns {Promise<void>} Resolves when the message is accepted by the server.
+ * @throws {Error} When SMTP is not configured or the transport rejects the mail.
+ */
+async function sendUserRemoved({ to, name }) {
+  const nodemailer = require('nodemailer');
+  const { smtp, appUrl, orgName } = config;
+
+  if (!smtp.host) {
+    throw new Error('SMTP is not configured (set SMTP_HOST)');
+  }
+
+  const content = {
+    heading: `Your ${orgName} account has been removed`,
+    paragraphs: [
+      `Hi ${name || 'there'},`,
+      `Your account on <strong>${orgName}</strong> (${to}) has been removed by an administrator. You will no longer be able to sign in or access the workspace.`,
+      'If you believe this was a mistake, please reach out to your organization administrator.',
+    ],
+    buttonText: 'Visit Kompro',
+    buttonUrl: appUrl,
+    footerNote:
+      'Kompro is free, open-source software (AGPL-3.0), self-hosted by your organization.',
+  };
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: smtp.user ? { user: smtp.user, pass: smtp.pass } : undefined,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+  });
+
+  await transporter.sendMail({
+    from: smtp.from,
+    to,
+    subject: `Your ${orgName} account has been removed`,
+    text: buildTextEmail(content),
+    html: buildBrandedEmail(content),
+  });
+}
+
+module.exports = { sendInvite, sendPasswordReset, sendUserRemoved };
