@@ -174,8 +174,9 @@ async function acceptInvite({ token, password }) {
 /**
  * Initiates a password reset for an account.
  * @param {object} input - { email }.
- * @returns {Promise<object>} { userExists, emailed, token } where token is only
- *   present when no SMTP is configured and the account exists.
+ * @returns {Promise<object>} { userExists, emailed } where emailed reflects
+ *   whether the link was emailed. The token is never returned to the caller;
+ *   when SMTP is absent it is written to the server log for out-of-band delivery.
  * @throws {Error} When SMTP is configured but the reset email cannot be sent.
  */
 async function forgotPassword({ email }) {
@@ -194,13 +195,19 @@ async function forgotPassword({ email }) {
     data: { token, email: user.email, userId: user.id, expiresAt },
   });
 
-  // With SMTP, email the link and reveal nothing. Without SMTP, hand the link
-  // back so the user can use it (self-hosted, no mail server).
+  // With SMTP, email the link and reveal nothing to the caller. Without SMTP we
+  // cannot deliver it, but we must NOT return the token either: that would let
+  // anyone who guesses an email take over the account (and confirms it exists).
+  // Instead log it server-side so a self-hosted operator can deliver it out of
+  // band.
   if (config.smtp.host) {
     await emailService.sendPasswordReset({ to: user.email, token });
     return { userExists: true, emailed: true };
   }
-  return { userExists: true, emailed: false, token };
+  console.log(
+    `[password-reset] SMTP not configured. Manual reset link for ${user.email}: ${config.appUrl}/reset-password?token=${token}`
+  );
+  return { userExists: true, emailed: false };
 }
 
 /**

@@ -35,4 +35,14 @@ describe('Password reset', () => {
     const newLogin = await request(app).post('/api/auth/login').send({ email, password: 'BrandNew9!zz' });
     expect(newLogin.status).toBe(200);
   });
+
+  it('never returns a reset token or link in the response', async () => {
+    const email = uniqueEmail('leak');
+    await request(app).post('/api/users').set('Cookie', admin.cookie).send({ email, name: 'Leak' });
+    const forgot = await request(app).post('/api/auth/forgot-password').send({ email });
+    expect(forgot.status).toBe(200);
+    expect(forgot.body.message).toBe('If that account exists, a reset link has been sent.');
+    // The token must never be disclosed to the caller, even when SMTP is absent.
+    expect(JSON.stringify(forgot.body)).not.toMatch(/token|resetUrl|reset_url/i);
+  });
 });

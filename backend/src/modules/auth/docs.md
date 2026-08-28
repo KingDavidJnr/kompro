@@ -126,18 +126,19 @@ Request body:
 Responses:
 
 - 200 OK (always a generic message to avoid account enumeration)
+
+  The response is identical whether or not the account exists, and it never
+  includes the reset token or link.
+
 ```json
 { "message": "If that account exists, a reset link has been sent." }
 ```
 
-- 200 OK when SMTP is not configured and the account exists (link returned so
-  it can be delivered manually):
-```json
-{
-  "message": "Reset link generated.",
-  "data": { "resetUrl": "http://localhost:5173/reset-password?token=one-time-token" }
-}
-```
+  When SMTP is not configured the link cannot be emailed, so it is written to
+  the server log (for example `[password-reset] SMTP not configured. Manual
+  reset link for jane@org.com: http://localhost:5173/reset-password?token=...`)
+  for a self-hosted operator to deliver out of band. It is never returned to the
+  caller, so guessing an email cannot yield a usable reset link.
 
 ### POST /api/auth/reset-password
 
