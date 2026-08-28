@@ -9,6 +9,8 @@
  */
 
 const prisma = require('../../lib/prisma');
+const emailService = require('../../lib/email');
+const config = require('../../config');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -70,7 +72,7 @@ async function createPolicy({ title, description, content, status, rules, owner 
     throw new ValidationError(`Invalid status. Allowed: ${POLICY_STATUSES.join(', ')}`);
   }
 
-  return prisma.policy.create({
+  const policy = await prisma.policy.create({
     data: {
       title,
       description: description || null,
@@ -80,6 +82,37 @@ async function createPolicy({ title, description, content, status, rules, owner 
       owner: owner || null,
     },
   });
+
+  // Announce when a policy goes live.
+  if (policy.status === 'active') {
+    await notifyPolicyPublished(policy);
+  }
+
+  return policy;
+}
+
+/**
+ * Emails all active users when a policy is published.
+ * @param {object} policy - Policy record with title/description.
+ * @returns {Promise<void>}
+ */
+async function notifyPolicyPublished(policy) {
+  if (!config.smtp.host) return;
+  const users = await prisma.user.findMany({ where: { active: true }, select: { email: true } });
+  const emails = users.map((u) => u.email).filter(Boolean);
+  if (!emails.length) return;
+  try {
+    await emailService.sendNotification({
+      to: emails,
+      heading: `New policy published on ${config.orgName}: ${policy.title}`,
+      paragraphs: [
+        `A policy "${policy.title}" has been published on ${config.orgName}.`,
+        policy.description || 'Sign in to review the full policy.',
+      ],
+    });
+  } catch (err) {
+    console.error(`Failed to send policy-published email: ${err.message}`);
+  }
 }
 
 /**
@@ -108,7 +141,11 @@ async function updatePolicy(id, { title, description, content, status, rules, ow
   if (rules !== undefined) data.rules = rules;
   if (owner !== undefined) data.owner = owner;
 
-  return prisma.policy.update({ where: { id }, data });
+  const updated = await prisma.policy.update({ where: { id }, data });
+  if (updated.status === 'active' && existing.status !== 'active') {
+    await notifyPolicyPublished(updated);
+  }
+  return updated;
 }
 
 /**

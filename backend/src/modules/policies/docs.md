@@ -16,6 +16,14 @@ the policy records.
   the policy-as-code engine; the API accepts any JSON object or array there.
 - Listing supports filtering by status and pagination.
 
+## Notifications
+
+- When a policy transitions to `active` (on create with `status: "active"`, or
+  on update from a non-active status to `active`), every active user is emailed
+  once via `notifyPolicyPublished`. Recipients are delivered as a single BCC
+  batch to avoid leaking addresses. If SMTP is not configured the notification is
+  skipped silently.
+
 ## API
 
 All responses use the shape `{ "message": string, "data": object }`.
