@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
 }
 
 model Organization {
@@ -27,6 +28,7 @@ model User {
   sessions     Session[]
   invites      Invite[]
   passwordResets PasswordReset[]
+  auditLogs     AuditLog[]
   assessments  Assessment[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -95,6 +97,7 @@ model Permission {
 model AuditLog {
   id        String   @id @default(cuid())
   actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
   action    String
   entity    String
   entityId  String?
@@ -103,6 +106,7 @@ model AuditLog {
   ip        String?
   createdAt DateTime @default(now())
 
+  @@index([actorId])
   @@index([entity, entityId])
   @@index([createdAt])
 }
