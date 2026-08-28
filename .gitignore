@@ -156,3 +156,6 @@ vite.config.ts.timestamp-*
 
 # Local standards file (never committed to origin)
 standards.md
+
+# Local roadmap / planning notes (never committed to origin)
+roadmap.md
