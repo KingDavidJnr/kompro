@@ -12,6 +12,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const config = require('./config');
 const errorHandler = require('./middleware/errorHandler');
+const prisma = require('./lib/prisma');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const orgRoutes = require('./modules/organization/org.routes');
@@ -66,8 +67,27 @@ app.use(errorHandler);
 // The server only listens when this file is run directly (not when required).
 module.exports = app;
 
-if (require.main === module) {
+/**
+ * Starts the server after verifying database connectivity.
+ *
+ * Runs a trivial query to confirm Prisma can reach PostgreSQL, logs the result,
+ * then binds the HTTP port. The server still starts on connection failure so
+ * the health endpoint remains reachable, but the error is surfaced loudly.
+ * @returns {Promise<void>}
+ */
+async function start() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('Database connected');
+  } catch (err) {
+    console.error(`Database connection failed: ${err.message}`);
+  }
+
   app.listen(config.port, () => {
     console.log(`Kompro backend listening on port ${config.port}`);
   });
+}
+
+if (require.main === module) {
+  start();
 }
