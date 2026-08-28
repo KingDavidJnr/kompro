@@ -8,6 +8,7 @@
 
 const evidenceService = require('./evidence.service');
 const auditService = require('../audit/audit.service');
+const { NotFoundError } = require('../../utils/errors');
 
 /**
  * Handles GET /api/evidence.
@@ -56,7 +57,11 @@ async function get(req, res, next) {
  */
 async function create(req, res, next) {
   try {
-    const evidence = await evidenceService.createEvidence(req.body);
+    // Multer populates req.file when an attachment is uploaded.
+    const file = req.file
+      ? { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype }
+      : null;
+    const evidence = await evidenceService.createEvidence({ ...req.body, file });
     await auditService.recordFromRequest(req, {
       action: 'create',
       entity: 'evidence',
@@ -65,6 +70,27 @@ async function create(req, res, next) {
       after: evidence,
     });
     res.status(201).json({ message: 'Evidence created', data: { evidence } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Handles GET /api/evidence/:id/file.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response streaming the file bytes.
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function download(req, res, next) {
+  try {
+    const { stream, contentType } = await evidenceService.getEvidenceFile(req.params.id);
+    res.setHeader('Content-Type', contentType);
+    // If the stream fails mid-flight, surface a 404 to the client.
+    stream.on('error', () => {
+      if (!res.headersSent) res.status(404).json({ message: 'File not found' });
+    });
+    stream.pipe(res);
   } catch (err) {
     next(err);
   }
@@ -118,4 +144,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove };
+module.exports = { list, get, create, update, remove, download };

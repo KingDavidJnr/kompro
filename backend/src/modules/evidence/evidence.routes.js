@@ -7,27 +7,34 @@
  */
 
 const router = require('express').Router();
+const multer = require('multer');
 const { body } = require('express-validator');
 const controller = require('./evidence.controller');
 const validate = require('../../middleware/validate');
 const requireAuth = require('../../middleware/requireAuth');
 const requirePermission = require('../../middleware/requirePermission');
+const config = require('../../config');
 const { EVIDENCE_SOURCES } = require('./evidence.service');
+
+// Multer buffers the upload in memory (capped) so it can be written by the
+// active storage driver (local disk or S3).
+const upload = multer({ limits: { fileSize: config.maxUploadBytes } });
 
 // Read access requires evidence:read.
 router.get('/', requireAuth, requirePermission('evidence:read'), controller.list);
 router.get('/:id', requireAuth, requirePermission('evidence:read'), controller.get);
+router.get('/:id/file', requireAuth, requirePermission('evidence:read'), controller.download);
 
-// Creation requires evidence:create.
+// Creation requires evidence:create. A file attachment is optional.
 router.post(
   '/',
   requireAuth,
   requirePermission('evidence:create'),
+  upload.single('file'),
   body('title').isString().withMessage('Evidence title is required'),
   body('description').optional().isString(),
   body('source').optional().isIn(EVIDENCE_SOURCES).withMessage(`Source must be one of: ${EVIDENCE_SOURCES.join(', ')}`),
   body('content').optional().isString(),
-  body('filePath').optional().isString(),
   body('controlId').optional().isString(),
   body('policyId').optional().isString(),
   body('collectedAt').optional().isISO8601().withMessage('collectedAt must be a valid date'),

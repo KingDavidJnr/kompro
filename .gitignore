@@ -9,6 +9,11 @@ frontend/dist/
 
 # Backend
 backend/node_modules/
+backend/uploads/
+
+# Allow committing the example env files
+!.env.example
+!backend/.env.example
 
 # Logs
 logs

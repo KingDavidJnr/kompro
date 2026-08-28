@@ -6,6 +6,7 @@
  */
 
 const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
@@ -61,5 +62,21 @@ module.exports = {
     pass: process.env.SMTP_PASS,
     secure: process.env.SMTP_SECURE === 'true',
     from: process.env.MAIL_FROM || 'no-reply@kompro.local',
+  },
+
+  // Where uploaded evidence files are stored on local disk when S3 is not used.
+  uploadDir: process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'),
+
+  // Maximum accepted upload size in bytes (derived from megabytes).
+  maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 10) * 1024 * 1024,
+
+  // S3-compatible storage. When bucket and region are set, evidence files are
+  // stored in S3; otherwise the local uploadDir is used. All keys are optional.
+  s3: {
+    bucket: process.env.S3_BUCKET,
+    region: process.env.S3_REGION,
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    endpoint: process.env.S3_ENDPOINT,
   },
 };

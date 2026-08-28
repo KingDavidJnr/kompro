@@ -130,6 +130,7 @@ model Evidence {
   source      String?
   content     String?
   filePath    String?
+  mimeType    String?
   collectedAt DateTime?
   controlId   String?
   policyId    String?

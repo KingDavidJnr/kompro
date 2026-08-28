@@ -9,6 +9,7 @@
  */
 
 const prisma = require('../../lib/prisma');
+const storage = require('../../lib/storage');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -71,12 +72,13 @@ async function getEvidence(id) {
 }
 
 /**
- * Creates an evidence record.
- * @param {object} input - { title, description, source, content, filePath, collectedAt, controlId, policyId }.
+ * Creates an evidence record, optionally storing an uploaded file.
+ * @param {object} input - { title, description, source, content, filePath, collectedAt, controlId, policyId, file }.
+ * @param {object} [input.file] - Uploaded file ({ buffer, originalname, mimetype }).
  * @returns {object} Created evidence.
  * @throws {ValidationError} On missing title, invalid source, or unknown control/policy.
  */
-async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId }) {
+async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, file }) {
   if (!title) {
     throw new ValidationError('Evidence title is required');
   }
@@ -94,19 +96,51 @@ async function createEvidence({ title, description, source, content, filePath, c
     if (!policy) throw new ValidationError('Linked policy not found');
   }
 
+  // A manually supplied filePath (no upload) can still be recorded as-is.
+  let storedPath = filePath || null;
+  let mimeType = null;
+
+  // When a file buffer is provided, persist it via the active storage driver.
+  if (file && file.buffer) {
+    storedPath = await storage.upload({
+      buffer: file.buffer,
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
+    mimeType = file.mimetype;
+  }
+
   return prisma.evidence.create({
     data: {
       title,
       description: description || null,
       source: source || null,
       content: content || null,
-      filePath: filePath || null,
+      filePath: storedPath,
+      mimeType,
       collectedAt: collectedAt ? new Date(collectedAt) : null,
       controlId: controlId || null,
       policyId: policyId || null,
     },
     include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
   });
+}
+
+/**
+ * Resolves the stored file for an evidence record as a readable stream.
+ * @param {string} id - Evidence id.
+ * @returns {Promise<{ stream: Readable, contentType: string }>}
+ * @throws {NotFoundError} When the evidence or its file is missing.
+ */
+async function getEvidenceFile(id) {
+  const evidence = await prisma.evidence.findUnique({ where: { id } });
+  if (!evidence) {
+    throw new NotFoundError('Evidence not found');
+  }
+  if (!evidence.filePath) {
+    throw new NotFoundError('This evidence has no file attached');
+  }
+  return storage.getFile(evidence.filePath, evidence.mimeType);
 }
 
 /**
@@ -165,12 +199,17 @@ async function deleteEvidence(id) {
     throw new NotFoundError('Evidence not found');
   }
   await prisma.evidence.delete({ where: { id } });
+  // Best-effort removal of the underlying file (local or S3).
+  if (existing.filePath) {
+    await storage.deleteFile(existing.filePath).catch(() => {});
+  }
   return true;
 }
 
 module.exports = {
   listEvidence,
   getEvidence,
+  getEvidenceFile,
   createEvidence,
   updateEvidence,
   deleteEvidence,
