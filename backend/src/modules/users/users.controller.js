@@ -1,10 +1,13 @@
 /**
  * HTTP layer for user management endpoints.
  *
- * Wraps users.service and formats responses as { message, data }.
+ * Wraps users.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor, the change and
+ * the before/after state.
  */
 
 const userService = require('./users.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/users.
@@ -51,6 +54,13 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const user = await userService.createUser(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'user',
+      entityId: user.id,
+      before: null,
+      after: user,
+    });
     res.status(201).json({ message: 'User created', data: { user } });
   } catch (err) {
     next(err);
@@ -66,7 +76,16 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    // Capture the prior state for the audit trail.
+    const before = await userService.getUserById(req.params.id);
     const user = await userService.updateUser(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'user',
+      entityId: user.id,
+      before,
+      after: user,
+    });
     res.json({ message: 'User updated', data: { user } });
   } catch (err) {
     next(err);
@@ -82,7 +101,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await userService.getUserById(req.params.id);
     await userService.deleteUser(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'user',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'User deleted', data: {} });
   } catch (err) {
     next(err);

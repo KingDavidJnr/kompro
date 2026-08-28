@@ -1,10 +1,13 @@
 /**
  * HTTP layer for control management endpoints.
  *
- * Wraps controls.service and formats responses as { message, data }.
+ * Wraps controls.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const controlService = require('./controls.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/controls.
@@ -53,6 +56,13 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const control = await controlService.createControl(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'control',
+      entityId: control.id,
+      before: null,
+      after: control,
+    });
     res.status(201).json({ message: 'Control created', data: { control } });
   } catch (err) {
     next(err);
@@ -68,7 +78,15 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await controlService.getControl(req.params.id);
     const control = await controlService.updateControl(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'control',
+      entityId: control.id,
+      before,
+      after: control,
+    });
     res.json({ message: 'Control updated', data: { control } });
   } catch (err) {
     next(err);
@@ -84,7 +102,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await controlService.getControl(req.params.id);
     await controlService.deleteControl(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'control',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Control deleted', data: {} });
   } catch (err) {
     next(err);

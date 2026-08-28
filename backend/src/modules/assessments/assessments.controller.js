@@ -1,11 +1,13 @@
 /**
  * HTTP layer for assessment endpoints.
  *
- * Wraps assessments.service and formats responses as { message, data }.
- * The authenticated user is recorded as the assessor by default.
+ * Wraps assessments.service and formats responses as { message, data }. The
+ * authenticated user is recorded as the assessor by default. Every mutating
+ * action writes an audit entry recording the actor and before/after state.
  */
 
 const assessmentService = require('./assessments.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/assessments.
@@ -53,9 +55,15 @@ async function get(req, res, next) {
  */
 async function create(req, res, next) {
   try {
-    // Record the acting user as the assessor unless one was supplied.
     const assessorId = req.body.assessorId || req.user.id;
     const assessment = await assessmentService.createAssessment({ ...req.body, assessorId });
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'assessment',
+      entityId: assessment.id,
+      before: null,
+      after: assessment,
+    });
     res.status(201).json({ message: 'Assessment created', data: { assessment } });
   } catch (err) {
     next(err);
@@ -71,7 +79,15 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await assessmentService.getAssessment(req.params.id);
     const assessment = await assessmentService.updateAssessment(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'assessment',
+      entityId: assessment.id,
+      before,
+      after: assessment,
+    });
     res.json({ message: 'Assessment updated', data: { assessment } });
   } catch (err) {
     next(err);
@@ -87,7 +103,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await assessmentService.getAssessment(req.params.id);
     await assessmentService.deleteAssessment(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'assessment',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Assessment deleted', data: {} });
   } catch (err) {
     next(err);

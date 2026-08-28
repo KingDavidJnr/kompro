@@ -2,10 +2,13 @@
  * HTTP layer for requirement and mapping endpoints.
  *
  * Requirements and their control mappings are managed here. Wraps
- * frameworks.service and formats responses as { message, data }.
+ * frameworks.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const frameworkService = require('./frameworks.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/requirements.
@@ -35,6 +38,13 @@ async function list(req, res, next) {
 async function create(req, res, next) {
   try {
     const requirement = await frameworkService.createRequirement(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'requirement',
+      entityId: requirement.id,
+      before: null,
+      after: requirement,
+    });
     res.status(201).json({ message: 'Requirement created', data: { requirement } });
   } catch (err) {
     next(err);
@@ -50,8 +60,7 @@ async function create(req, res, next) {
  */
 async function get(req, res, next) {
   try {
-    const requirement = await frameworkService.getFramework(req.params.id);
-    res.json({ message: 'Requirement retrieved', data: { requirement } });
+    res.json({ message: 'Requirement retrieved', data: { requirement: await frameworkService.getRequirement(req.params.id) } });
   } catch (err) {
     next(err);
   }
@@ -66,7 +75,15 @@ async function get(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await frameworkService.getRequirement(req.params.id);
     const requirement = await frameworkService.updateRequirement(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'requirement',
+      entityId: requirement.id,
+      before,
+      after: requirement,
+    });
     res.json({ message: 'Requirement updated', data: { requirement } });
   } catch (err) {
     next(err);
@@ -82,7 +99,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await frameworkService.getRequirement(req.params.id);
     await frameworkService.deleteRequirement(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'requirement',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Requirement deleted', data: {} });
   } catch (err) {
     next(err);
@@ -99,6 +124,13 @@ async function remove(req, res, next) {
 async function createMapping(req, res, next) {
   try {
     const mapping = await frameworkService.createMapping(req.params.requirementId, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'mapping',
+      entityId: `${req.params.requirementId}:${req.body.controlId}`,
+      before: null,
+      after: mapping,
+    });
     res.status(201).json({ message: 'Mapping created', data: { mapping } });
   } catch (err) {
     next(err);
@@ -114,7 +146,15 @@ async function createMapping(req, res, next) {
  */
 async function deleteMapping(req, res, next) {
   try {
+    const before = { requirementId: req.params.requirementId, controlId: req.params.controlId };
     await frameworkService.deleteMapping(req.params.requirementId, req.params.controlId);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'mapping',
+      entityId: `${req.params.requirementId}:${req.params.controlId}`,
+      before,
+      after: null,
+    });
     res.json({ message: 'Mapping deleted', data: {} });
   } catch (err) {
     next(err);

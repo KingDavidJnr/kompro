@@ -127,6 +127,26 @@ async function listRequirements(frameworkId) {
 }
 
 /**
+ * Returns a single requirement.
+ * @param {string} id - Requirement id.
+ * @returns {object} Requirement record with framework and mapping counts.
+ * @throws {NotFoundError} When the requirement does not exist.
+ */
+async function getRequirement(id) {
+  const requirement = await prisma.frameworkRequirement.findUnique({
+    where: { id },
+    include: {
+      framework: { select: { id: true, name: true } },
+      _count: { select: { controlMappings: true } },
+    },
+  });
+  if (!requirement) {
+    throw new NotFoundError('Requirement not found');
+  }
+  return requirement;
+}
+
+/**
  * Creates a requirement under a framework.
  * @param {object} input - { frameworkId, code, title, description }.
  * @returns {object} Created requirement.
@@ -298,6 +318,7 @@ module.exports = {
   updateFramework,
   deleteFramework,
   listRequirements,
+  getRequirement,
   createRequirement,
   updateRequirement,
   deleteRequirement,

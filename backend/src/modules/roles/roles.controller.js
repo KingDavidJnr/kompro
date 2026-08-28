@@ -1,10 +1,13 @@
 /**
  * HTTP layer for role and permission endpoints.
  *
- * Wraps roles.service and formats responses as { message, data }.
+ * Wraps roles.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const roleService = require('./roles.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/roles.
@@ -61,6 +64,13 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const role = await roleService.createRole(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'role',
+      entityId: role.id,
+      before: null,
+      after: role,
+    });
     res.status(201).json({ message: 'Role created', data: { role } });
   } catch (err) {
     next(err);
@@ -76,7 +86,15 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await roleService.getRole(req.params.id);
     const role = await roleService.updateRole(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'role',
+      entityId: role.id,
+      before,
+      after: role,
+    });
     res.json({ message: 'Role updated', data: { role } });
   } catch (err) {
     next(err);
@@ -92,7 +110,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await roleService.getRole(req.params.id);
     await roleService.deleteRole(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'role',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Role deleted', data: {} });
   } catch (err) {
     next(err);

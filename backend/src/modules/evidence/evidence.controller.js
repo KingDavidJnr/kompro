@@ -1,10 +1,13 @@
 /**
  * HTTP layer for evidence management endpoints.
  *
- * Wraps evidence.service and formats responses as { message, data }.
+ * Wraps evidence.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const evidenceService = require('./evidence.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/evidence.
@@ -54,6 +57,13 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const evidence = await evidenceService.createEvidence(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'evidence',
+      entityId: evidence.id,
+      before: null,
+      after: evidence,
+    });
     res.status(201).json({ message: 'Evidence created', data: { evidence } });
   } catch (err) {
     next(err);
@@ -69,7 +79,15 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await evidenceService.getEvidence(req.params.id);
     const evidence = await evidenceService.updateEvidence(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'evidence',
+      entityId: evidence.id,
+      before,
+      after: evidence,
+    });
     res.json({ message: 'Evidence updated', data: { evidence } });
   } catch (err) {
     next(err);
@@ -85,7 +103,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await evidenceService.getEvidence(req.params.id);
     await evidenceService.deleteEvidence(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'evidence',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Evidence deleted', data: {} });
   } catch (err) {
     next(err);

@@ -1,10 +1,13 @@
 /**
  * HTTP layer for policy management endpoints.
  *
- * Wraps policies.service and formats responses as { message, data }.
+ * Wraps policies.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const policyService = require('./policies.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/policies.
@@ -52,6 +55,13 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   try {
     const policy = await policyService.createPolicy(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'policy',
+      entityId: policy.id,
+      before: null,
+      after: policy,
+    });
     res.status(201).json({ message: 'Policy created', data: { policy } });
   } catch (err) {
     next(err);
@@ -67,7 +77,15 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const before = await policyService.getPolicy(req.params.id);
     const policy = await policyService.updatePolicy(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'policy',
+      entityId: policy.id,
+      before,
+      after: policy,
+    });
     res.json({ message: 'Policy updated', data: { policy } });
   } catch (err) {
     next(err);
@@ -83,7 +101,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await policyService.getPolicy(req.params.id);
     await policyService.deletePolicy(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'policy',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Policy deleted', data: {} });
   } catch (err) {
     next(err);

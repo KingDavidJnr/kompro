@@ -5,6 +5,7 @@
  */
 
 const orgService = require('./org.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/org/settings.
@@ -30,7 +31,16 @@ async function getSettings(req, res, next) {
  */
 async function updateSettings(req, res, next) {
   try {
-    res.json({ message: 'Organization settings updated', data: { organization: await orgService.updateSettings(req.body) } });
+    const before = await orgService.getSettings();
+    const organization = await orgService.updateSettings(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'organization',
+      entityId: organization.id,
+      before,
+      after: organization,
+    });
+    res.json({ message: 'Organization settings updated', data: { organization } });
   } catch (err) {
     next(err);
   }

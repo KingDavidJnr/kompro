@@ -23,6 +23,7 @@ const evidenceRoutes = require('./modules/evidence/evidence.routes');
 const assessmentsRoutes = require('./modules/assessments/assessments.routes');
 const frameworksRoutes = require('./modules/frameworks/frameworks.routes');
 const requirementsRoutes = require('./modules/frameworks/requirements.routes');
+const auditRoutes = require('./modules/audit/audit.routes');
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/evidence', evidenceRoutes);
 app.use('/api/assessments', assessmentsRoutes);
 app.use('/api/frameworks', frameworksRoutes);
 app.use('/api/requirements', requirementsRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Unknown routes return a 404 with a useful message.
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));

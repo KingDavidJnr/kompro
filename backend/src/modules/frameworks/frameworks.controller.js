@@ -1,10 +1,13 @@
 /**
  * HTTP layer for framework endpoints.
  *
- * Wraps frameworks.service and formats responses as { message, data }.
+ * Wraps frameworks.service and formats responses as { message, data }. Every
+ * mutating action writes an audit entry recording the actor and before/after
+ * state.
  */
 
 const frameworkService = require('./frameworks.service');
+const auditService = require('../audit/audit.service');
 
 /**
  * Handles GET /api/frameworks.
@@ -32,6 +35,13 @@ async function list(req, res, next) {
 async function create(req, res, next) {
   try {
     const framework = await frameworkService.createFramework(req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'create',
+      entity: 'framework',
+      entityId: framework.id,
+      before: null,
+      after: framework,
+    });
     res.status(201).json({ message: 'Framework created', data: { framework } });
   } catch (err) {
     next(err);
@@ -77,7 +87,16 @@ async function status(req, res, next) {
  */
 async function update(req, res, next) {
   try {
-    res.json({ message: 'Framework updated', data: { framework: await frameworkService.updateFramework(req.params.id, req.body) } });
+    const before = await frameworkService.getFramework(req.params.id);
+    const framework = await frameworkService.updateFramework(req.params.id, req.body);
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'framework',
+      entityId: framework.id,
+      before,
+      after: framework,
+    });
+    res.json({ message: 'Framework updated', data: { framework } });
   } catch (err) {
     next(err);
   }
@@ -92,7 +111,15 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   try {
+    const before = await frameworkService.getFramework(req.params.id);
     await frameworkService.deleteFramework(req.params.id);
+    await auditService.recordFromRequest(req, {
+      action: 'delete',
+      entity: 'framework',
+      entityId: req.params.id,
+      before,
+      after: null,
+    });
     res.json({ message: 'Framework deleted', data: {} });
   } catch (err) {
     next(err);
