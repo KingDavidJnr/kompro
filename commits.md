@@ -89,6 +89,23 @@ Good:
 
 Avoid combining unrelated changes into a single commit.
 
+### Describe multiple changes when necessary
+
+When a commit contains multiple related changes that cannot be adequately described by the subject line alone, include a body describing the individual changes.
+
+Use the subject line to summarize the overall change, followed by a blank line and a list of the specific changes.
+
+Example:
+
+```text
+[chore] add root project configuration
+- add root package configuration and project scripts
+- add package lockfile
+- add root environment variable example
+````
+
+The commit body is not required for every commit. Use it when the commit contains multiple changes or when additional context is useful.
+
 ### Documentation changes
 
 Use `[docs]` for documentation-only changes.
