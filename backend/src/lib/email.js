@@ -11,6 +11,11 @@
 
 const config = require('../config');
 
+// Kompro brand assets are baked into the product (not configurable).
+const KOMPRO_LOGO_URL =
+  'https://res.cloudinary.com/dtvwrtbwa/image/upload/v1787888015/kompro-brand-logo-resized-bg_p8rsnc.png';
+const KOMPRO_BRAND_COLOR = '#6c07c7';
+
 /**
  * Builds a branded HTML email body.
  * @param {object} opts - { heading, paragraphs, buttonText, buttonUrl, footerNote }.
@@ -22,8 +27,8 @@ const config = require('../config');
  * @returns {string} Full HTML email document.
  */
 function buildBrandedEmail({ heading, paragraphs, buttonText, buttonUrl, footerNote }) {
-  const logo = config.mailLogoUrl;
-  const brand = config.brandColor;
+  const logo = KOMPRO_LOGO_URL;
+  const brand = KOMPRO_BRAND_COLOR;
 
   // The logo PNG is transparent; it sits directly on the white card so its
   // distinctness is preserved (no background fill behind it).
