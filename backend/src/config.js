@@ -61,7 +61,7 @@ module.exports = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
     secure: process.env.SMTP_SECURE === 'true',
-    from: process.env.MAIL_FROM || 'no-reply@kompro.local',
+    from: process.env.MAIL_FROM,
     fromName: process.env.MAIL_FROM_NAME || 'Kompro',
   },
 

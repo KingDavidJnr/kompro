@@ -22,6 +22,23 @@ function sender() {
   return { name: config.smtp.fromName || 'Kompro', address: config.smtp.from };
 }
 
+/**
+ * Ensures SMTP is usable before attempting to send.
+ *
+ * `MAIL_FROM` must be set explicitly: the From address has to match the
+ * authenticated SMTP identity, otherwise the transport rejects it at the
+ * SMTP layer. We never fall back to a placeholder address for this reason.
+ * @throws {Error} When SMTP host or MAIL_FROM is missing.
+ */
+function ensureConfigured() {
+  if (!config.smtp.host) {
+    throw new Error('SMTP is not configured (set SMTP_HOST)');
+  }
+  if (!config.smtp.from) {
+    throw new Error('MAIL_FROM must be set to match the authenticated SMTP address');
+  }
+}
+
 // Kompro brand assets are baked into the product (not configurable).
 const KOMPRO_LOGO_URL =
   'https://res.cloudinary.com/dtvwrtbwa/image/upload/v1787888015/kompro-brand-logo-resized-bg_p8rsnc.png';
@@ -117,9 +134,7 @@ async function sendInvite({ to, token }) {
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName, inviteTtlHours } = config;
 
-  if (!smtp.host) {
-    throw new Error('SMTP is not configured (set SMTP_HOST)');
-  }
+  ensureConfigured();
 
   const buttonUrl = `${appUrl}/accept-invite?token=${token}`;
   const content = {
@@ -166,9 +181,7 @@ async function sendPasswordReset({ to, token }) {
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName, inviteTtlHours } = config;
 
-  if (!smtp.host) {
-    throw new Error('SMTP is not configured (set SMTP_HOST)');
-  }
+  ensureConfigured();
 
   const buttonUrl = `${appUrl}/reset-password?token=${token}`;
   const content = {
@@ -215,9 +228,7 @@ async function sendUserRemoved({ to, name }) {
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName } = config;
 
-  if (!smtp.host) {
-    throw new Error('SMTP is not configured (set SMTP_HOST)');
-  }
+  ensureConfigured();
 
   const content = {
     heading: `Your ${orgName} account has been removed`,
@@ -272,9 +283,7 @@ async function sendNotification({ to, heading, paragraphs, buttonText, buttonUrl
   const nodemailer = require('nodemailer');
   const { smtp, appUrl, orgName } = config;
 
-  if (!smtp.host) {
-    throw new Error('SMTP is not configured (set SMTP_HOST)');
-  }
+  ensureConfigured();
 
   const content = {
     heading,
