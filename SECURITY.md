@@ -314,7 +314,7 @@ As a compliance platform, your instance is itself in scope:
 
 Report suspected vulnerabilities privately to the maintainers at:
 
-> **security@kompro.example**  *(replace with your real contact)*
+> **me@davidoduse.com**
 
 Include steps to reproduce, impact, and any suggested mitigation. We aim to
 acknowledge within 72 hours and will coordinate disclosure.
