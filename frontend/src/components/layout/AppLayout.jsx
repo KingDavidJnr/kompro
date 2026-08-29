@@ -18,6 +18,7 @@ import {
   LogoutIcon,
   BellIcon,
   ChevronDownIcon,
+  PlugIcon,
 } from '../../components/icons';
 
 const NAV = [
@@ -35,15 +36,16 @@ const NAV = [
       { to: '/assessments', label: 'Assessments', Icon: ClipboardIcon },
     ],
   },
-  {
-    label: 'GRC',
-    items: [
-      { to: '/risk', label: 'Risk', Icon: FlagIcon },
-      { to: '/incidents', label: 'Incidents', Icon: ExclamationNav },
-      { to: '/itsm', label: 'ITSM', Icon: ServerIcon },
-      { to: '/audit-program', label: 'Audit Program', Icon: ClipboardIcon },
-    ],
-  },
+    {
+      label: 'GRC',
+      items: [
+        { to: '/risk', label: 'Risk', Icon: FlagIcon },
+        { to: '/incidents', label: 'Incidents', Icon: ExclamationNav },
+        { to: '/itsm', label: 'ITSM', Icon: ServerIcon },
+        { to: '/integrations', label: 'Integrations', Icon: PlugIcon },
+        { to: '/audit-program', label: 'Audit Program', Icon: ClipboardIcon },
+      ],
+    },
   {
     label: 'Administration',
     items: [

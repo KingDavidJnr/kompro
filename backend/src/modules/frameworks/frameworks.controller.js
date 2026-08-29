@@ -145,4 +145,24 @@ async function readiness(req, res, next) {
   }
 }
 
-module.exports = { list, create, get, status, update, remove, readiness };
+/**
+ * Handles POST /api/frameworks/seed.
+ *
+ * Re-applies the bundled framework + requirement catalogs (ISO 27001, SOC 2,
+ * GDPR, ...) so the operator can populate the system from the UI without
+ * running the CLI seed. The actual upsert is delegated to the seed script.
+ * @param {object} req - Authenticated request; uses req.user.id for audit.
+ * @param {object} res - Express response ({ message, data: { frameworks } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function seed(req, res, next) {
+  try {
+    const frameworks = await frameworkService.seedCatalog(req.user.id);
+    res.json({ message: 'Framework catalog seeded', data: { frameworks } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, get, status, update, remove, readiness, seed };

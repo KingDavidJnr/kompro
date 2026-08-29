@@ -10,6 +10,8 @@ export default function Frameworks() {
   const [confirm, setConfirm] = useState(null);
   const [reqModal, setReqModal] = useState(null);
   const [error, setError] = useState(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedError, setSeedError] = useState(null);
 
   const frameworks = data?.frameworks || [];
 
@@ -54,13 +56,62 @@ export default function Frameworks() {
     }
   }
 
+  async function seedCatalog() {
+    setSeeding(true);
+    setSeedError(null);
+    try {
+      await api.post('/frameworks/seed');
+      refetch();
+    } catch (err) {
+      setSeedError(err.response?.data?.message || 'Seeding failed.');
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   async function openRequirements(f) {
-    setReqModal({ framework: f, requirements: null, loading: true, error: null });
+    setReqModal({ framework: f, requirements: null, loading: true, error: null, adding: false, form: { code: '', title: '', description: '' }, addError: null });
     try {
       const res = await api.get(`/requirements?frameworkId=${f.id}`);
       setReqModal((prev) => ({ ...prev, requirements: res.data.data.requirements, loading: false }));
     } catch (err) {
       setReqModal((prev) => ({ ...prev, error: err.response?.data?.message || 'Failed to load requirements.', loading: false }));
+    }
+  }
+
+  function reqUpdate(patch) {
+    setReqModal((prev) => (prev ? { ...prev, ...patch } : prev));
+  }
+
+  async function addRequirement(e) {
+    e.preventDefault();
+    const fm = reqModal.framework;
+    if (!reqModal.form.title.trim()) {
+      reqUpdate({ addError: 'Requirement title is required.' });
+      return;
+    }
+    reqUpdate({ addError: null });
+    try {
+      await api.post('/requirements', {
+        frameworkId: fm.id,
+        code: reqModal.form.code.trim() || undefined,
+        title: reqModal.form.title.trim(),
+        description: reqModal.form.description.trim() || undefined,
+      });
+      const res = await api.get(`/requirements?frameworkId=${fm.id}`);
+      reqUpdate({ requirements: res.data.data.requirements, adding: false, form: { code: '', title: '', description: '' } });
+    } catch (err) {
+      reqUpdate({ addError: err.response?.data?.message || 'Failed to add requirement.' });
+    }
+  }
+
+  async function deleteRequirement(r) {
+    try {
+      await api.delete(`/requirements/${r.id}`);
+      const res = await api.get(`/requirements?frameworkId=${reqModal.framework.id}`);
+      reqUpdate({ requirements: res.data.data.requirements });
+    } catch (err) {
+      reqUpdate({ error: err.response?.data?.message || 'Failed to delete requirement.' });
     }
   }
 
@@ -70,12 +121,20 @@ export default function Frameworks() {
         title="Frameworks"
         description="Compliance frameworks and their requirement catalogs."
         actions={
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> New framework
-          </Button>
+          <>
+            <Button variant="secondary" onClick={seedCatalog} disabled={seeding}>
+              {seeding ? <Spinner className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
+              {seeding ? 'Seeding…' : 'Seed catalog'}
+            </Button>
+            <Button onClick={openCreate}>
+              <PlusIcon className="h-4 w-4" /> New framework
+            </Button>
+          </>
         }
       />
-      {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+      {(error || seedError) && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error || seedError}</div>
+      )}
 
       <Card>
         {loading ? (
@@ -96,6 +155,11 @@ export default function Frameworks() {
               },
               { key: 'description', label: 'Description' },
               { key: 'version', label: 'Version', render: (f) => <span className="text-slate-500">{f.version}</span> },
+              {
+                key: 'requirements',
+                label: 'Requirements',
+                render: (f) => <Badge color="charcoal">{f._count?.requirements ?? 0}</Badge>,
+              },
               {
                 key: 'enabled',
                 label: 'Enabled',
@@ -183,6 +247,11 @@ export default function Frameworks() {
         open={!!reqModal}
         onClose={() => setReqModal(null)}
         title={reqModal ? `Requirements — ${reqModal.framework.name}` : 'Requirements'}
+        footer={
+          <Button variant="secondary" onClick={() => setReqModal(null)}>
+            Close
+          </Button>
+        }
       >
         {reqModal?.loading ? (
           <div className="flex justify-center py-10">
@@ -190,21 +259,63 @@ export default function Frameworks() {
           </div>
         ) : reqModal?.error ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{reqModal.error}</div>
-        ) : (reqModal?.requirements?.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-500">No requirements for this framework yet.</p>
-        ) : (
-          <div className="max-h-[60vh] space-y-3 overflow-y-auto">
-            {reqModal.requirements.map((r) => (
-              <div key={r.id} className="rounded-xl border border-slate-200 p-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-medium text-slate-900">{r.title}</p>
-                  <span className="flex-none font-mono text-xs text-slate-400">{r.code}</span>
+        ) : reqModal ? (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => reqUpdate({ adding: !reqModal.adding, addError: null })}>
+                <PlusIcon className="h-4 w-4" /> Add requirement
+              </Button>
+            </div>
+
+            {reqModal.adding && (
+              <form onSubmit={addRequirement} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Code">
+                    <input className="input" value={reqModal.form.code} onChange={(e) => reqUpdate({ form: { ...reqModal.form, code: e.target.value } })} placeholder="e.g. A.1" />
+                  </Field>
+                  <Field label="Title">
+                    <input required className="input" value={reqModal.form.title} onChange={(e) => reqUpdate({ form: { ...reqModal.form, title: e.target.value } })} placeholder="Requirement title" />
+                  </Field>
                 </div>
-                {r.description && <p className="mt-1 text-sm text-slate-500">{r.description}</p>}
+                <Field label="Description">
+                  <textarea className="input" rows={2} value={reqModal.form.description} onChange={(e) => reqUpdate({ form: { ...reqModal.form, description: e.target.value } })} />
+                </Field>
+                {reqModal.addError && <p className="text-sm text-rose-600">{reqModal.addError}</p>}
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" type="button" onClick={() => reqUpdate({ adding: false })}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Add</Button>
+                </div>
+              </form>
+            )}
+
+            {reqModal.requirements?.length ? (
+              <div className="max-h-[50vh] space-y-3 overflow-y-auto">
+                {reqModal.requirements.map((r) => (
+                  <div key={r.id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 p-3">
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <p className="font-medium text-slate-900">{r.title}</p>
+                        {r.code && <span className="flex-none font-mono text-xs text-slate-400">{r.code}</span>}
+                      </div>
+                      {r.description && <p className="mt-1 text-sm text-slate-500">{r.description}</p>}
+                    </div>
+                    <button
+                      onClick={() => deleteRequirement(r)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                      aria-label="Delete requirement"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              !reqModal.adding && <p className="text-sm text-slate-500">No requirements for this framework yet.</p>
+            )}
           </div>
-        )}
+        ) : null}
       </Modal>
     </div>
   );

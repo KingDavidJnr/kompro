@@ -46,4 +46,7 @@ router.patch(
 // Deletion requires frameworks:delete.
 router.delete('/:id', requireAuth, requirePermission('frameworks:delete'), controller.remove);
 
+// Re-applying the bundled catalog requires frameworks:create.
+router.post('/seed', requireAuth, requirePermission('frameworks:create'), controller.seed);
+
 module.exports = router;

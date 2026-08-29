@@ -15,6 +15,8 @@ const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
+  // Surface slow/hung backend responses as errors instead of spinning forever.
+  timeout: 45000,
 });
 
 api.interceptors.response.use(

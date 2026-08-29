@@ -10,6 +10,7 @@
 
 const prisma = require('../../lib/prisma');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
+const { seedFrameworkCatalog } = require('../../../prisma/seed');
 
 /**
  * Aggregates assessment results into a single status.
@@ -414,6 +415,20 @@ async function computeReadiness(frameworkId) {
   };
 }
 
+/**
+ * (Re)applies the bundled, authoritative framework + requirement catalogs.
+ *
+ * Delegates to the seed script's idempotent `seedFrameworkCatalog` (upserts
+ * each framework and backfills only its missing requirements) and attributes
+ * the change to the requesting user. Returns the resulting framework list.
+ * @param {string} actorId - User performing the seed (for the audit trail).
+ * @returns {Promise<Array>} The full framework list with requirement counts.
+ */
+async function seedCatalog(actorId) {
+  await seedFrameworkCatalog({ actorId });
+  return listFrameworks({});
+}
+
 module.exports = {
   listFrameworks,
   getFramework,
@@ -429,4 +444,5 @@ module.exports = {
   deleteMapping,
   deriveFrameworkStatus,
   computeReadiness,
+  seedCatalog,
 };
