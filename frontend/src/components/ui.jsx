@@ -14,10 +14,11 @@ const VARIANTS = {
   danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm',
 };
 
-export function Button({ variant = 'primary', className = '', children, ...props }) {
+export function Button({ variant = 'primary', size = 'md', className = '', children, ...props }) {
+  const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm' };
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizes[size] || sizes.md} ${VARIANTS[variant]} ${className}`}
       {...props}
     >
       {children}
