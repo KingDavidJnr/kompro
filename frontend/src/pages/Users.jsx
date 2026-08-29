@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, RoleSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, UsersIcon } from '../components/icons';
 
 export default function Users() {
@@ -88,7 +88,7 @@ export default function Users() {
                 label: '',
                 render: (u) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
@@ -127,13 +127,7 @@ export default function Users() {
             <input className="input" value={modal?.name || ''} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
           </Field>
           <Field label="Role">
-            <select className="input" value={modal?.roleId || ''} onChange={(e) => setModal({ ...modal, roleId: e.target.value })}>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+            <RoleSelect value={modal?.roleId || null} onChange={(id) => setModal({ ...modal, roleId: id })} />
           </Field>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" checked={!!modal?.active} onChange={(e) => setModal({ ...modal, active: e.target.checked })} />

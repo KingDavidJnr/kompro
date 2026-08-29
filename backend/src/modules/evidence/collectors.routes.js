@@ -32,8 +32,27 @@ router.post(
   controller.create
 );
 
+// Update a collector configuration.
+router.patch(
+  '/:id',
+  requireAuth,
+  requirePermission('evidence:collect'),
+  body('name').optional().isString(),
+  body('type').optional().isString(),
+  body('description').optional().isString(),
+  body('enabled').optional().isBoolean(),
+  body('cadenceMinutes').optional().isInt({ min: 1 }).withMessage('cadenceMinutes must be a positive integer'),
+  body('params').optional().isObject(),
+  body('secrets').optional().isObject(),
+  validate,
+  controller.update
+);
+
 // Trigger an immediate run of a collector.
 router.post('/:id/run', requireAuth, requirePermission('evidence:collect'), controller.runNow);
+
+// Remove a collector configuration.
+router.delete('/:id', requireAuth, requirePermission('evidence:collect'), controller.remove);
 
 // Retrieve a collector's run history (derived from the audit log).
 router.get('/:id/runs', requireAuth, requirePermission('evidence:collect'), controller.getRuns);

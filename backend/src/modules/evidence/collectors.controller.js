@@ -73,4 +73,36 @@ async function getRuns(req, res, next) {
   }
 }
 
-module.exports = { list, create, runNow, getRuns };
+/**
+ * Handles PATCH /:id (update a collector configuration).
+ * @param {object} req - Authenticated request with updatable fields in body.
+ * @param {object} res - Express response ({ message, data: { collector } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function update(req, res, next) {
+  try {
+    const collector = await collectorService.updateCollector(req.params.id, req.body);
+    res.json({ message: 'Collector updated', data: { collector } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Handles DELETE /:id (remove a collector configuration).
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: {} }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function remove(req, res, next) {
+  try {
+    await collectorService.deleteCollector(req.params.id);
+    res.json({ message: 'Collector deleted', data: {} });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, update, remove, runNow, getRuns };

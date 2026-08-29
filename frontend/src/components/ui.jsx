@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import api from '../lib/api';
 import { XIcon } from './icons';
 
 /**
@@ -8,7 +9,7 @@ import { XIcon } from './icons';
  */
 
 const VARIANTS = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm',
+  primary: 'bg-charcoal-800 text-white hover:bg-charcoal-900 shadow-sm',
   secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
   ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
   danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm',
@@ -18,7 +19,7 @@ export function Button({ variant = 'primary', size = 'md', className = '', child
   const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm' };
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizes[size] || sizes.md} ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${sizes[size] || sizes.md} ${VARIANTS[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -45,7 +46,7 @@ export function Card({ className = '', children }) {
 
 export function Spinner({ className = 'h-5 w-5' }) {
   return (
-    <svg className={`animate-spin text-brand-500 ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg className={`animate-spin text-charcoal-500 ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
       <path className="opacity-90" d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
@@ -66,7 +67,7 @@ export function PageHeader({ title, description, actions }) {
 
 export function EmptyState({ icon, title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/60 px-6 py-16 text-center">
       {icon && <div className="mb-3 text-slate-300">{icon}</div>}
       <p className="text-sm font-semibold text-slate-700">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p>}
@@ -90,7 +91,7 @@ export function Modal({ open, onClose, title, children, footer }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl">
+      <div className="relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h3 className="text-base font-semibold text-slate-900">{title}</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -133,7 +134,7 @@ export function Drawer({ open, onClose, title, children, footer }) {
 
 export function Table({ columns, rows, empty }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50">
           <tr>
@@ -168,5 +169,256 @@ export function Table({ columns, rows, empty }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * Searchable single-select (combobox) for large, remote lists.
+ *
+ * Props:
+ *  - value: currently selected id (or null)
+ *  - onChange(id): called with the chosen id or null when cleared
+ *  - loadOptions(query): Promise resolving to [{ value, label }] for the query
+ *  - loadValue(id): optional; resolves a single id to { value, label } so an
+ *    existing selection (e.g. when editing) can be labelled without loading the
+ *    whole list
+ *  - placeholder / searchPlaceholder
+ *  - allowClear: show a clear (×) button to unset the value
+ *  - getLabel(option): how to render an option's label
+ */
+export function SearchableSelect({
+  value,
+  onChange,
+  loadOptions,
+  loadValue,
+  placeholder = 'Select…',
+  searchPlaceholder = 'Search…',
+  allowClear = true,
+  disabled = false,
+  getLabel = (o) => o.label,
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [highlight, setHighlight] = useState(0);
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+  const debounceRef = useRef(null);
+  const loadOptionsRef = useRef(loadOptions);
+  const loadValueRef = useRef(loadValue);
+  loadOptionsRef.current = loadOptions;
+  loadValueRef.current = loadValue;
+
+  // Resolve an existing value into a displayable label.
+  useEffect(() => {
+    if (value == null || value === '') {
+      setSelected(null);
+      return;
+    }
+    if (selected && selected.value === value) return;
+    if (!loadValueRef.current) return;
+    let active = true;
+    loadValueRef.current(value).then((o) => {
+      if (active && o) setSelected(o);
+      else if (active) setSelected({ value, label: String(value) });
+    }).catch(() => {
+      if (active) setSelected({ value, label: String(value) });
+    });
+    return () => { active = false; };
+  }, [value, selected]);
+
+  // Fetch options (debounced) whenever the popover is open or the query changes.
+  useEffect(() => {
+    if (!open) return undefined;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setLoading(true);
+      Promise.resolve(loadOptionsRef.current(query))
+        .then((opts) => setOptions(Array.isArray(opts) ? opts : []))
+        .catch(() => setOptions([]))
+        .finally(() => setLoading(false));
+    }, 200);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [open, query]);
+
+  // Close on outside click.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
+
+  function choose(opt) {
+    setSelected(opt);
+    onChange(opt ? opt.value : null);
+    setOpen(false);
+    setQuery('');
+  }
+
+  function clear(e) {
+    e.stopPropagation();
+    setSelected(null);
+    onChange(null);
+  }
+
+  const display = selected ? getLabel(selected) : placeholder;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm shadow-sm focus:border-charcoal-400 focus:outline-none focus:ring-charcoal-300 disabled:opacity-60"
+      >
+        <span className={selected ? 'truncate text-slate-800' : 'text-slate-400'}>{display}</span>
+        <span className="flex flex-none items-center gap-1">
+          {allowClear && selected && (
+            <span
+              role="button"
+              tabIndex={-1}
+              onClick={clear}
+              className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Clear selection"
+            >
+              <XIcon className="h-4 w-4" />
+            </span>
+          )}
+          <svg className="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+          <div className="border-b border-slate-100 p-2">
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setHighlight(0); }}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight((h) => Math.min(options.length - 1, h + 1)); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight((h) => Math.max(0, h - 1)); }
+                else if (e.key === 'Enter') { e.preventDefault(); if (options[highlight]) choose(options[highlight]); }
+                else if (e.key === 'Escape') { setOpen(false); }
+              }}
+              placeholder={searchPlaceholder}
+              className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-charcoal-400 focus:outline-none"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto py-1">
+            {loading && <div className="px-3 py-2 text-sm text-slate-400">Searching…</div>}
+            {!loading && options.length === 0 && <div className="px-3 py-2 text-sm text-slate-400">No matches.</div>}
+            {!loading && options.map((o, i) => (
+              <button
+                type="button"
+                key={o.value}
+                onMouseEnter={() => setHighlight(i)}
+                onClick={() => choose(o)}
+                className={`block w-full px-3 py-2 text-left text-sm ${i === highlight ? 'bg-slate-100' : 'hover:bg-slate-50'} ${o.value === (selected && selected.value) ? 'font-medium text-charcoal-800' : 'text-slate-700'}`}
+              >
+                {getLabel(o)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Searchable picker for users. Stores the selected user's display name into
+ * the (free-text) `owner`-style field, so no schema change is required.
+ */
+export function UserSelect({ value, onChange, placeholder = 'Unassigned', allowClear = true }) {
+  const loadOptions = async (q) => {
+    const res = await api.get(`/users?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+    return (res.data.data.users || []).map((u) => ({
+      value: u.name,
+      label: u.name ? `${u.name}${u.email ? ` · ${u.email}` : ''}` : u.email,
+    }));
+  };
+  const loadValue = async (name) => {
+    const res = await api.get(`/users?search=${encodeURIComponent(name)}&pageSize=50`);
+    const u = (res.data.data.users || []).find((x) => x.name === name);
+    return u ? { value: u.name, label: `${u.name} · ${u.email}` } : { value: name, label: name };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search users…"
+      allowClear={allowClear}
+    />
+  );
+}
+
+/**
+ * Searchable picker for frameworks. The framework list is small, so all
+ * frameworks are fetched once and filtered client-side as the user types.
+ */
+export function FrameworkSelect({ value, onChange, placeholder = 'Select framework', allowClear = false }) {
+  const loadOptions = async (q) => {
+    const res = await api.get('/frameworks');
+    const list = res.data.data.frameworks || [];
+    const ql = q ? q.toLowerCase() : '';
+    return list
+      .filter((f) => !ql || f.name.toLowerCase().includes(ql) || (f.description || '').toLowerCase().includes(ql))
+      .map((f) => ({ value: f.id, label: f.name }));
+  };
+  const loadValue = async (id) => {
+    const res = await api.get('/frameworks');
+    const f = (res.data.data.frameworks || []).find((x) => x.id === id);
+    return f ? { value: f.id, label: f.name } : { value: id, label: id };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search frameworks…"
+      allowClear={allowClear}
+    />
+  );
+}
+
+/**
+ * Searchable picker for roles (used on the user edit form).
+ */
+export function RoleSelect({ value, onChange, placeholder = 'Select role' }) {
+  const loadOptions = async (q) => {
+    const res = await api.get('/roles');
+    const list = res.data.data.roles || [];
+    const ql = q ? q.toLowerCase() : '';
+    return list
+      .filter((r) => !ql || r.name.toLowerCase().includes(ql))
+      .map((r) => ({ value: r.id, label: r.name }));
+  };
+  const loadValue = async (id) => {
+    const res = await api.get('/roles');
+    const r = (res.data.data.roles || []).find((x) => x.id === id);
+    return r ? { value: r.id, label: r.name } : { value: id, label: id };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search roles…"
+      allowClear={false}
+    />
   );
 }

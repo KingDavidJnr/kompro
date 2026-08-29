@@ -72,7 +72,7 @@ export default function Controls() {
                 label: 'Name',
                 render: (c) => (
                   <span className="flex items-center gap-2 font-medium text-slate-900">
-                    <CubeIcon className="h-4 w-4 text-brand-500" /> {c.title}
+                    <CubeIcon className="h-4 w-4 text-charcoal-500" /> {c.title}
                   </span>
                 ),
               },
@@ -83,7 +83,7 @@ export default function Controls() {
                 label: '',
                 render: (c) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(c)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">

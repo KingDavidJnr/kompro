@@ -22,6 +22,7 @@ async function list(req, res, next) {
     const result = await userService.listUsers({
       page: req.query.page,
       pageSize: req.query.pageSize,
+      search: req.query.search,
     });
     res.json({ message: 'Users retrieved', data: result });
   } catch (err) {

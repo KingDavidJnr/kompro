@@ -161,6 +161,24 @@ export const SparkIcon = (p) => (
   </Svg>
 );
 
+export const PlugIcon = (p) => (
+  <Svg {...p}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v5m6-5v5M7 8h10v3a5 5 0 01-10 0V8zM12 16v5" />
+  </Svg>
+);
+
+export const PlayIcon = (p) => (
+  <Svg {...p}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7 5l12 7-12 7V5z" />
+  </Svg>
+);
+
+export const ClockIcon = (p) => (
+  <Svg {...p}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z" />
+  </Svg>
+);
+
 export const ChevronDownIcon = (p) => (
   <Svg {...p}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />

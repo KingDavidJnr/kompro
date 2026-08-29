@@ -54,7 +54,7 @@ function PlanDrawer({ plan, onClose, onChanged }) {
                   loading={false}
                   items={nc.actions}
                   onAdd={(b) => addCa(nc.id, b)}
-                  fields={[{ key: 'description', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['open', 'in_progress', 'closed'] }, { key: 'owner', label: 'Owner' }]}
+                  fields={[{ key: 'description', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['open', 'in_progress', 'closed'] }, { key: 'owner', label: 'Owner', type: 'user' }]}
                   render={(a) => (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600">{a.description}</span>
@@ -125,7 +125,7 @@ export default function AuditProgram() {
         ) : (
           <Table
             columns={[
-              { key: 'title', label: 'Title', render: (p) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-brand-500" /> {p.title}</span> },
+              { key: 'title', label: 'Title', render: (p) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {p.title}</span> },
               { key: 'scope', label: 'Scope', render: (p) => <span className="text-slate-500">{p.scope || '—'}</span> },
               { key: 'status', label: 'Status', render: (p) => <Badge color={statusColor(p.status)}>{p.status}</Badge> },
               {
@@ -133,8 +133,8 @@ export default function AuditProgram() {
                 label: '',
                 render: (p) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => setSelected(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Details"><EyeIcon className="h-4 w-4" /></button>
-                    <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"><PencilIcon className="h-4 w-4" /></button>
+                    <button onClick={() => setSelected(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700" title="Details"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700"><PencilIcon className="h-4 w-4" /></button>
                     <button onClick={() => setConfirm(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                   </div>
                 ),

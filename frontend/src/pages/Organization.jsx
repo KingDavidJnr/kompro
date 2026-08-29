@@ -56,7 +56,7 @@ export default function Organization() {
       <PageHeader
         title="Organization"
         description="The single tenant this Kompro instance serves."
-        actions={<UsersIcon className="h-6 w-6 text-brand-400" />}
+        actions={<UsersIcon className="h-6 w-6 text-charcoal-400" />}
       />
       <Card className="p-6">
         <form onSubmit={save} className="space-y-5">

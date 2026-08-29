@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../components/icons';
 
@@ -37,7 +37,7 @@ function IncidentDrawer({ incident, onClose, onChanged }) {
               loading={false}
               items={inc.actions}
               onAdd={addAction}
-              fields={[{ key: 'action', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['todo', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner' }]}
+              fields={[{ key: 'action', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['todo', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner', type: 'user' }]}
               render={(a) => (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-700">{a.action}</span>
@@ -106,7 +106,7 @@ export default function Incidents() {
         ) : (
           <Table
             columns={[
-              { key: 'title', label: 'Title', render: (i) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-brand-500" /> {i.title}</span> },
+              { key: 'title', label: 'Title', render: (i) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {i.title}</span> },
               { key: 'severity', label: 'Severity', render: (i) => <Badge color={i.severity === 'high' ? 'danger' : i.severity === 'medium' ? 'warning' : 'neutral'}>{i.severity}</Badge> },
               { key: 'status', label: 'Status', render: (i) => <Badge color={statusColor(i.status)}>{i.status}</Badge> },
               {
@@ -114,8 +114,8 @@ export default function Incidents() {
                 label: '',
                 render: (i) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => setSelected(i)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Details"><EyeIcon className="h-4 w-4" /></button>
-                    <button onClick={() => openEdit(i)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"><PencilIcon className="h-4 w-4" /></button>
+                    <button onClick={() => setSelected(i)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700" title="Details"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(i)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700"><PencilIcon className="h-4 w-4" /></button>
                     <button onClick={() => setConfirm(i)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                   </div>
                 ),
@@ -145,7 +145,7 @@ export default function Incidents() {
               {['open', 'contained', 'resolved'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

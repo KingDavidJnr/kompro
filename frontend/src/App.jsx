@@ -9,6 +9,7 @@ import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Policies from './pages/Policies';
 import Frameworks from './pages/Frameworks';
+import FrameworkDetail from './pages/FrameworkDetail';
 import Controls from './pages/Controls';
 import Evidence from './pages/Evidence';
 import Assessments from './pages/Assessments';
@@ -16,6 +17,8 @@ import Risk from './pages/Risk';
 import Incidents from './pages/Incidents';
 import ITSM from './pages/ITSM';
 import AuditProgram from './pages/AuditProgram';
+import AuditLogs from './pages/AuditLogs';
+import Integrations from './pages/Integrations';
 import { Spinner } from './components/ui';
 
 function RequireAuth({ children }) {
@@ -38,7 +41,7 @@ function RequireAuth({ children }) {
 function NotFound() {
   return (
     <div className="mx-auto max-w-md py-24 text-center">
-      <p className="text-sm font-semibold text-brand-600">404</p>
+      <p className="text-sm font-semibold text-charcoal-800">404</p>
       <h1 className="mt-2 text-2xl font-bold text-slate-900">Page not found</h1>
       <p className="mt-2 text-sm text-slate-500">The page you are looking for doesn’t exist yet.</p>
     </div>
@@ -68,13 +71,16 @@ export default function App() {
         <Route path="roles" element={<Roles />} />
         <Route path="policies" element={<Policies />} />
         <Route path="frameworks" element={<Frameworks />} />
+        <Route path="frameworks/:id" element={<FrameworkDetail />} />
         <Route path="controls" element={<Controls />} />
         <Route path="evidence" element={<Evidence />} />
         <Route path="assessments" element={<Assessments />} />
         <Route path="risk" element={<Risk />} />
         <Route path="incidents" element={<Incidents />} />
         <Route path="itsm" element={<ITSM />} />
+        <Route path="integrations" element={<Integrations />} />
         <Route path="audit-program" element={<AuditProgram />} />
+        <Route path="audit" element={<AuditLogs />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

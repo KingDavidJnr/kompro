@@ -25,6 +25,8 @@ model User {
   active       Boolean   @default(true)
   roleId       String?
   role         Role?     @relation(fields: [roleId], references: [id])
+  provider     String? // 'google' | 'microsoft' for SSO-provisioned accounts
+  providerId   String? // stable subject id from the identity provider
   sessions     Session[]
   invites      Invite[]
   evidenceUploads Evidence[]
@@ -35,6 +37,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   @@index([roleId])
+  @@index([provider, providerId])
 }
 
 model Invite {

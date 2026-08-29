@@ -1,9 +1,63 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon } from '../components/icons';
+
+function scoreOf(r) {
+  return r.score != null ? r.score : (Number(r.likelihood) || 0) * (Number(r.impact) || 0);
+}
+
+function riskLevel(score) {
+  if (score >= 15) return { label: 'Critical', color: 'danger' };
+  if (score >= 9) return { label: 'High', color: 'warning' };
+  if (score >= 4) return { label: 'Medium', color: 'info' };
+  return { label: 'Low', color: 'success' };
+}
+
+const LEVEL_BG = { Critical: 'bg-rose-500', High: 'bg-amber-500', Medium: 'bg-sky-500', Low: 'bg-emerald-500' };
+
+function SummaryStat({ label, value, tone = 'text-slate-900' }) {
+  return (
+    <Card className="p-4">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
+    </Card>
+  );
+}
+
+function Heatmap({ risks }) {
+  return (
+    <div className="inline-grid grid-cols-6 gap-1">
+      <div />
+      {[1, 2, 3, 4, 5].map((l) => (
+        <div key={l} className="flex items-center justify-center text-xs font-medium text-slate-400">{l}</div>
+      ))}
+      {[5, 4, 3, 2, 1].map((imp) => (
+        <React.Fragment key={imp}>
+          <div className="flex items-center justify-center text-xs font-medium text-slate-400">{imp}</div>
+          {[1, 2, 3, 4, 5].map((lk) => {
+            const s = imp * lk;
+            const lvl = riskLevel(s);
+            const here = risks.filter((r) => Number(r.likelihood) === lk && Number(r.impact) === imp);
+            return (
+              <div
+                key={lk}
+                title={`Impact ${imp} × Likelihood ${lk} — ${lvl.label} (${here.length} risk${here.length === 1 ? '' : 's'})`}
+                className={`flex h-11 items-center justify-center rounded-md text-xs font-semibold text-white ${LEVEL_BG[lvl.label]} ${here.length ? 'ring-2 ring-white' : 'opacity-30'}`}
+              >
+                {here.length || ''}
+              </div>
+            );
+          })}
+        </React.Fragment>
+      ))}
+      <div />
+      <div className="col-span-5 mt-1 text-[11px] text-slate-400">Likelihood →</div>
+    </div>
+  );
+}
 
 function RiskDrawer({ risk, onClose, onChanged }) {
   const detail = useGet(`/risks/${risk.id}`);
@@ -27,13 +81,13 @@ function RiskDrawer({ risk, onClose, onChanged }) {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Badge color={statusColor(r.status)}>{r.status}</Badge>
-            <Badge color="neutral">score {r.score}</Badge>
+            <Badge color={riskLevel(scoreOf(r)).color}>{riskLevel(scoreOf(r)).label} · {scoreOf(r)}</Badge>
             {r.owner && <Badge color="brand">{r.owner}</Badge>}
           </div>
 
           <Section title="Scenarios" path={`/risks/${risk.id}/scenarios`} add={add} fields={[{ key: 'title', label: 'Title' }]} items={r.scenarios} render={(s) => <span className="text-sm text-slate-700">{s.title}</span>} />
           <Section title="Key Risk Indicators" path={`/risks/${risk.id}/kris`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'threshold', label: 'Threshold', type: 'number' }, { key: 'currentValue', label: 'Current value', type: 'number' }]} items={r.kris} render={(k) => <span className="text-sm text-slate-700">{k.title} <Badge color={statusColor(k.status)}>{k.status}</Badge></span>} />
-          <Section title="Treatments" path={`/risks/${risk.id}/treatments`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'status', label: 'Status', type: 'select', options: ['planned', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner' }]} items={r.treatments} render={(t) => <span className="text-sm text-slate-700">{t.title} <Badge color={statusColor(t.status)}>{t.status}</Badge></span>} />
+          <Section title="Treatments" path={`/risks/${risk.id}/treatments`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'status', label: 'Status', type: 'select', options: ['planned', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner', type: 'user' }]} items={r.treatments} render={(t) => <span className="text-sm text-slate-700">{t.title} <Badge color={statusColor(t.status)}>{t.status}</Badge></span>} />
         </div>
       )}
     </Drawer>
@@ -57,6 +111,15 @@ export default function Risk() {
   const [error, setError] = useState(null);
 
   const risks = data?.risks || [];
+
+  const levelCounts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+  let scoreSum = 0;
+  risks.forEach((r) => {
+    const s = scoreOf(r);
+    levelCounts[riskLevel(s).label] += 1;
+    scoreSum += s;
+  });
+  const avg = risks.length ? Math.round(scoreSum / risks.length) : 0;
 
   function openCreate() {
     setError(null);
@@ -108,23 +171,35 @@ export default function Risk() {
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <SummaryStat label="Total risks" value={risks.length} />
+        <SummaryStat label="Critical / High" value={levelCounts.Critical + levelCounts.High} tone="text-rose-600" />
+        <SummaryStat label="Average score" value={avg} />
+        <SummaryStat label="Open" value={risks.filter((r) => r.status !== 'closed').length} />
+      </div>
+
+      <Card className="mb-6 p-5">
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Risk heatmap (likelihood × impact)</h2>
+        <Heatmap risks={risks} />
+      </Card>
+
       <Card>
         {loading ? (
           <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
         ) : (
           <Table
             columns={[
-              { key: 'title', label: 'Title', render: (r) => <span className="flex items-center gap-2 font-medium text-slate-900"><FlagIcon className="h-4 w-4 text-brand-500" /> {r.title}</span> },
+              { key: 'title', label: 'Title', render: (r) => <span className="flex items-center gap-2 font-medium text-slate-900"><FlagIcon className="h-4 w-4 text-charcoal-500" /> {r.title}</span> },
               { key: 'category', label: 'Category', render: (r) => <span className="text-slate-500">{r.category || '—'}</span> },
-              { key: 'score', label: 'Score', render: (r) => <Badge color={r.score > 12 ? 'danger' : r.score > 6 ? 'warning' : 'success'}>{r.score}</Badge> },
+              { key: 'score', label: 'Score', render: (r) => { const s = scoreOf(r); const l = riskLevel(s); return (<span className="inline-flex items-center gap-2"><Badge color={l.color}>{l.label}</Badge><span className="text-slate-500">{s}</span></span>); } },
               { key: 'status', label: 'Status', render: (r) => <Badge color={statusColor(r.status)}>{r.status}</Badge> },
               {
                 key: 'actions',
                 label: '',
                 render: (r) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => setSelected(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Details"><EyeIcon className="h-4 w-4" /></button>
-                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"><PencilIcon className="h-4 w-4" /></button>
+                    <button onClick={() => setSelected(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700" title="Details"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700"><PencilIcon className="h-4 w-4" /></button>
                     <button onClick={() => setConfirm(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                   </div>
                 ),
@@ -147,13 +222,14 @@ export default function Risk() {
             <Field label="Likelihood (1-5)"><input type="number" min="1" max="5" className="input" value={modal?.likelihood ?? 3} onChange={(e) => setModal({ ...modal, likelihood: e.target.value })} /></Field>
             <Field label="Impact (1-5)"><input type="number" min="1" max="5" className="input" value={modal?.impact ?? 3} onChange={(e) => setModal({ ...modal, impact: e.target.value })} /></Field>
           </div>
+          <p className="text-xs text-slate-500">Computed risk score: <span className="font-semibold text-slate-700">{(Number(modal?.likelihood) || 0) * (Number(modal?.impact) || 0)}</span> ({riskLevel((Number(modal?.likelihood) || 0) * (Number(modal?.impact) || 0)).label})</p>
           <Field label="Category"><input className="input" value={modal?.category || ''} onChange={(e) => setModal({ ...modal, category: e.target.value })} /></Field>
           <Field label="Status">
             <select className="input" value={modal?.status || 'open'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {['open', 'mitigated', 'closed'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

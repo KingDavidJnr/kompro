@@ -63,23 +63,16 @@ async function isNewLoginIp(userId, ip) {
 }
 
 /**
- * Authenticates a user and creates a session.
- * @param {object} input - { email, password, ip }.
- * @param {string} [input.ip] - Request IP, used for new-device detection.
- * @returns {object} { token, user } where user is sanitized.
- * @throws {UnauthorizedError} On invalid credentials or inactive user.
+ * Persists a session for a resolved user and mints the session JWT.
+ *
+ * Shared by password login and SSO so every sign-in path produces the same
+ * revocable session cookie. Also records the login audit entry and, when SMTP
+ * is configured, alerts on a first sign-in from a new IP.
+ * @param {object} user - Resolved user record (must be active).
+ * @param {string} [ip] - Request IP, used for new-device detection.
+ * @returns {Promise<object>} { token, user } where user is sanitized.
  */
-async function login({ email, password, ip }) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.active) {
-    throw new UnauthorizedError('Invalid credentials');
-  }
-
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) {
-    throw new UnauthorizedError('Invalid credentials');
-  }
-
+async function createSessionForUser(user, ip) {
   // Persist a session so it can be revoked independently of the token.
   const expiresAt = new Date(Date.now() + config.sessionTtlMs);
   const session = await prisma.session.create({
@@ -115,6 +108,85 @@ async function login({ email, password, ip }) {
   }
 
   return { token, user: publicUser(user) };
+}
+
+/**
+ * Authenticates a user and creates a session.
+ * @param {object} input - { email, password, ip }.
+ * @param {string} [input.ip] - Request IP, used for new-device detection.
+ * @returns {object} { token, user } where user is sanitized.
+ * @throws {UnauthorizedError} On invalid credentials or inactive user.
+ */
+async function login({ email, password, ip }) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.active) {
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok) {
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  return createSessionForUser(user, ip);
+}
+
+/**
+ * Resolves (or provisions) a user from a verified identity-provider profile
+ * and creates a session. Matching prefers the provider subject id, then falls
+ * back to the verified email so an SSO login can attach to an existing
+ * password account. When no match exists a new user is created with the member
+ * role (or admin for the first user), unless auto-provisioning is disabled.
+ * @param {object} input - { email, name, provider, providerId, ip }.
+ * @returns {Promise<object>} { token, user } where user is sanitized.
+ * @throws {UnauthorizedError} When SSO provisioning is disabled and the
+ *   identity does not match an existing user.
+ */
+async function ssoLogin({ email, name, provider, providerId, ip }) {
+  if (!email) {
+    throw new UnauthorizedError('Identity provider did not return an email');
+  }
+
+  let user = await prisma.user.findFirst({
+    where: { OR: [{ provider, providerId }, { email }] },
+  });
+
+  if (!user) {
+    if (!config.sso.autoProvision) {
+      throw new UnauthorizedError('No account matches this sign-in. Contact an administrator.');
+    }
+
+    const count = await prisma.user.count();
+    const roleName = count === 0 ? 'admin' : 'member';
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) {
+      throw new Error(`Default role "${roleName}" not found. Run the seed script.`);
+    }
+
+    user = await prisma.user.create({
+      // passwordHash is required; SSO accounts get a random hash so a password
+      // login attempt can never succeed for them.
+      data: {
+        email,
+        name,
+        provider,
+        providerId,
+        roleId: role.id,
+        active: true,
+        passwordHash: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10),
+      },
+    });
+  } else if (!user.active) {
+    throw new UnauthorizedError('Account is inactive');
+  } else if (!user.providerId) {
+    // Link the identity to the existing (password) account for future logins.
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { provider, providerId, name: user.name || name },
+    });
+  }
+
+  return createSessionForUser(user, ip);
 }
 
 /**
@@ -254,4 +326,4 @@ async function resetPassword({ token, password }) {
   return publicUser(record.user);
 }
 
-module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, isNewLoginIp };
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, isNewLoginIp, ssoLogin };

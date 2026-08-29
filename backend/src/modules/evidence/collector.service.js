@@ -150,6 +150,61 @@ async function ingestEvidence(collectorConfig) {
 }
 
 /**
+ * Updates a collector configuration. Secrets are only re-encrypted when a new
+ * secrets object is supplied; otherwise the stored (encrypted) value is kept.
+ * @param {string} id - CollectorConfig id.
+ * @param {object} input - Updatable fields ({ name, description, type, enabled,
+ *   cadenceMinutes, params, secrets? }).
+ * @returns {Promise<object>} The updated CollectorConfig.
+ * @throws {NotFoundError} When the collector does not exist.
+ * @throws {ValidationError} When the collector type is unknown.
+ */
+async function updateCollector(id, { name, description, type, enabled, cadenceMinutes, params, secrets }) {
+  const existing = await prisma.collectorConfig.findUnique({ where: { id } });
+  if (!existing) {
+    throw new NotFoundError('Collector not found');
+  }
+  if (type && type !== existing.type) {
+    getCollector(type); // validate the new type is registered
+  }
+
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (description !== undefined) data.description = description || null;
+  if (type !== undefined) data.type = type;
+  if (enabled !== undefined) {
+    data.enabled = enabled === true;
+    // (Re)arm the schedule when enabling a previously disabled collector.
+    if (data.enabled) {
+      const cadence = cadenceMinutes || existing.cadenceMinutes || 360;
+      data.nextRunAt = new Date(Date.now() + cadence * 60000);
+    } else {
+      data.nextRunAt = null;
+    }
+  }
+  if (cadenceMinutes !== undefined) data.cadenceMinutes = cadenceMinutes;
+  if (params !== undefined) data.params = params || undefined;
+  // Only overwrite secrets when the caller explicitly provided a (non-undefined) object.
+  if (secrets !== undefined) data.secrets = secrets ? encryptJSON(secrets) : null;
+
+  return prisma.collectorConfig.update({ where: { id }, data });
+}
+
+/**
+ * Deletes a collector configuration.
+ * @param {string} id - CollectorConfig id.
+ * @returns {Promise<void>}
+ * @throws {NotFoundError} When the collector does not exist.
+ */
+async function deleteCollector(id) {
+  const existing = await prisma.collectorConfig.findUnique({ where: { id } });
+  if (!existing) {
+    throw new NotFoundError('Collector not found');
+  }
+  await prisma.collectorConfig.delete({ where: { id } });
+}
+
+/**
  * Triggers an immediate run of a collector by id.
  * @param {string} id - CollectorConfig id.
  * @returns {Promise<object>} The ingestion result.
@@ -209,6 +264,8 @@ async function getCollectorRuns(id, { page = 1, pageSize = 25 } = {}) {
 module.exports = {
   listCollectors,
   createCollector,
+  updateCollector,
+  deleteCollector,
   ingestEvidence,
   runCollectorNow,
   runDueCollectors,

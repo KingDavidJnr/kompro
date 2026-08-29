@@ -76,4 +76,12 @@ router.post(
 router.post('/logout', requireAuth, controller.logout);
 router.get('/me', requireAuth, controller.me);
 
+// OAuth 2.0 (Authorization Code + PKCE) for Google and Microsoft. The browser
+// is redirected to the provider and back to the callback, which sets the same
+// session cookie used by password login.
+router.get('/google', controller.ssoRedirect('google'));
+router.get('/google/callback', controller.ssoCallback('google'));
+router.get('/microsoft', controller.ssoRedirect('microsoft'));
+router.get('/microsoft/callback', controller.ssoCallback('microsoft'));
+
 module.exports = router;

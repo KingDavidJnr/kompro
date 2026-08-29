@@ -25,6 +25,8 @@ async function list(req, res, next) {
       entityId: req.query.entityId,
       actorId: req.query.actorId,
       action: req.query.action,
+      from: req.query.from,
+      to: req.query.to,
     });
     res.json({ message: 'Audit log retrieved', data: result });
   } catch (err) {

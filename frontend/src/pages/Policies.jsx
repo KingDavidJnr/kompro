@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '../components/icons';
 
 const STATUSES = ['draft', 'active', 'retired'];
@@ -48,7 +48,7 @@ function PolicyDrawer({ policy, onClose, onChanged }) {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-              tab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800'
+              tab === t.id ? 'bg-charcoal-100 text-charcoal-900' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             {t.label}
@@ -272,10 +272,10 @@ export default function Policies() {
                 label: '',
                 render: (p) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => setSelected(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Details">
+                    <button onClick={() => setSelected(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700" title="Details">
                       <EyeIcon className="h-4 w-4" />
                     </button>
-                    <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(p)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
@@ -326,7 +326,7 @@ export default function Policies() {
             </select>
           </Field>
           <Field label="Owner">
-            <input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} />
+            <UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>

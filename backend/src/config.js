@@ -61,7 +61,8 @@ module.exports = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
     secure: process.env.SMTP_SECURE === 'true',
-    from: process.env.MAIL_FROM || 'no-reply@kompro.local',
+    from: process.env.MAIL_FROM,
+    fromName: process.env.MAIL_FROM_NAME || 'Kompro',
   },
 
   // Where uploaded evidence files are stored on local disk when S3 is not used.
@@ -75,6 +76,30 @@ module.exports = {
 
   // How many days audit entries are retained before purge (audit:purge).
   auditRetentionDays: Number(process.env.AUDIT_RETENTION_DAYS || 365),
+
+  // Social/enterprise SSO (OAuth 2.0 Authorization Code + PKCE). Each provider
+  // is only "enabled" when its client id and secret are present. Matching is by
+  // verified email, so an SSO login for an existing password account simply
+  // links that account; otherwise a new user is provisioned with the member
+  // role (or admin, if it is the very first user in the system).
+  sso: {
+    autoProvision: process.env.SSO_AUTO_PROVISION !== 'false',
+    // Optional override for the redirect/callback base URL. When unset the
+    // callback URI is derived from the incoming request host so the whole
+    // handshake stays on the same origin the browser already uses.
+    redirectBase: process.env.SSO_REDIRECT_BASE || '',
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      scope: process.env.GOOGLE_SCOPE || 'openid email profile',
+    },
+    microsoft: {
+      clientId: process.env.MICROSOFT_CLIENT_ID,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+      tenant: process.env.MICROSOFT_TENANT || 'common',
+      scope: process.env.MICROSOFT_SCOPE || 'openid email profile',
+    },
+  },
 
   // S3-compatible storage. When bucket and region are set, evidence files are
   // stored in S3; otherwise the local uploadDir is used. All keys are optional.

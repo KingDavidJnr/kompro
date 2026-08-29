@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, UserSelect } from '../components/ui';
 import { PlusIcon, TrashIcon, ServerIcon, CogIcon, ChartIcon } from '../components/icons';
 
 const TABS = [
@@ -23,7 +23,7 @@ export default function ITSM() {
 
   function openCreate() {
     setError(null);
-    if (tab === 'assets') setModal({ type: 'assets', name: '', type: '', description: '', owner: '', location: '', status: 'active' });
+    if (tab === 'assets') setModal({ type: 'assets', name: '', atype: '', description: '', owner: '', location: '', status: 'active' });
     if (tab === 'changes') setModal({ type: 'changes', title: '', description: '', status: 'requested', risk: '', assetId: '' });
     if (tab === 'capacity') setModal({ type: 'capacity', resource: '', unit: '', currentCapacity: '', plannedCapacity: '', notes: '' });
   }
@@ -75,7 +75,7 @@ export default function ITSM() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-              tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+              tab === t.id ? 'border-charcoal-800 text-charcoal-900' : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <t.Icon className="h-4 w-4" /> {t.label}
@@ -131,7 +131,7 @@ export default function ITSM() {
               <Field label="Name"><input required className="input" value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} /></Field>
               <Field label="Type"><input className="input" value={modal.atype || ''} onChange={(e) => setModal({ ...modal, atype: e.target.value })} /></Field>
               <Field label="Description"><input className="input" value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
-              <Field label="Owner"><input className="input" value={modal.owner} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+              <Field label="Owner"><UserSelect value={modal.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
               <Field label="Location"><input className="input" value={modal.location} onChange={(e) => setModal({ ...modal, location: e.target.value })} /></Field>
               <Field label="Status">
                 <select className="input" value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
