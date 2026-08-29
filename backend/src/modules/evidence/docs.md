@@ -202,3 +202,81 @@ Response 404:
 ```json
 { "message": "Evidence not found" }
 ```
+
+## Automated evidence collectors
+
+Kompro can collect evidence automatically instead of waiting for a manual
+upload. A collector is a configuration (`CollectorConfig`) that names a
+connector `type`, a `cadenceMinutes` recurrence, and `params` (plus encrypted
+`secrets` for connectors that need credentials). An in-process runner started
+with the server evaluates enabled collectors whose `nextRunAt` is due and
+ingests their output.
+
+- All collector routes require `evidence:collect` (admin).
+- Each run is recorded in the audit trail (`action: "collect"`,
+  `entity: "evidence"`) with the number of items added and its status, so
+  collection is fully attributable. On failure the error is recorded and the
+  admins are emailed via the existing notification service.
+- Collected evidence is written with `source: "automated_check"` and
+  `collectedAt` set to the run time. Connectors map their output to a `controlId`
+  / `policyId` when identifiers are present.
+
+### Connector types
+
+- **sql** - Runs a read-only query against Kompro's own PostgreSQL database
+  (the existing Prisma connection, so it needs no external credentials) and
+  turns each row into an evidence item. `params`:
+  - `sql` (required) - the query text.
+  - `titleColumn` (default `title`) - column used for the evidence title.
+  - `descriptionColumn` (default `description`).
+  - `controlIdColumn` / `policyIdColumn` - column(s) whose values are a Control
+    / Policy id to link (optional).
+  - `defaultTitle` - fallback title when the title column is null.
+  - `includeRowJson` - store the full row as the evidence content.
+
+### GET /api/evidence/collectors
+
+Lists all collector configurations with their last-run status. Requires
+evidence:collect.
+
+Response 200:
+```json
+{
+  "message": "Collectors retrieved",
+  "data": {
+    "collectors": [
+      { "id": "clr...", "name": "Stale controls", "type": "sql", "enabled": true, "cadenceMinutes": 360, "lastRunAt": "2026-08-29T00:00:00.000Z", "lastStatus": "success", "nextRunAt": "2026-08-29T12:00:00.000Z" }
+    ]
+  }
+}
+```
+
+### POST /api/evidence/collectors
+
+Creates a collector. Requires evidence:collect.
+
+Request body:
+```json
+{
+  "name": "Stale controls",
+  "type": "sql",
+  "enabled": true,
+  "cadenceMinutes": 360,
+  "params": { "sql": "SELECT id, title FROM \"Control\" WHERE \"updatedAt\" < now() - interval '90 days'", "titleColumn": "title", "controlIdColumn": "id", "defaultTitle": "Stale control" }
+}
+```
+
+Response 201:
+```json
+{ "message": "Collector created", "data": { "collector": { "id": "clr...", "name": "Stale controls", "type": "sql", "enabled": true } } }
+```
+
+### POST /api/evidence/collectors/:id/run
+
+Triggers an immediate run of a collector. Requires evidence:collect.
+
+Response 200:
+```json
+{ "message": "Collector run complete", "data": { "status": "success", "added": 3 } }
+```
+

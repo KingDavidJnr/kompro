@@ -155,8 +155,9 @@ model Evidence {
   status      String    @default("submitted")
   collectedAt DateTime?
   controlId   String?
-  policyId    String?
+  policyId     String?
   uploadedById String?
+  collectorId  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
@@ -169,6 +170,7 @@ model Evidence {
   @@index([source])
   @@index([status])
   @@index([uploadedById])
+  @@index([collectorId])
 }
 
 model Assessment {
@@ -234,4 +236,28 @@ model Mapping {
   control       Control             @relation(fields: [controlId], references: [id], onDelete: Cascade)
 
   @@id([requirementId, controlId])
+}
+
+// Automated evidence collection configuration. Secrets are stored encrypted in
+// the `secrets` column (see src/lib/crypto) so self-hosted teams manage their
+// own credentials entirely within the database, with no extra environment
+// variables or external secret infrastructure required.
+model CollectorConfig {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  type           String // 'sql' | future connector types
+  enabled        Boolean  @default(false)
+  cadenceMinutes Int      @default(360)
+  params         Json?
+  secrets        String? // encrypted JSON of secret key/values
+  lastRunAt      DateTime?
+  lastStatus     String? // 'success' | 'error'
+  lastError      String?
+  nextRunAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([nextRunAt])
 }

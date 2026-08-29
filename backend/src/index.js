@@ -25,6 +25,7 @@ const assessmentsRoutes = require('./modules/assessments/assessments.routes');
 const frameworksRoutes = require('./modules/frameworks/frameworks.routes');
 const requirementsRoutes = require('./modules/frameworks/requirements.routes');
 const auditRoutes = require('./modules/audit/audit.routes');
+const collectorRunner = require('./modules/evidence/collector.runner');
 
 const app = express();
 
@@ -86,6 +87,12 @@ async function start() {
   app.listen(config.port, () => {
     console.log(`Kompro backend listening on port ${config.port}`);
   });
+
+  // Recurring automated-evidence sweeps run only in real deployments, never in
+  // the test environment (which drives the app without calling start()).
+  if (config.nodeEnv !== 'test') {
+    collectorRunner.startCollectorRunner();
+  }
 }
 
 if (require.main === module) {

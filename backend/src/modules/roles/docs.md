@@ -73,6 +73,7 @@ The full seeded set:
 | `evidence:create` | Upload/create evidence. |
 | `evidence:update` | Update evidence, including accepting or rejecting it. |
 | `evidence:delete` | Delete evidence. |
+| `evidence:collect` | Configure and trigger automated evidence collectors. |
 | `assessments:read` | View assessments and their results. |
 | `assessments:create` | Create assessments. |
 | `assessments:update` | Update assessments, assign assessors and record results. |

@@ -36,6 +36,7 @@ const PERMISSIONS = [
   { name: 'evidence:create', description: 'Create evidence' },
   { name: 'evidence:update', description: 'Update evidence' },
   { name: 'evidence:delete', description: 'Delete evidence' },
+  { name: 'evidence:collect', description: 'Configure and run automated evidence collectors' },
   { name: 'assessments:read', description: 'View assessments' },
   { name: 'assessments:create', description: 'Create assessments' },
   { name: 'assessments:update', description: 'Update assessments' },
