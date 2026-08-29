@@ -1,4 +1,9 @@
-const { request, app, createAdminSession } = require('./helpers');
+const { request, app, createAdminSession, prisma } = require('./helpers');
+const { seedFrameworkCatalog } = require('../prisma/seed');
+
+// The shared remote test database adds latency; give the multi-request
+// scenarios enough headroom to complete.
+jest.setTimeout(120000);
 
 describe('Frameworks, requirements and mappings', () => {
   let admin;
@@ -70,5 +75,89 @@ describe('Frameworks, requirements and mappings', () => {
 
     const delFw = await request(app).delete(`/api/frameworks/${fwId}`).set('Cookie', admin.cookie);
     expect(delFw.status).toBe(200);
+  });
+
+  it('computes readiness with percentage, breakdown and gaps', async () => {
+    // Seed the scenario directly to avoid one HTTP round trip per entity on the
+    // slow shared test database; only the readiness endpoint is exercised over HTTP.
+    const fw = await prisma.framework.create({
+      data: { name: `Readiness FW ${Date.now()}`, enabled: true },
+    });
+    const [c1, c2, c3] = await Promise.all([
+      prisma.control.create({ data: { title: `Readiness c1 ${Date.now()}` } }),
+      prisma.control.create({ data: { title: `Readiness c2 ${Date.now()}` } }),
+      prisma.control.create({ data: { title: `Readiness c3 ${Date.now()}` } }),
+    ]);
+    const [r1, r2, r3, r4] = await Promise.all([
+      prisma.frameworkRequirement.create({ data: { frameworkId: fw.id, code: 'A.1', title: 'R1' } }),
+      prisma.frameworkRequirement.create({ data: { frameworkId: fw.id, code: 'A.2', title: 'R2' } }),
+      prisma.frameworkRequirement.create({ data: { frameworkId: fw.id, code: 'A.3', title: 'R3' } }),
+      prisma.frameworkRequirement.create({ data: { frameworkId: fw.id, code: 'A.4', title: 'R4' } }),
+    ]);
+    // r1 -> c1 (satisfied), r2 -> c2 (unsatisfied), r3 -> c3 (unassessed), r4 -> unmapped.
+    await Promise.all([
+      prisma.mapping.create({ data: { requirementId: r1.id, controlId: c1.id } }),
+      prisma.mapping.create({ data: { requirementId: r2.id, controlId: c2.id } }),
+      prisma.mapping.create({ data: { requirementId: r3.id, controlId: c3.id } }),
+      prisma.assessment.create({ data: { controlId: c1.id, result: 'satisfied' } }),
+      prisma.assessment.create({ data: { controlId: c2.id, result: 'unsatisfied' } }),
+    ]);
+
+    const res = await request(app).get(`/api/frameworks/${fw.id}/readiness`).set('Cookie', admin.cookie);
+    expect(res.status).toBe(200);
+    const data = res.body.data;
+    expect(data.totalRequirements).toBe(4);
+    expect(data.satisfied).toBe(1);
+    expect(data.readinessPercent).toBe(25);
+    expect(data.breakdown.satisfied).toBe(1);
+    expect(data.breakdown.unsatisfied).toBe(1);
+    expect(data.breakdown.unassessed).toBe(1);
+    expect(data.breakdown.unmapped).toBe(1);
+    expect(data.gaps).toHaveLength(3);
+    const gapStatuses = data.gaps.map((g) => g.status).sort();
+    expect(gapStatuses).toEqual(['unassessed', 'unmapped', 'unsatisfied']);
+    // The satisfied requirement is not listed as a gap.
+    const gapReqIds = data.gaps.map((g) => g.requirement.id);
+    expect(gapReqIds).not.toContain(r1.id);
+
+    await prisma.framework.delete({ where: { id: fw.id } });
+    await prisma.control.deleteMany({ where: { id: { in: [c1.id, c2.id, c3.id] } } });
+  });
+
+  it('ships the current requirement catalog for each bundled framework', async () => {
+    const list = await request(app).get('/api/frameworks').set('Cookie', admin.cookie);
+    const iso = list.body.data.frameworks.find((f) => f.name === 'ISO 27001');
+    const soc2 = list.body.data.frameworks.find((f) => f.name === 'SOC 2');
+    expect(iso).toBeTruthy();
+    expect(soc2).toBeTruthy();
+
+    const isoReqs = await request(app).get(`/api/requirements?frameworkId=${iso.id}`).set('Cookie', admin.cookie);
+    expect(isoReqs.status).toBe(200);
+    expect(isoReqs.body.data.requirements.length).toBe(93);
+
+    const soc2Reqs = await request(app).get(`/api/requirements?frameworkId=${soc2.id}`).set('Cookie', admin.cookie);
+    expect(soc2Reqs.status).toBe(200);
+    expect(soc2Reqs.body.data.requirements.length).toBe(27);
+  });
+
+  it('records audited framework seeding attributed to a responsible owner', async () => {
+    const owner = await prisma.user.findUnique({ where: { email: admin.email } });
+    // Remove the bundled framework so the seed must recreate it and its catalog.
+    await prisma.frameworkRequirement.deleteMany({ where: { framework: { name: 'ISO 27001' } } });
+    await prisma.framework.deleteMany({ where: { name: 'ISO 27001' } });
+
+    await seedFrameworkCatalog({ actorId: owner.id });
+
+    const framework = await prisma.framework.findUnique({ where: { name: 'ISO 27001' } });
+    const entries = await prisma.auditLog.findMany({
+      where: {
+        actorId: owner.id,
+        action: 'create',
+        entity: { in: ['framework', 'requirement'] },
+        entityId: framework.id,
+      },
+    });
+    expect(entries.some((entry) => entry.entity === 'framework')).toBe(true);
+    expect(entries.some((entry) => entry.entity === 'requirement')).toBe(true);
   });
 });

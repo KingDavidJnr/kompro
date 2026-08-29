@@ -16,6 +16,11 @@ const requirePermission = require('../../middleware/requirePermission');
 const config = require('../../config');
 const { EVIDENCE_SOURCES } = require('./evidence.service');
 
+// Automated evidence collectors (admin configured and triggered). Mounted
+// before the generic /:id routes so "/collectors" is not captured by them.
+const collectorsRoutes = require('./collectors.routes');
+router.use('/collectors', collectorsRoutes);
+
 // Multer buffers the upload in memory (capped) so it can be written by the
 // active storage driver (local disk or S3).
 const upload = multer({ limits: { fileSize: config.maxUploadBytes } });

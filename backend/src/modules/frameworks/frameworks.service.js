@@ -311,6 +311,109 @@ async function deriveFrameworkStatus(frameworkId) {
   };
 }
 
+/**
+ * Computes compliance readiness for a framework.
+ *
+ * Aggregates the latest assessment of every control mapped to each requirement
+ * into a per-requirement status, then derives overall readiness: a percentage
+ * of fully satisfied requirements, a status breakdown, and a list of gaps
+ * (requirements that are not satisfied) with their linked controls. A
+ * requirement is "satisfied" only when every mapped control's latest assessment
+ * is satisfied.
+ * @param {string} frameworkId - Framework id.
+ * @returns {object} { framework, totalRequirements, satisfied, readinessPercent, breakdown, gaps }.
+ * @throws {NotFoundError} When the framework does not exist.
+ */
+async function computeReadiness(frameworkId) {
+  const framework = await prisma.framework.findUnique({
+    where: { id: frameworkId },
+    include: {
+      requirements: {
+        orderBy: { code: 'asc' },
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          description: true,
+          controlMappings: {
+            select: {
+              control: {
+                select: {
+                  id: true,
+                  title: true,
+                  assessments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: { result: true, createdAt: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!framework) {
+    throw new NotFoundError('Framework not found');
+  }
+
+  const breakdown = {
+    satisfied: 0,
+    partially_satisfied: 0,
+    unsatisfied: 0,
+    needs_review: 0,
+    unassessed: 0,
+    unmapped: 0,
+  };
+  const gaps = [];
+
+  for (const req of framework.requirements) {
+    const controls = req.controlMappings.map((m) => {
+      const latest = m.control.assessments[0] || null;
+      return {
+        id: m.control.id,
+        title: m.control.title,
+        latestResult: latest ? latest.result : null,
+        assessedAt: latest ? latest.createdAt : null,
+      };
+    });
+
+    let status;
+    if (controls.length === 0) {
+      status = 'unmapped';
+    } else {
+      const results = controls.map((c) => c.latestResult);
+      if (results.includes('unsatisfied')) status = 'unsatisfied';
+      else if (results.includes('needs_review')) status = 'needs_review';
+      else if (results.includes(null)) status = 'unassessed';
+      else if (results.includes('partially_satisfied')) status = 'partially_satisfied';
+      else status = 'satisfied';
+    }
+
+    breakdown[status] += 1;
+    if (status !== 'satisfied') {
+      gaps.push({
+        requirement: { id: req.id, code: req.code, title: req.title, description: req.description },
+        status,
+        controls,
+      });
+    }
+  }
+
+  const total = framework.requirements.length;
+  const readinessPercent = total === 0 ? 0 : Math.round((breakdown.satisfied / total) * 100);
+
+  return {
+    framework: { id: framework.id, name: framework.name, enabled: framework.enabled },
+    totalRequirements: total,
+    satisfied: breakdown.satisfied,
+    readinessPercent,
+    breakdown,
+    gaps,
+  };
+}
+
 module.exports = {
   listFrameworks,
   getFramework,
@@ -325,4 +428,5 @@ module.exports = {
   createMapping,
   deleteMapping,
   deriveFrameworkStatus,
+  computeReadiness,
 };

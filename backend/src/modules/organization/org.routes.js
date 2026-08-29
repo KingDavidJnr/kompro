@@ -1,8 +1,8 @@
 /**
  * Organization settings routes.
  *
- * Both endpoints require authentication. Updating also requires the
- * "org:update" permission.
+ * Both endpoints require authentication. Reading requires the "org:read"
+ * permission and updating requires the "org:update" permission.
  */
 
 const router = require('express').Router();
@@ -12,8 +12,8 @@ const validate = require('../../middleware/validate');
 const requireAuth = require('../../middleware/requireAuth');
 const requirePermission = require('../../middleware/requirePermission');
 
-// Any authenticated user may read organization settings.
-router.get('/settings', requireAuth, controller.getSettings);
+// Reading organization settings requires the org:read permission.
+router.get('/settings', requireAuth, requirePermission('org:read'), controller.getSettings);
 
 // Updating settings is restricted to users with the org:update permission.
 router.patch(

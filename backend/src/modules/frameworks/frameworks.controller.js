@@ -126,4 +126,23 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, get, status, update, remove };
+/**
+ * Handles GET /api/frameworks/:id/readiness.
+ *
+ * Returns the compliance readiness for a framework: an overall percentage of
+ * satisfied requirements, a status breakdown, and a list of gaps (requirements
+ * that are not satisfied) together with their linked controls.
+ * @param {object} req - Authenticated request with id param.
+ * @param {object} res - Express response ({ message, data: readiness }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function readiness(req, res, next) {
+  try {
+    res.json({ message: 'Framework readiness computed', data: await frameworkService.computeReadiness(req.params.id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, get, status, update, remove, readiness };

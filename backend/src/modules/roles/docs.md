@@ -25,12 +25,14 @@ intended meaning is:
 
 - **admin** - Full access. Connected to every seeded permission, so it can
   manage users, roles, the organization, controls, policies, evidence,
-  assessments, frameworks and audit logs (including purging entries). The
-  bootstrap admin account created from environment variables gets this role.
+  assessments, frameworks, risk, incidents, ITSM and audit programs, plus the
+  audit logs (including purging entries). The bootstrap admin account created
+  from environment variables gets this role.
 - **auditor** - Read-only compliance and audit access. Granted the read
   permissions for organization, users, roles, audit, controls, policies,
-  evidence, assessments and frameworks. An auditor can review the entire
-  compliance posture and export the audit log, but cannot change anything.
+  evidence, assessments, frameworks, risk, incidents, ITSM and audit plans.
+  An auditor can review the entire compliance posture and export the audit log,
+  but cannot change anything.
 - **member** - Basic member access. Granted `org:read` only, so a member can
   see the organization's name and settings but has no administrative or
   compliance-editing rights by default.
@@ -73,6 +75,7 @@ The full seeded set:
 | `evidence:create` | Upload/create evidence. |
 | `evidence:update` | Update evidence, including accepting or rejecting it. |
 | `evidence:delete` | Delete evidence. |
+| `evidence:collect` | Configure and trigger automated evidence collectors. |
 | `assessments:read` | View assessments and their results. |
 | `assessments:create` | Create assessments. |
 | `assessments:update` | Update assessments, assign assessors and record results. |
@@ -81,6 +84,22 @@ The full seeded set:
 | `frameworks:create` | Create frameworks and requirements. |
 | `frameworks:update` | Update frameworks, requirements and mappings. |
 | `frameworks:delete` | Delete frameworks and requirements. |
+| `risk:read` | View the risk register, scenarios, KRIs and treatments. |
+| `risk:create` | Create risk entries, scenarios, KRIs and treatments. |
+| `risk:update` | Update risk entries, scenarios, KRIs and treatments. |
+| `risk:delete` | Delete risk entries, scenarios, KRIs and treatments. |
+| `incident:read` | View incidents and their response actions. |
+| `incident:create` | Create incidents and response actions. |
+| `incident:update` | Update incidents and response actions. |
+| `incident:delete` | Delete incidents and response actions. |
+| `itsm:read` | View IT assets, changes and capacity plans. |
+| `itsm:create` | Create IT assets, changes and capacity plans. |
+| `itsm:update` | Update IT assets, changes and capacity plans. |
+| `itsm:delete` | Delete IT assets, changes and capacity plans. |
+| `auditplan:read` | View audit plans, nonconformities and corrective actions. |
+| `auditplan:create` | Create audit plans, nonconformities and corrective actions. |
+| `auditplan:update` | Update audit plans, nonconformities and corrective actions. |
+| `auditplan:delete` | Delete audit plans, nonconformities and corrective actions. |
 
 New permissions should be added to the `PERMISSIONS` array in
 `prisma/seed.js`; the seed connects them to the `admin` role automatically.

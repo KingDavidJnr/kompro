@@ -106,7 +106,7 @@ async function notifyEvidenceStatus(evidence, status) {
  * @returns {object} Created evidence.
  * @throws {ValidationError} On missing title, invalid source, or unknown control/policy.
  */
-async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, file, uploadedById }) {
+async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, collectorId, file, uploadedById }) {
   if (!title) {
     throw new ValidationError('Evidence title is required');
   }
@@ -150,6 +150,7 @@ async function createEvidence({ title, description, source, content, filePath, c
       collectedAt: collectedAt ? new Date(collectedAt) : null,
       controlId: controlId || null,
       policyId: policyId || null,
+      collectorId: collectorId || null,
       uploadedById: uploadedById || null,
     },
     include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },

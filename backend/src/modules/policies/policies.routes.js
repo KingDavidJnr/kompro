@@ -48,4 +48,21 @@ router.patch(
 // Deletion requires policies:delete.
 router.delete('/:id', requireAuth, requirePermission('policies:delete'), controller.remove);
 
+// Policy lifecycle sub-resources (versions, change requests, reviews, exceptions).
+// All reuse the existing policies:* permissions for consistency.
+router.get('/:id/versions', requireAuth, requirePermission('policies:read'), controller.listVersions);
+router.post('/:id/versions', requireAuth, requirePermission('policies:create'), controller.createVersion);
+
+router.get('/:id/change-requests', requireAuth, requirePermission('policies:read'), controller.listChangeRequests);
+router.post('/:id/change-requests', requireAuth, requirePermission('policies:create'), controller.createChangeRequest);
+router.patch('/:id/change-requests/:crid', requireAuth, requirePermission('policies:update'), controller.updateChangeRequest);
+
+router.get('/:id/reviews', requireAuth, requirePermission('policies:read'), controller.listReviews);
+router.post('/:id/reviews', requireAuth, requirePermission('policies:create'), controller.createReview);
+router.patch('/:id/reviews/:rid', requireAuth, requirePermission('policies:update'), controller.updateReview);
+
+router.get('/:id/exceptions', requireAuth, requirePermission('policies:read'), controller.listExceptions);
+router.post('/:id/exceptions', requireAuth, requirePermission('policies:create'), controller.createException);
+router.patch('/:id/exceptions/:eid', requireAuth, requirePermission('policies:update'), controller.updateException);
+
 module.exports = router;

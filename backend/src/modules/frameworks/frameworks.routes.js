@@ -17,6 +17,7 @@ const requirePermission = require('../../middleware/requirePermission');
 router.get('/', requireAuth, requirePermission('frameworks:read'), controller.list);
 router.get('/:id', requireAuth, requirePermission('frameworks:read'), controller.get);
 router.get('/:id/status', requireAuth, requirePermission('frameworks:read'), controller.status);
+router.get('/:id/readiness', requireAuth, requirePermission('frameworks:read'), controller.readiness);
 
 // Creation requires frameworks:create.
 router.post(

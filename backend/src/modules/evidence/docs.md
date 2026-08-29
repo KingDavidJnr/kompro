@@ -202,3 +202,329 @@ Response 404:
 ```json
 { "message": "Evidence not found" }
 ```
+
+## Automated evidence collectors
+
+Kompro can collect evidence automatically instead of waiting for a manual
+upload. A collector is a configuration (`CollectorConfig`) that names a
+connector `type`, a `cadenceMinutes` recurrence, and `params` (plus encrypted
+`secrets` for connectors that need credentials). An in-process runner started
+with the server evaluates enabled collectors whose `nextRunAt` is due and
+ingests their output.
+
+- All collector routes require `evidence:collect` (admin).
+- Each run is recorded in the audit trail (`action: "collect"`,
+  `entity: "evidence"`) with the number of items added and its status, so
+  collection is fully attributable. On failure the error is recorded and the
+  admins are emailed via the existing notification service.
+- Collected evidence is written with `source: "automated_check"` and
+  `collectedAt` set to the run time. Connectors map their output to a `controlId`
+  / `policyId` when identifiers are present.
+
+### Connector types
+
+- **sql** - Runs a read-only query against Kompro's own PostgreSQL database
+  (the existing Prisma connection, so it needs no external credentials) and
+  turns each row into an evidence item. `params`:
+  - `sql` (required) - the query text.
+  - `titleColumn` (default `title`) - column used for the evidence title.
+  - `descriptionColumn` (default `description`).
+  - `controlIdColumn` / `policyIdColumn` - column(s) whose values are a Control
+    / Policy id to link (optional).
+  - `defaultTitle` - fallback title when the title column is null.
+  - `includeRowJson` - store the full row as the evidence content.
+
+- **file** - Reads files already on the server's filesystem (e.g. reports
+  dropped into a folder by an external job) and turns each into an evidence
+  item. Needs no secrets. `params`:
+  - `path` (required) - directory or single file path.
+  - `pattern` (default `*`) - glob filter in directory mode.
+  - `titleFrom` - `filename` (default) or `content` (first line).
+  - `description`, `maxBytes` (default 100000), `controlId`, `policyId`.
+
+- **http** - The generic REST collector. One connector covers virtually every
+  integration (GitHub, GitLab, Okta/Entra, AWS, Azure, GCP, Jira, ServiceNow,
+  Snyk, SonarQube, KnowBe4, SecurityScorecard, Datadog, Cloudflare, Kubernetes,
+  backup, and any other API). An integration is just a configuration, not new
+  code. `params`:
+  - `method` (default `GET`), `url` (supports `{{secret.*}}`/`{{param.*}}`).
+  - `headers` (values support interpolation).
+  - `body` (optional, for POST/PUT).
+  - `auth` - one of:
+    - `{ type: 'apiKey', header?, prefix?, value: '{{secret.token}}' }`
+    - `{ type: 'bearer', value: '{{secret.token}}', prefix? }`
+    - `{ type: 'oauth2', tokenUrl, clientId, clientSecret, scope? }` (adds `Bearer`)
+    - `{ type: 'aws', service, region, accessKeyId, secretAccessKey }` (SigV4)
+  - `itemsPath` - dot-path to the response array (omit for a single object).
+  - `mapping` - dot-paths (or literal `{{...}}`) for `title`, `description`,
+    `content`, `controlId`, `policyId`, `id`.
+  - `defaultTitle` - fallback title.
+
+  Secrets live in the encrypted `secrets` column of the CollectorConfig row and
+  are interpolated via `{{secret.KEY}}` - never stored in environment
+  variables. `{{param.KEY}}` interpolates from `params`.
+
+### Example collector configurations
+
+These are pasted into `params` (and `secrets`) when creating a collector. They
+demonstrate that "all" integrations are configuration of the `http` collector.
+
+**GitHub - passing Actions runs (apiKey)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://api.github.com/repos/{{param.owner}}/{{param.repo}}/actions/runs?per_page=50",
+    "headers": { "Accept": "application/vnd.github+json" },
+    "auth": { "type": "apiKey", "header": "Authorization", "prefix": "Bearer ", "value": "{{secret.githubToken}}" },
+    "itemsPath": "workflow_runs",
+    "mapping": { "title": "name", "description": "head_commit.message", "id": "id" }
+  },
+  "secrets": { "githubToken": "<from 1Password>" }
+}
+```
+
+**GitLab - pipeline security gate (bearer)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://gitlab.com/api/v4/projects/{{param.projectId}}/pipelines?status=success&per_page=50",
+    "auth": { "type": "bearer", "value": "{{secret.gitlabToken}}" },
+    "itemsPath": "pipelines",
+    "mapping": { "title": "id", "description": "ref" }
+  }
+}
+```
+
+**Okta / Entra ID - MFA coverage (oauth2)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://{{param.subdomain}}.okta.com/api/v1/users?limit=50",
+    "auth": {
+      "type": "oauth2",
+      "tokenUrl": "https://{{param.subdomain}}.okta.com/oauth2/v1/token",
+      "clientId": "{{secret.clientId}}",
+      "clientSecret": "{{secret.clientSecret}}",
+      "scope": "okta.users.read"
+    },
+    "itemsPath": "users",
+    "mapping": { "title": "profile.email", "description": "profile.login" }
+  }
+}
+```
+
+**AWS - Config / Security Hub findings (SigV4)**
+```json
+{
+  "params": {
+    "method": "POST",
+    "url": "https://securityhub.us-east-1.amazonaws.com/accounts/{{param.accountId}}/findings",
+    "auth": {
+      "type": "aws",
+      "service": "securityhub",
+      "region": "us-east-1",
+      "accessKeyId": "{{secret.accessKeyId}}",
+      "secretAccessKey": "{{secret.secretAccessKey}}"
+    },
+    "itemsPath": "findings",
+    "mapping": { "title": "Title", "description": "Description", "id": "Id" }
+  }
+}
+```
+
+**Azure / Microsoft Graph - secure score (oauth2)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://graph.microsoft.com/v1.0/security/secureScores",
+    "auth": {
+      "type": "oauth2",
+      "tokenUrl": "https://login.microsoftonline.com/{{param.tenantId}}/oauth2/v2.0/token",
+      "clientId": "{{secret.clientId}}",
+      "clientSecret": "{{secret.clientSecret}}",
+      "scope": "https://graph.microsoft.com/.default"
+    },
+    "itemsPath": "value",
+    "mapping": { "title": "name", "description": "description" }
+  }
+}
+```
+
+**Jira / ServiceNow - closed security tickets (apiKey / bearer)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://{{param.site}}.atlassian.net/rest/api/3/search?jql=project={{param.project}}%20AND%20type=Security",
+    "auth": { "type": "apiKey", "header": "Authorization", "prefix": "Basic ", "value": "{{secret.jiraBasic}}" },
+    "itemsPath": "issues",
+    "mapping": { "title": "key", "description": "fields.summary" }
+  }
+}
+```
+
+**Snyk / SonarQube / Trivy - vulnerability counts (bearer)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://{{param.host}}/api/projects/{{param.project}}/issues?types=VULNERABILITY&statuses=OPEN",
+    "auth": { "type": "bearer", "value": "{{secret.sonarToken}}" },
+    "itemsPath": "issues",
+    "mapping": { "title": "message", "description": "rule" }
+  }
+}
+```
+
+**KnowBe4 / Mimecast / M365 - phishing training (apiKey)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://us.api.knowbe4.com/v1/recipients?per_page=50",
+    "headers": { "Authorization": "Bearer {{secret.kb4Token}}" },
+    "itemsPath": "data",
+    "mapping": { "title": "email", "description": "training_enrollment_status" }
+  }
+}
+```
+
+**SecurityScorecard / UpGuard / BitSight - vendor risk (bearer)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://api.securityscorecard.io/ratings/{{param.domain}}/history",
+    "auth": { "type": "bearer", "value": "{{secret.sscToken}}" },
+    "itemsPath": "entries",
+    "mapping": { "title": "date", "description": "score" }
+  }
+}
+```
+
+**Datadog / Splunk / Elastic - uptime & alerts (apiKey)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://api.datadoghq.com/api/v1/monitor",
+    "headers": { "DD-API-KEY": "{{secret.ddKey}}", "DD-APPLICATION-KEY": "{{secret.ddApp}}" },
+    "itemsPath": "monitors",
+    "mapping": { "title": "name", "description": "overall_state" }
+  }
+}
+```
+
+**Cloudflare - WAF / TLS config (bearer)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://api.cloudflare.com/client/v4/zones/{{param.zoneId}}/settings",
+    "auth": { "type": "bearer", "value": "{{secret.cfToken}}" },
+    "itemsPath": "result",
+    "mapping": { "title": "id", "description": "value" }
+  }
+}
+```
+
+**Kubernetes / Terraform - config drift (bearer / file)**
+```json
+{
+  "params": {
+    "method": "GET",
+    "url": "https://{{param.cluster}}/apis/policy/v1beta1/podsecuritypolicies",
+    "auth": { "type": "bearer", "value": "{{secret.k8sToken}}" },
+    "itemsPath": "items",
+    "mapping": { "title": "metadata.name" }
+  }
+}
+```
+
+**Veeam / backup - last successful backup (file or http)**
+```json
+{
+  "params": {
+    "path": "/var/compliance/backups/",
+    "pattern": "*.json",
+    "titleFrom": "filename"
+  }
+}
+```
+
+### GET /api/evidence/collectors
+
+Lists all collector configurations with their last-run status. Requires
+evidence:collect.
+
+Response 200:
+```json
+{
+  "message": "Collectors retrieved",
+  "data": {
+    "collectors": [
+      { "id": "clr...", "name": "Stale controls", "type": "sql", "enabled": true, "cadenceMinutes": 360, "lastRunAt": "2026-08-29T00:00:00.000Z", "lastStatus": "success", "nextRunAt": "2026-08-29T12:00:00.000Z" }
+    ]
+  }
+}
+```
+
+### POST /api/evidence/collectors
+
+Creates a collector. Requires evidence:collect.
+
+Request body:
+```json
+{
+  "name": "Stale controls",
+  "type": "sql",
+  "enabled": true,
+  "cadenceMinutes": 360,
+  "params": { "sql": "SELECT id, title FROM \"Control\" WHERE \"updatedAt\" < now() - interval '90 days'", "titleColumn": "title", "controlIdColumn": "id", "defaultTitle": "Stale control" }
+}
+```
+
+Response 201:
+```json
+{ "message": "Collector created", "data": { "collector": { "id": "clr...", "name": "Stale controls", "type": "sql", "enabled": true } } }
+```
+
+### POST /api/evidence/collectors/:id/run
+
+Triggers an immediate run of a collector. Requires evidence:collect.
+
+Response 200:
+```json
+{ "message": "Collector run complete", "data": { "status": "success", "added": 3 } }
+```
+
+### GET /api/evidence/collectors/:id/runs
+
+Returns a collector's run history, derived from the audit log (each run is an
+`action: "collect"` entry). Requires evidence:collect. Supports `page` and
+`pageSize` (max 100) query parameters.
+
+Response 200:
+```json
+{
+  "message": "Collector runs retrieved",
+  "data": {
+    "runs": [
+      { "id": "clr...", "action": "collect", "entity": "evidence", "entityId": "clr...", "after": { "collector": "Stale controls", "status": "success", "added": 3 }, "createdAt": "2026-08-29T12:00:00.000Z" }
+    ],
+    "total": 12,
+    "page": 1,
+    "pageSize": 25
+  }
+}
+```
+
+Response 404 (unknown collector):
+```json
+{ "message": "Collector not found" }
+```
+
