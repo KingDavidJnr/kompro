@@ -11,6 +11,17 @@
 
 const config = require('../config');
 
+/**
+ * Builds the envelope "From" as a named sender. nodemailer accepts an object
+ * form `{ name, address }`, which renders as `"<name>" <address>` — this is the
+ * supported way to attach a display name (the config only stored the address
+ * before). The name defaults to "Kompro" and is overridable via MAIL_FROM_NAME.
+ * @returns {{ name: string, address: string }} Named sender.
+ */
+function sender() {
+  return { name: config.smtp.fromName || 'Kompro', address: config.smtp.from };
+}
+
 // Kompro brand assets are baked into the product (not configurable).
 const KOMPRO_LOGO_URL =
   'https://res.cloudinary.com/dtvwrtbwa/image/upload/v1787888015/kompro-brand-logo-resized-bg_p8rsnc.png';
@@ -134,7 +145,7 @@ async function sendInvite({ to, token }) {
   });
 
   await transporter.sendMail({
-    from: smtp.from,
+    from: sender(),
     to,
     subject: `You have been invited to ${orgName}`,
     text: buildTextEmail(content),
@@ -183,7 +194,7 @@ async function sendPasswordReset({ to, token }) {
   });
 
   await transporter.sendMail({
-    from: smtp.from,
+    from: sender(),
     to,
     subject: `Reset your ${orgName} password`,
     text: buildTextEmail(content),
@@ -232,7 +243,7 @@ async function sendUserRemoved({ to, name }) {
   });
 
   await transporter.sendMail({
-    from: smtp.from,
+    from: sender(),
     to,
     subject: `Your ${orgName} account has been removed`,
     text: buildTextEmail(content),
@@ -286,7 +297,7 @@ async function sendNotification({ to, heading, paragraphs, buttonText, buttonUrl
   });
 
   const mail = {
-    from: smtp.from,
+    from: sender(),
     subject: heading,
     text: buildTextEmail(content),
     html: buildBrandedEmail(content),

@@ -62,6 +62,7 @@ module.exports = {
     pass: process.env.SMTP_PASS,
     secure: process.env.SMTP_SECURE === 'true',
     from: process.env.MAIL_FROM || 'no-reply@kompro.local',
+    fromName: process.env.MAIL_FROM_NAME || 'Kompro',
   },
 
   // Where uploaded evidence files are stored on local disk when S3 is not used.
