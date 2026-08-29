@@ -75,7 +75,7 @@ export default function ITSM() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-              tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+              tab === t.id ? 'border-charcoal-800 text-charcoal-900' : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <t.Icon className="h-4 w-4" /> {t.label}

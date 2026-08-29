@@ -81,7 +81,7 @@ export default function Assessments() {
                 label: 'Name',
                 render: (a) => (
                   <span className="flex items-center gap-2 font-medium text-slate-900">
-                    <ClipboardIcon className="h-4 w-4 text-brand-500" /> {a.name}
+                    <ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {a.name}
                   </span>
                 ),
               },
@@ -101,7 +101,7 @@ export default function Assessments() {
                 label: '',
                 render: (a) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(a)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(a)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(a)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">

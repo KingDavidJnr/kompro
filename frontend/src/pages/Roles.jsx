@@ -104,7 +104,7 @@ export default function Roles() {
                 label: '',
                 render: (r) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">

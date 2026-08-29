@@ -14,9 +14,9 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  /* Subtle, brand-tinted focus ring used across interactive elements. */
+  /* Subtle, charcoal-tinted focus ring used across interactive elements. */
   *:focus-visible {
-    @apply outline-none ring-2 ring-brand-300 ring-offset-2 ring-offset-white;
+    @apply outline-none ring-2 ring-charcoal-300 ring-offset-2 ring-offset-white;
   }
 }
 
@@ -26,7 +26,7 @@
   }
 
   .input {
-    @apply block w-full rounded-xl border-slate-300 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-brand-400 focus:ring-brand-300;
+    @apply block w-full rounded-xl border-slate-300 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-charcoal-400 focus:ring-charcoal-300;
   }
 
   .label {

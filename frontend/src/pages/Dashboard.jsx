@@ -12,7 +12,7 @@ function totalOf(payload, key) {
 }
 
 const STATS = [
-  { key: 'frameworks', label: 'Frameworks', to: '/frameworks', Icon: ShieldIcon, accent: 'from-brand-500 to-brand-700' },
+  { key: 'frameworks', label: 'Frameworks', to: '/frameworks', Icon: ShieldIcon, accent: 'from-charcoal-600 to-charcoal-800' },
   { key: 'controls', label: 'Controls', to: '/controls', Icon: CubeIcon, accent: 'from-sky-500 to-sky-700' },
   { key: 'policies', label: 'Policies', to: '/policies', Icon: DocumentIcon, accent: 'from-violet-500 to-violet-700' },
   { key: 'evidence', label: 'Evidence', to: '/evidence', Icon: FolderIcon, accent: 'from-emerald-500 to-emerald-700' },
@@ -55,7 +55,7 @@ export default function Dashboard() {
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.accent} text-white`}>
                   <s.Icon className="h-6 w-6" />
                 </div>
-                <ArrowUpRightIcon className="h-4 w-4 text-slate-300 transition group-hover:text-brand-500" />
+                <ArrowUpRightIcon className="h-4 w-4 text-slate-300 transition group-hover:text-charcoal-600" />
               </div>
               <p className="mt-4 text-3xl font-bold tracking-tight text-slate-900">{values[s.key]}</p>
               <p className="mt-1 text-sm text-slate-500">{s.label}</p>
@@ -68,7 +68,7 @@ export default function Dashboard() {
         <Card className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-900">Recent activity</h2>
-            <Link to="/audit-program" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+            <Link to="/audit-program" className="text-sm font-medium text-charcoal-700 hover:text-brand-600">
               View all
             </Link>
           </div>

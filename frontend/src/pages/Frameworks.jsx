@@ -79,7 +79,7 @@ export default function Frameworks() {
                 label: 'Name',
                 render: (f) => (
                   <span className="flex items-center gap-2 font-medium text-slate-900">
-                    <ShieldIcon className="h-4 w-4 text-brand-500" /> {f.name}
+                    <ShieldIcon className="h-4 w-4 text-charcoal-500" /> {f.name}
                   </span>
                 ),
               },
@@ -91,7 +91,7 @@ export default function Frameworks() {
                 render: (f) => (
                   <button
                     onClick={() => toggle(f)}
-                    className={`relative h-6 w-11 rounded-full transition ${f.enabled ? 'bg-brand-600' : 'bg-slate-300'}`}
+                    className={`relative h-6 w-11 rounded-full transition ${f.enabled ? 'bg-charcoal-800' : 'bg-slate-300'}`}
                   >
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${f.enabled ? 'left-[22px]' : 'left-0.5'}`} />
                   </button>
@@ -102,7 +102,7 @@ export default function Frameworks() {
                 label: '',
                 render: (f) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">

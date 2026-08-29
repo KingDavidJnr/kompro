@@ -114,7 +114,7 @@ export default function Risk() {
         ) : (
           <Table
             columns={[
-              { key: 'title', label: 'Title', render: (r) => <span className="flex items-center gap-2 font-medium text-slate-900"><FlagIcon className="h-4 w-4 text-brand-500" /> {r.title}</span> },
+              { key: 'title', label: 'Title', render: (r) => <span className="flex items-center gap-2 font-medium text-slate-900"><FlagIcon className="h-4 w-4 text-charcoal-500" /> {r.title}</span> },
               { key: 'category', label: 'Category', render: (r) => <span className="text-slate-500">{r.category || '—'}</span> },
               { key: 'score', label: 'Score', render: (r) => <Badge color={r.score > 12 ? 'danger' : r.score > 6 ? 'warning' : 'success'}>{r.score}</Badge> },
               { key: 'status', label: 'Status', render: (r) => <Badge color={statusColor(r.status)}>{r.status}</Badge> },
@@ -123,8 +123,8 @@ export default function Risk() {
                 label: '',
                 render: (r) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => setSelected(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Details"><EyeIcon className="h-4 w-4" /></button>
-                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"><PencilIcon className="h-4 w-4" /></button>
+                    <button onClick={() => setSelected(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700" title="Details"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700"><PencilIcon className="h-4 w-4" /></button>
                     <button onClick={() => setConfirm(r)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"><TrashIcon className="h-4 w-4" /></button>
                   </div>
                 ),

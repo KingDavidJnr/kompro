@@ -88,7 +88,7 @@ export default function Users() {
                 label: '',
                 render: (u) => (
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600">
+                    <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button onClick={() => setConfirm(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">

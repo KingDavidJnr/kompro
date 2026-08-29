@@ -8,7 +8,7 @@ import { XIcon } from './icons';
  */
 
 const VARIANTS = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm',
+  primary: 'bg-charcoal-800 text-white hover:bg-charcoal-900 shadow-sm',
   secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
   ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
   danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm',
@@ -45,7 +45,7 @@ export function Card({ className = '', children }) {
 
 export function Spinner({ className = 'h-5 w-5' }) {
   return (
-    <svg className={`animate-spin text-brand-500 ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg className={`animate-spin text-charcoal-500 ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
       <path className="opacity-90" d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>

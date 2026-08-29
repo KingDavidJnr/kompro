@@ -68,8 +68,10 @@ function NavItem({ item }) {
       to={item.to}
       end={item.end}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-          isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        `flex items-center gap-3 rounded-xl border-l-2 px-3 py-2 text-sm font-medium transition ${
+          isActive
+            ? 'border-brand-500 bg-white/5 text-white'
+            : 'border-transparent text-slate-400 hover:bg-white/5 hover:text-white'
         }`
       }
     >
@@ -107,7 +109,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar */}
-      <aside className="hidden w-64 flex-none flex-col border-r border-slate-200 bg-white md:flex">
+       <aside className="hidden w-64 flex-none flex-col border-r border-charcoal-800 bg-charcoal-900 md:flex">
         <div className="flex h-16 items-center border-b border-slate-100 px-5">
           <Logo />
         </div>
@@ -125,7 +127,7 @@ export default function AppLayout() {
         </nav>
         <div className="border-t border-slate-100 p-3">
           <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-slate-200">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
@@ -152,7 +154,7 @@ export default function AppLayout() {
                 onClick={() => setMenuOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 py-1.5 pl-1.5 pr-2 hover:bg-slate-50"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-charcoal-800 text-xs font-semibold text-white">
                   {initials}
                 </div>
                 <ChevronDownIcon className="h-4 w-4 text-slate-400" />
