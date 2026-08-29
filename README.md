@@ -43,6 +43,10 @@ An organization can create and manage its own:
 - Assessments
 - Organizational standards
 - Compliance structures
+- Risk registers
+- Incidents
+- IT assets and changes
+- Audit programs
 
 External frameworks are represented as configurable framework definitions that can be enabled by an organization when needed.
 
@@ -163,6 +167,36 @@ Mappings connect related requirements and controls.
 For example, a single organizational control may contribute toward requirements in several enabled frameworks.
 
 This allows an organization to maintain its underlying compliance state once rather than independently maintaining duplicate implementations for every framework.
+
+### Risk Management
+
+Risk management allows organizations to maintain a risk register and track treatment activities.
+
+Organizations can record risks with likelihood and impact scores, model risk scenarios, monitor key risk indicators (KRIs), and track remediation through treatment plans.
+
+### Incident Management
+
+Incident management supports the recording and handling of security and operational incidents.
+
+Incidents can be classified by severity and status, and response actions can be tracked through to completion with assigned owners and due dates.
+
+### IT Service Management
+
+IT service management covers the operational IT items that support the compliance program.
+
+Kompro tracks assets, change requests, and capacity plans so that the infrastructure behind controls and evidence is itself visible and governed.
+
+### Audit Program
+
+The audit program manages internal and external audits, the nonconformities identified during them, and the corrective actions used to close them.
+
+This complements the immutable audit history (audit log) by providing structured audit planning and remediation workflow.
+
+### Automated Evidence Collection
+
+Beyond manual submissions, Kompro can collect evidence automatically from connected systems.
+
+Configurable collectors run on a schedule or on demand, pulling evidence from SQL databases, HTTP APIs, files, and other integrations, with credentials stored encrypted. Collected evidence is recorded with a full audit trail.
 
 ## Cross-Framework Compliance
 
@@ -413,6 +447,11 @@ Security-related functionality includes:
 * Evidence tracking
 * Policy management
 * Access control
+* Risk management
+* Incident management
+* IT service management
+* Audit program management
+* Automated evidence collection
 * Secure configuration through environment variables
 
 Security practices and deployment hardening requirements will be documented before the `v1.0.0` release.
@@ -434,6 +473,11 @@ The initial development direction includes:
 * Cross-framework mappings
 * Policy-as-code
 * Audit history
+* Risk management
+* Incident management
+* IT service management
+* Audit program management
+* Automated evidence collection
 * Seeded compliance frameworks
 * Additional integrations
 * Production deployment support
