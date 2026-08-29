@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, UserSelect } from '../components/ui';
 import { PlusIcon, TrashIcon, ServerIcon, CogIcon, ChartIcon } from '../components/icons';
 
 const TABS = [
@@ -131,7 +131,7 @@ export default function ITSM() {
               <Field label="Name"><input required className="input" value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} /></Field>
               <Field label="Type"><input className="input" value={modal.atype || ''} onChange={(e) => setModal({ ...modal, atype: e.target.value })} /></Field>
               <Field label="Description"><input className="input" value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
-              <Field label="Owner"><input className="input" value={modal.owner} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+              <Field label="Owner"><UserSelect value={modal.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
               <Field label="Location"><input className="input" value={modal.location} onChange={(e) => setModal({ ...modal, location: e.target.value })} /></Field>
               <Field label="Status">
                 <select className="input" value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>

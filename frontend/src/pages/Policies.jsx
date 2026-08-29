@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '../components/icons';
 
 const STATUSES = ['draft', 'active', 'retired'];
@@ -326,7 +326,7 @@ export default function Policies() {
             </select>
           </Field>
           <Field label="Owner">
-            <input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} />
+            <UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>

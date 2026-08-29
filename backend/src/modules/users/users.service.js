@@ -22,17 +22,27 @@ const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
 /**
- * Lists users with pagination.
- * @param {object} [opts] - { page, pageSize }.
+ * Lists users with pagination and optional search.
+ * @param {object} [opts] - { page, pageSize, search }.
  * @returns {object} { users, total, page, pageSize } where users are sanitized.
  */
-async function listUsers({ page = 1, pageSize = DEFAULT_PAGE_SIZE } = {}) {
+async function listUsers({ page = 1, pageSize = DEFAULT_PAGE_SIZE, search } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || DEFAULT_PAGE_SIZE));
 
+  const where = {};
+  if (search) {
+    const q = String(search).trim();
+    where.OR = [
+      { name: { contains: q, mode: 'insensitive' } },
+      { email: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+
   const [total, users] = await Promise.all([
-    prisma.user.count(),
+    prisma.user.count({ where }),
     prisma.user.findMany({
+      where,
       skip: (safePage - 1) * safeSize,
       take: safeSize,
       orderBy: { createdAt: 'asc' },

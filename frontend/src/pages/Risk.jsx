@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon } from '../components/icons';
 
@@ -87,7 +87,7 @@ function RiskDrawer({ risk, onClose, onChanged }) {
 
           <Section title="Scenarios" path={`/risks/${risk.id}/scenarios`} add={add} fields={[{ key: 'title', label: 'Title' }]} items={r.scenarios} render={(s) => <span className="text-sm text-slate-700">{s.title}</span>} />
           <Section title="Key Risk Indicators" path={`/risks/${risk.id}/kris`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'threshold', label: 'Threshold', type: 'number' }, { key: 'currentValue', label: 'Current value', type: 'number' }]} items={r.kris} render={(k) => <span className="text-sm text-slate-700">{k.title} <Badge color={statusColor(k.status)}>{k.status}</Badge></span>} />
-          <Section title="Treatments" path={`/risks/${risk.id}/treatments`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'status', label: 'Status', type: 'select', options: ['planned', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner' }]} items={r.treatments} render={(t) => <span className="text-sm text-slate-700">{t.title} <Badge color={statusColor(t.status)}>{t.status}</Badge></span>} />
+          <Section title="Treatments" path={`/risks/${risk.id}/treatments`} add={add} fields={[{ key: 'title', label: 'Title' }, { key: 'status', label: 'Status', type: 'select', options: ['planned', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner', type: 'user' }]} items={r.treatments} render={(t) => <span className="text-sm text-slate-700">{t.title} <Badge color={statusColor(t.status)}>{t.status}</Badge></span>} />
         </div>
       )}
     </Drawer>
@@ -229,7 +229,7 @@ export default function Risk() {
               {['open', 'mitigated', 'closed'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

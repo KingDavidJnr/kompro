@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../components/icons';
 
@@ -37,7 +37,7 @@ function IncidentDrawer({ incident, onClose, onChanged }) {
               loading={false}
               items={inc.actions}
               onAdd={addAction}
-              fields={[{ key: 'action', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['todo', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner' }]}
+              fields={[{ key: 'action', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['todo', 'in_progress', 'done'] }, { key: 'owner', label: 'Owner', type: 'user' }]}
               render={(a) => (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-700">{a.action}</span>
@@ -145,7 +145,7 @@ export default function Incidents() {
               {['open', 'contained', 'resolved'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><input className="input" value={modal?.owner || ''} onChange={(e) => setModal({ ...modal, owner: e.target.value })} /></Field>
+          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

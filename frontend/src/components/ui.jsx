@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import api from '../lib/api';
 import { XIcon } from './icons';
 
 /**
@@ -212,7 +213,7 @@ export function SearchableSelect({
 
   // Resolve an existing value into a displayable label.
   useEffect(() => {
-    if (value == null) {
+    if (value == null || value === '') {
       setSelected(null);
       return;
     }
@@ -328,5 +329,96 @@ export function SearchableSelect({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Searchable picker for users. Stores the selected user's display name into
+ * the (free-text) `owner`-style field, so no schema change is required.
+ */
+export function UserSelect({ value, onChange, placeholder = 'Unassigned', allowClear = true }) {
+  const loadOptions = async (q) => {
+    const res = await api.get(`/users?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+    return (res.data.data.users || []).map((u) => ({
+      value: u.name,
+      label: u.name ? `${u.name}${u.email ? ` · ${u.email}` : ''}` : u.email,
+    }));
+  };
+  const loadValue = async (name) => {
+    const res = await api.get(`/users?search=${encodeURIComponent(name)}&pageSize=50`);
+    const u = (res.data.data.users || []).find((x) => x.name === name);
+    return u ? { value: u.name, label: `${u.name} · ${u.email}` } : { value: name, label: name };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search users…"
+      allowClear={allowClear}
+    />
+  );
+}
+
+/**
+ * Searchable picker for frameworks. The framework list is small, so all
+ * frameworks are fetched once and filtered client-side as the user types.
+ */
+export function FrameworkSelect({ value, onChange, placeholder = 'Select framework', allowClear = false }) {
+  const loadOptions = async (q) => {
+    const res = await api.get('/frameworks');
+    const list = res.data.data.frameworks || [];
+    const ql = q ? q.toLowerCase() : '';
+    return list
+      .filter((f) => !ql || f.name.toLowerCase().includes(ql) || (f.description || '').toLowerCase().includes(ql))
+      .map((f) => ({ value: f.id, label: f.name }));
+  };
+  const loadValue = async (id) => {
+    const res = await api.get('/frameworks');
+    const f = (res.data.data.frameworks || []).find((x) => x.id === id);
+    return f ? { value: f.id, label: f.name } : { value: id, label: id };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search frameworks…"
+      allowClear={allowClear}
+    />
+  );
+}
+
+/**
+ * Searchable picker for roles (used on the user edit form).
+ */
+export function RoleSelect({ value, onChange, placeholder = 'Select role' }) {
+  const loadOptions = async (q) => {
+    const res = await api.get('/roles');
+    const list = res.data.data.roles || [];
+    const ql = q ? q.toLowerCase() : '';
+    return list
+      .filter((r) => !ql || r.name.toLowerCase().includes(ql))
+      .map((r) => ({ value: r.id, label: r.name }));
+  };
+  const loadValue = async (id) => {
+    const res = await api.get('/roles');
+    const r = (res.data.data.roles || []).find((x) => x.id === id);
+    return r ? { value: r.id, label: r.name } : { value: id, label: id };
+  };
+  return (
+    <SearchableSelect
+      value={value || null}
+      onChange={onChange}
+      loadOptions={loadOptions}
+      loadValue={loadValue}
+      placeholder={placeholder}
+      searchPlaceholder="Search roles…"
+      allowClear={false}
+    />
   );
 }

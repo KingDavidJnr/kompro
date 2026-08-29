@@ -54,7 +54,7 @@ function PlanDrawer({ plan, onClose, onChanged }) {
                   loading={false}
                   items={nc.actions}
                   onAdd={(b) => addCa(nc.id, b)}
-                  fields={[{ key: 'description', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['open', 'in_progress', 'closed'] }, { key: 'owner', label: 'Owner' }]}
+                  fields={[{ key: 'description', label: 'Action' }, { key: 'status', label: 'Status', type: 'select', options: ['open', 'in_progress', 'closed'] }, { key: 'owner', label: 'Owner', type: 'user' }]}
                   render={(a) => (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600">{a.description}</span>

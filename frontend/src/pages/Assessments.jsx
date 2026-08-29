@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, FrameworkSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon } from '../components/icons';
 
 const STATUSES = ['draft', 'in_progress', 'complete'];
@@ -138,14 +138,7 @@ export default function Assessments() {
             <textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
           <Field label="Framework">
-            <select className="input" value={modal?.frameworkId || ''} onChange={(e) => setModal({ ...modal, frameworkId: e.target.value })}>
-              <option value="">—</option>
-              {frameworks.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
+            <FrameworkSelect value={modal?.frameworkId || null} onChange={(id) => setModal({ ...modal, frameworkId: id })} />
           </Field>
           <Field label="Status">
             <select className="input" value={modal?.status || 'draft'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>

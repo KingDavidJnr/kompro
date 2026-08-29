@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Field, Spinner } from './ui';
+import { Button, Field, Spinner, UserSelect } from './ui';
 import { PlusIcon } from './icons';
 
 /**
@@ -35,6 +35,8 @@ export function AddList({ loading, items = [], onAdd, fields, render, empty = 'N
             <Field key={f.key} label={f.label}>
               {f.type === 'textarea' ? (
                 <textarea className="input" rows={2} value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+              ) : f.type === 'user' ? (
+                <UserSelect value={form[f.key]} onChange={(v) => setForm({ ...form, [f.key]: v })} />
               ) : f.type === 'select' ? (
                 <select className="input" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}>
                   <option value="">—</option>
