@@ -9,6 +9,7 @@
 const bcrypt = require('bcrypt');
 const prisma = require('../src/lib/prisma');
 const config = require('../src/config');
+const { recordAudit } = require('../src/modules/audit/audit.service');
 
 // Canonical permission list. Add new permissions here as features grow.
 const PERMISSIONS = [
@@ -251,24 +252,52 @@ const FRAMEWORK_REQUIREMENTS = {
 };
 
 /**
- * Seeds permissions, roles, the organization and an optional admin user.
- * @returns {void}
+ * Resolves the actor that owns seed-time changes so bootstrapping is
+ * attributable. Prefers the configured initial admin, then any existing admin,
+ * falling back to null when no responsible owner can be determined.
+ * @returns {Promise<string|null>} Actor user id, or null.
  */
+async function resolveSeedActor() {
+  if (config.initialAdminEmail) {
+    const user = await prisma.user.findUnique({ where: { email: config.initialAdminEmail } });
+    if (user) return user.id;
+  }
+  const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } });
+  if (adminRole) {
+    const admin = await prisma.user.findFirst({ where: { roleId: adminRole.id } });
+    if (admin) return admin.id;
+  }
+  return null;
+}
+
 /**
  * Ensure each bundled framework exists and carries its current authoritative
  * requirement catalog. Idempotent by requirement `code`: only requirements not
  * already present are inserted, so re-runs top up without duplicating or wiping
- * requirements an administrator may have customized.
+ * requirements an administrator may have customized. When an `actorId` is
+ * supplied, the creations are recorded in the audit trail so seeding bears an
+ * owner of responsibility.
  *
+ * @param {object} [opts] - { actorId }.
  * @returns {Promise<void>}
  */
-async function seedFrameworkCatalog() {
+async function seedFrameworkCatalog({ actorId = null } = {}) {
   for (const [name, requirements] of Object.entries(FRAMEWORK_REQUIREMENTS)) {
+    const existed = await prisma.framework.findUnique({ where: { name } });
     const framework = await prisma.framework.upsert({
       where: { name },
       update: {},
       create: { name, description: FRAMEWORK_DESCRIPTIONS[name] || null, enabled: false },
     });
+    if (!existed && actorId) {
+      await recordAudit({
+        actorId,
+        action: 'create',
+        entity: 'framework',
+        entityId: framework.id,
+        after: { name: framework.name, description: framework.description, seeded: true },
+      });
+    }
     const existing = await prisma.frameworkRequirement.findMany({
       where: { frameworkId: framework.id },
       select: { code: true },
@@ -284,6 +313,15 @@ async function seedFrameworkCatalog() {
         description: requirement.description || null,
       })),
     });
+    if (actorId) {
+      await recordAudit({
+        actorId,
+        action: 'create',
+        entity: 'requirement',
+        entityId: framework.id,
+        after: { framework: framework.name, added: missing.length },
+      });
+    }
     console.log(`Seeded ${missing.length} requirements for ${name}`);
   }
 }
@@ -329,20 +367,8 @@ async function main() {
     console.log('Seeded organization');
   }
 
-  // Seed the bundled compliance frameworks (disabled until enabled via API).
-  for (const fw of FRAMEWORKS) {
-    await prisma.framework.upsert({
-      where: { name: fw.name },
-      update: {},
-      create: { name: fw.name, description: fw.description, enabled: false },
-    });
-  }
-  // Seed each framework and its authoritative requirement catalog.
-  await seedFrameworkCatalog();
-  console.log(`Seeded ${FRAMEWORKS.length} frameworks and their requirement catalogs`);
-
-
-  // Bootstrap an admin when credentials are provided and none exists yet.
+  // Bootstrap the admin first so that seed-time framework and requirement
+  // creations can be attributed to a responsible owner in the audit trail.
   if (config.initialAdminEmail && config.initialAdminPassword) {
     const existing = await prisma.user.findUnique({
       where: { email: config.initialAdminEmail },
@@ -369,6 +395,12 @@ async function main() {
       );
     }
   }
+
+  // Seed each framework and its authoritative requirement catalog, attributed
+  // to the responsible owner so bootstrapping is traceable.
+  const actorId = await resolveSeedActor();
+  await seedFrameworkCatalog({ actorId });
+  console.log(`Seeded ${FRAMEWORKS.length} frameworks and their requirement catalogs`);
 }
 
 module.exports = { seedFrameworkCatalog };

@@ -1,4 +1,5 @@
 const { request, app, createAdminSession, prisma } = require('./helpers');
+const { seedFrameworkCatalog } = require('../prisma/seed');
 
 // The shared remote test database adds latency; give the multi-request
 // scenarios enough headroom to complete.
@@ -137,5 +138,26 @@ describe('Frameworks, requirements and mappings', () => {
     const soc2Reqs = await request(app).get(`/api/requirements?frameworkId=${soc2.id}`).set('Cookie', admin.cookie);
     expect(soc2Reqs.status).toBe(200);
     expect(soc2Reqs.body.data.requirements.length).toBe(27);
+  });
+
+  it('records audited framework seeding attributed to a responsible owner', async () => {
+    const owner = await prisma.user.findUnique({ where: { email: admin.email } });
+    // Remove the bundled framework so the seed must recreate it and its catalog.
+    await prisma.frameworkRequirement.deleteMany({ where: { framework: { name: 'ISO 27001' } } });
+    await prisma.framework.deleteMany({ where: { name: 'ISO 27001' } });
+
+    await seedFrameworkCatalog({ actorId: owner.id });
+
+    const framework = await prisma.framework.findUnique({ where: { name: 'ISO 27001' } });
+    const entries = await prisma.auditLog.findMany({
+      where: {
+        actorId: owner.id,
+        action: 'create',
+        entity: { in: ['framework', 'requirement'] },
+        entityId: framework.id,
+      },
+    });
+    expect(entries.some((entry) => entry.entity === 'framework')).toBe(true);
+    expect(entries.some((entry) => entry.entity === 'requirement')).toBe(true);
   });
 });

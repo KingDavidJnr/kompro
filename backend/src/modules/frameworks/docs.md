@@ -22,6 +22,12 @@ status is derived from the latest assessment of each mapped control.
   organization via /api/requirements/:id/mappings. Readiness (see
   /api/frameworks/:id/readiness) is therefore measurable as soon as you map
   controls and assess them.
+- Bootstrapping the bundled frameworks and their catalogs via `npm run seed` is
+  audited: the framework and requirement creations are recorded in the audit
+  trail and attributed to a responsible owner (the seeded initial admin, or the
+  first available admin). Seeding is idempotent by requirement code, so
+  re-running the seed only tops up missing requirements and re-audits those
+  additions; it never duplicates or wipes customized requirements.
 - Requirements belong to a framework and are managed at /api/requirements.
 - Mappings connect a requirement to a control. Creating or deleting a mapping
   uses frameworks:update. Mappings are unique per (requirement, control) pair.
