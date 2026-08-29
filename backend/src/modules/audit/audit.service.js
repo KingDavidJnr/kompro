@@ -65,15 +65,11 @@ async function recordFromRequest(req, { action, entity, entityId, before, after 
  * @param {object} [opts] - { page, pageSize, entity, entityId, actorId, action }.
  * @returns {object} { entries, total, page, pageSize }.
  */
-async function listAudit({ page = 1, pageSize = DEFAULT_PAGE_SIZE, entity, entityId, actorId, action } = {}) {
+async function listAudit({ page = 1, pageSize = DEFAULT_PAGE_SIZE, entity, entityId, actorId, action, from, to } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || DEFAULT_PAGE_SIZE));
 
-  const where = {};
-  if (entity) where.entity = entity;
-  if (entityId) where.entityId = entityId;
-  if (actorId) where.actorId = actorId;
-  if (action) where.action = action;
+  const where = buildAuditWhere({ entity, entityId, actorId, action, from, to });
 
   const [total, entries] = await Promise.all([
     prisma.auditLog.count({ where }),

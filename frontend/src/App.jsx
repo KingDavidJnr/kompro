@@ -16,6 +16,7 @@ import Risk from './pages/Risk';
 import Incidents from './pages/Incidents';
 import ITSM from './pages/ITSM';
 import AuditProgram from './pages/AuditProgram';
+import AuditLogs from './pages/AuditLogs';
 import Integrations from './pages/Integrations';
 import { Spinner } from './components/ui';
 
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="itsm" element={<ITSM />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="audit-program" element={<AuditProgram />} />
+        <Route path="audit" element={<AuditLogs />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

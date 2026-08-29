@@ -9,9 +9,21 @@
     height: 100%;
   }
 
+  :root {
+    --brand: #6c07c7;
+  }
+
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    border-top: 3px solid var(--brand);
+  }
+
+  /* Editorial display face for headings — deliberately not the default
+     SaaS sans, to give the product a distinct, document-like identity. */
+  h1, h2, h3, .font-display {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+    letter-spacing: -0.01em;
   }
 
   /* Subtle, charcoal-tinted focus ring used across interactive elements. */
@@ -22,11 +34,11 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-card;
+    @apply rounded-lg border border-slate-200 bg-white shadow-card;
   }
 
   .input {
-    @apply block w-full rounded-xl border-slate-300 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-charcoal-400 focus:ring-charcoal-300;
+    @apply block w-full rounded-md border-slate-300 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-charcoal-400 focus:ring-charcoal-300;
   }
 
   .label {
@@ -34,7 +46,7 @@
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded px-2.5 py-0.5 text-xs font-medium;
   }
 }
 

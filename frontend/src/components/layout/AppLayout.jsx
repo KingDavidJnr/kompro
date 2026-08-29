@@ -44,6 +44,7 @@ const NAV = [
         { to: '/itsm', label: 'ITSM', Icon: ServerIcon },
         { to: '/integrations', label: 'Integrations', Icon: PlugIcon },
         { to: '/audit-program', label: 'Audit Program', Icon: ClipboardIcon },
+        { to: '/audit', label: 'Audit logs', Icon: DocumentIcon },
       ],
     },
   {

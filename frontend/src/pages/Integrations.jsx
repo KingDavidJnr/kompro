@@ -49,7 +49,7 @@ function statusBadge(status) {
   };
   const cls = map[status] || map.pending;
   return (
-    <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
+    <span className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${cls}`}>
       {status || 'pending'}
     </span>
   );

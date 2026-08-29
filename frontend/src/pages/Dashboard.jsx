@@ -20,6 +20,57 @@ const STATS = [
   { key: 'incidents', label: 'Incidents', to: '/incidents', Icon: ClipboardIcon, accent: 'from-rose-500 to-rose-700' },
 ];
 
+const READINESS_TONE = {
+  emerald: { text: 'text-emerald-600', ring: 'bg-emerald-50', bar: 'bg-emerald-500' },
+  amber: { text: 'text-amber-600', ring: 'bg-amber-50', bar: 'bg-amber-500' },
+  rose: { text: 'text-rose-600', ring: 'bg-rose-50', bar: 'bg-rose-500' },
+};
+
+function ReadinessCard({ data }) {
+  const readiness = data.readiness || 0;
+  const toneKey = readiness >= 75 ? 'emerald' : readiness >= 50 ? 'amber' : 'rose';
+  const tone = READINESS_TONE[toneKey];
+  const items = [
+    { label: 'Framework adoption', value: data.components.frameworkEnabled },
+    { label: 'Control implementation', value: data.components.controlImplementation },
+    { label: 'Evidence coverage', value: data.components.evidenceCoverage },
+    { label: 'Assessment pass rate', value: data.components.assessmentPassRate },
+  ];
+  return (
+    <Card className="mb-8 p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
+        <div className="flex items-center gap-5">
+          <div className={`flex h-28 w-28 flex-none items-center justify-center rounded-full ${tone.ring}`}>
+            <div className="text-center">
+              <div className={`text-4xl font-bold ${tone.text}`}>{readiness}</div>
+              <div className="text-xs text-slate-400">/ 100</div>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Compliance readiness</h2>
+            <p className="mt-1 max-w-md text-sm text-slate-500">
+              Weighted across framework adoption, control implementation, evidence coverage and assessment pass rate.
+            </p>
+          </div>
+        </div>
+        <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+          {items.map((it) => (
+            <div key={it.label}>
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="text-slate-600">{it.label}</span>
+                <span className="font-semibold text-slate-900">{Math.round(it.value * 100)}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(it.value * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const frameworks = useGet('/frameworks?pageSize=1');
   const controls = useGet('/controls?pageSize=1');
@@ -28,6 +79,7 @@ export default function Dashboard() {
   const risks = useGet('/risk?pageSize=1');
   const incidents = useGet('/incidents?pageSize=1');
   const activity = useGet('/audit?pageSize=6');
+  const summary = useGet('/dashboard/summary');
 
   const values = {
     frameworks: totalOf(frameworks.data, 'frameworks'),
@@ -47,12 +99,18 @@ export default function Dashboard() {
         <p className="mt-1 text-sm text-slate-500">Here is a snapshot of your compliance program.</p>
       </div>
 
+      {summary.loading ? (
+        <div className="mb-8 text-sm text-slate-400">Calculating compliance readiness…</div>
+      ) : summary.data?.data ? (
+        <ReadinessCard data={summary.data.data} />
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STATS.map((s) => (
           <Link key={s.key} to={s.to}>
             <Card className="group p-5 transition hover:shadow-soft">
               <div className="flex items-center justify-between">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.accent} text-white`}>
+                <div className={`flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br ${s.accent} text-white`}>
                   <s.Icon className="h-6 w-6" />
                 </div>
                 <ArrowUpRightIcon className="h-4 w-4 text-slate-300 transition group-hover:text-charcoal-600" />

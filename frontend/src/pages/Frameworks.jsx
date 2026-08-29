@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
+import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon } from '../components/icons';
@@ -12,6 +13,7 @@ export default function Frameworks() {
   const [error, setError] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState(null);
+  const { confirm: ask, dialog } = useConfirm();
 
   const frameworks = data?.frameworks || [];
 
@@ -69,6 +71,15 @@ export default function Frameworks() {
     }
   }
 
+  function seedWithConfirm() {
+    ask({
+      title: 'Seed framework catalog?',
+      message:
+        'This adds the standard SOC 2, ISO 27001 and GDPR frameworks with their requirement catalogs if they are not already present. Existing frameworks are left untouched.',
+      confirmLabel: 'Seed catalog',
+    }).then((ok) => ok && seedCatalog());
+  }
+
   async function openRequirements(f) {
     setReqModal({ framework: f, requirements: null, loading: true, error: null, adding: false, form: { code: '', title: '', description: '' }, addError: null });
     try {
@@ -122,7 +133,7 @@ export default function Frameworks() {
         description="Compliance frameworks and their requirement catalogs."
         actions={
           <>
-            <Button variant="secondary" onClick={seedCatalog} disabled={seeding}>
+            <Button variant="secondary" onClick={seedWithConfirm} disabled={seeding}>
               {seeding ? <Spinner className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
               {seeding ? 'Seeding…' : 'Seed catalog'}
             </Button>
@@ -301,11 +312,15 @@ export default function Frameworks() {
                       </div>
                       {r.description && <p className="mt-1 text-sm text-slate-500">{r.description}</p>}
                     </div>
-                    <button
-                      onClick={() => deleteRequirement(r)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                      aria-label="Delete requirement"
-                    >
+                     <button
+                       onClick={() => ask({
+                         title: 'Delete requirement?',
+                         message: `Delete "${r.title}"? This cannot be undone.`,
+                         confirmLabel: 'Delete',
+                       }).then((ok) => ok && deleteRequirement(r))}
+                       className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                       aria-label="Delete requirement"
+                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
@@ -316,7 +331,8 @@ export default function Frameworks() {
             )}
           </div>
         ) : null}
-      </Modal>
+        </Modal>
+        {dialog}
     </div>
   );
 }
