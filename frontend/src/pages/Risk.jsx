@@ -7,7 +7,7 @@ import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon } from '../component
 
 function RiskDrawer({ risk, onClose, onChanged }) {
   const detail = useGet(`/risks/${risk.id}`);
-  const r = detail.data || risk;
+  const r = detail.data?.risk || risk;
 
   async function add(path, body, refetchKey) {
     try {

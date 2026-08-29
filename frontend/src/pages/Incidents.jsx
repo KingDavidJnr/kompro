@@ -7,7 +7,7 @@ import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../comp
 
 function IncidentDrawer({ incident, onClose, onChanged }) {
   const detail = useGet(`/incidents/${incident.id}`);
-  const inc = detail.data || incident;
+  const inc = detail.data?.incident || incident;
 
   async function addAction(body) {
     try {

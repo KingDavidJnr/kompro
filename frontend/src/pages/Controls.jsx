@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, CubeIcon } from '../components/icons';
 
-const STATUSES = ['active', 'planned', 'retired'];
+const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
 export default function Controls() {
   const { data, loading, refetch } = useGet('/controls?pageSize=100');
@@ -16,11 +16,11 @@ export default function Controls() {
 
   function openCreate() {
     setError(null);
-    setModal({ name: '', description: '', category: '', status: 'planned' });
+    setModal({ title: '', description: '', category: '', status: 'not_implemented' });
   }
   function openEdit(c) {
     setError(null);
-    setModal({ id: c.id, name: c.name, description: c.description || '', category: c.category || '', status: c.status });
+    setModal({ id: c.id, title: c.title, description: c.description || '', category: c.category || '', status: c.status });
   }
 
   async function save(e) {
@@ -72,7 +72,7 @@ export default function Controls() {
                 label: 'Name',
                 render: (c) => (
                   <span className="flex items-center gap-2 font-medium text-slate-900">
-                    <CubeIcon className="h-4 w-4 text-brand-500" /> {c.name}
+                    <CubeIcon className="h-4 w-4 text-brand-500" /> {c.title}
                   </span>
                 ),
               },
@@ -114,7 +114,7 @@ export default function Controls() {
       >
         <form onSubmit={save} className="space-y-4">
           <Field label="Name">
-            <input required className="input" value={modal?.name || ''} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
+            <input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} />
           </Field>
           <Field label="Description">
             <textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />

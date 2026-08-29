@@ -38,7 +38,7 @@ export default function Dashboard() {
     incidents: totalOf(incidents.data, 'incidents'),
   };
 
-  const logs = (activity.data?.logs || activity.data?.items || []).filter(Boolean);
+  const logs = (activity.data?.entries || activity.data?.logs || []).filter(Boolean);
 
   return (
     <div className="mx-auto max-w-6xl">

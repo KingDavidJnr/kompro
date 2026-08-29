@@ -7,7 +7,7 @@ import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../comp
 
 function PlanDrawer({ plan, onClose, onChanged }) {
   const detail = useGet(`/audit-program/${plan.id}`);
-  const p = detail.data || plan;
+  const p = detail.data?.plan || plan;
 
   async function addNc(body) {
     try {
