@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { SHOW_PASSWORD_LOGIN } from '../../config';
+import { SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
 import Logo from '../../components/Logo';
 import { Button, Field } from '../../components/ui';
-import { ShieldIcon, CheckIcon } from '../../components/icons';
+import { GoogleIcon, MicrosoftIcon, ShieldIcon, CheckIcon } from '../../components/icons';
+
+const SSO_META = {
+  google: { label: 'Continue with Google', Icon: GoogleIcon },
+  microsoft: { label: 'Continue with Microsoft', Icon: MicrosoftIcon },
+};
 
 const HIGHLIGHTS = [
   'Framework-agnostic compliance across ISO 27001, SOC 2, GDPR and more',
@@ -28,6 +33,10 @@ export default function Login() {
     } catch {
       // error surfaced via context
     }
+  }
+
+  function sso(provider) {
+    window.location.href = `/api/auth/${provider}`;
   }
 
   return (
@@ -66,6 +75,34 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sign in to your workspace</h1>
           <p className="mt-1 text-sm text-slate-500">Welcome back. Please enter your details.</p>
+
+          {SHOW_SSO_LOGIN && SSO_PROVIDERS.length > 0 && (
+            <div className="mt-8 space-y-3">
+              {SSO_PROVIDERS.map((p) => {
+                const meta = SSO_META[p];
+                if (!meta) return null;
+                const { label, Icon } = meta;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => sso(p)}
+                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <Icon className="h-5 w-5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {SHOW_SSO_LOGIN && SSO_PROVIDERS.length > 0 && SHOW_PASSWORD_LOGIN && (
+            <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              or
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          )}
 
           {SHOW_PASSWORD_LOGIN && (
             <form onSubmit={onSubmit} className="space-y-4">
