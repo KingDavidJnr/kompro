@@ -108,6 +108,55 @@ Response 200:
 }
 ```
 
+### GET /api/frameworks/:id/readiness
+
+Computes compliance readiness for a framework. Requires frameworks:read. It
+returns an overall readiness percentage (fully satisfied requirements divided
+by total requirements), a status breakdown, and a list of gaps - the
+requirements that are not satisfied - each with its linked controls and their
+latest assessment result. A requirement is "satisfied" only when every mapped
+control's latest assessment is `satisfied`.
+
+Status values per requirement:
+
+- `satisfied` - all mapped controls assessed and satisfied.
+- `partially_satisfied` - at least one mapped control satisfied and at least one
+  not (partial, unsatisfied, needs_review or unassessed).
+- `unsatisfied` - at least one mapped control is unsatisfied.
+- `needs_review` - no unsatisfied control but at least one needs review.
+- `unassessed` - mapped controls exist but at least one has no assessment.
+- `unmapped` - the requirement has no mapped controls.
+
+Response 200:
+```json
+{
+  "message": "Framework readiness computed",
+  "data": {
+    "framework": { "id": "clr...", "name": "ISO 27001", "enabled": true },
+    "totalRequirements": 4,
+    "satisfied": 1,
+    "readinessPercent": 25,
+    "breakdown": {
+      "satisfied": 1,
+      "partially_satisfied": 0,
+      "unsatisfied": 1,
+      "needs_review": 0,
+      "unassessed": 1,
+      "unmapped": 1
+    },
+    "gaps": [
+      {
+        "requirement": { "id": "clr...", "code": "A.2", "title": "Access control", "description": "..." },
+        "status": "unsatisfied",
+        "controls": [
+          { "id": "clr...", "title": "MFA", "latestResult": "unsatisfied", "assessedAt": "2026-08-28T10:00:00.000Z" }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### PATCH /api/frameworks/:id
 
 Updates a framework (name, description, enabled). Requires frameworks:update.
