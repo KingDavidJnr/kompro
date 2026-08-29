@@ -8,6 +8,7 @@ export default function Frameworks() {
   const { data, loading, refetch } = useGet('/frameworks?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [reqModal, setReqModal] = useState(null);
   const [error, setError] = useState(null);
 
   const frameworks = data?.frameworks || [];
@@ -50,6 +51,16 @@ export default function Frameworks() {
       refetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
+    }
+  }
+
+  async function openRequirements(f) {
+    setReqModal({ framework: f, requirements: null, loading: true, error: null });
+    try {
+      const res = await api.get(`/requirements?frameworkId=${f.id}`);
+      setReqModal((prev) => ({ ...prev, requirements: res.data.data.requirements, loading: false }));
+    } catch (err) {
+      setReqModal((prev) => ({ ...prev, error: err.response?.data?.message || 'Failed to load requirements.', loading: false }));
     }
   }
 
@@ -101,7 +112,10 @@ export default function Frameworks() {
                 key: 'actions',
                 label: '',
                 render: (f) => (
-                  <div className="flex justify-end gap-1">
+                  <div className="flex justify-end items-center gap-1">
+                    <button onClick={() => openRequirements(f)} className="rounded-lg px-2 py-1 text-xs font-medium text-charcoal-600 hover:bg-slate-100 hover:text-charcoal-900">
+                      Requirements
+                    </button>
                     <button onClick={() => openEdit(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -163,6 +177,34 @@ export default function Frameworks() {
         <p className="text-sm text-slate-600">
           Delete <span className="font-medium">{confirm?.name}</span>? Its requirements will be removed too.
         </p>
+      </Modal>
+
+      <Modal
+        open={!!reqModal}
+        onClose={() => setReqModal(null)}
+        title={reqModal ? `Requirements — ${reqModal.framework.name}` : 'Requirements'}
+      >
+        {reqModal?.loading ? (
+          <div className="flex justify-center py-10">
+            <Spinner className="h-7 w-7" />
+          </div>
+        ) : reqModal?.error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{reqModal.error}</div>
+        ) : (reqModal?.requirements?.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-500">No requirements for this framework yet.</p>
+        ) : (
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+            {reqModal.requirements.map((r) => (
+              <div key={r.id} className="rounded-xl border border-slate-200 p-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="font-medium text-slate-900">{r.title}</p>
+                  <span className="flex-none font-mono text-xs text-slate-400">{r.code}</span>
+                </div>
+                {r.description && <p className="mt-1 text-sm text-slate-500">{r.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );
