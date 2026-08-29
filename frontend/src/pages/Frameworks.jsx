@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
 import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
@@ -159,9 +160,9 @@ export default function Frameworks() {
                 key: 'name',
                 label: 'Name',
                 render: (f) => (
-                  <span className="flex items-center gap-2 font-medium text-slate-900">
+                  <Link to={`/frameworks/${f.id}`} className="flex items-center gap-2 font-medium text-slate-900 hover:text-brand-700 hover:underline">
                     <ShieldIcon className="h-4 w-4 text-charcoal-500" /> {f.name}
-                  </span>
+                  </Link>
                 ),
               },
               { key: 'description', label: 'Description' },

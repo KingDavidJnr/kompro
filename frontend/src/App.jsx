@@ -9,6 +9,7 @@ import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Policies from './pages/Policies';
 import Frameworks from './pages/Frameworks';
+import FrameworkDetail from './pages/FrameworkDetail';
 import Controls from './pages/Controls';
 import Evidence from './pages/Evidence';
 import Assessments from './pages/Assessments';
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="roles" element={<Roles />} />
         <Route path="policies" element={<Policies />} />
         <Route path="frameworks" element={<Frameworks />} />
+        <Route path="frameworks/:id" element={<FrameworkDetail />} />
         <Route path="controls" element={<Controls />} />
         <Route path="evidence" element={<Evidence />} />
         <Route path="assessments" element={<Assessments />} />

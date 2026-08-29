@@ -342,6 +342,7 @@ async function computeReadiness(frameworkId) {
                 select: {
                   id: true,
                   title: true,
+                  status: true,
                   assessments: {
                     orderBy: { createdAt: 'desc' },
                     take: 1,
@@ -359,6 +360,17 @@ async function computeReadiness(frameworkId) {
     throw new NotFoundError('Framework not found');
   }
 
+  // Every control linked by any requirement in this framework.
+  const controlIds = [...new Set(framework.requirements.flatMap((r) => r.controlMappings.map((m) => m.control.id)))];
+
+  // Evidence attached to those controls (grouped so we can count per control).
+  const evidenceGroups = controlIds.length
+    ? await prisma.evidence.groupBy({ by: ['controlId'], where: { controlId: { in: controlIds } }, _count: true })
+    : [];
+  const evidenceByControl = new Map(evidenceGroups.map((g) => [g.controlId, g._count]));
+  const totalEvidence = evidenceGroups.reduce((sum, g) => sum + g._count, 0);
+  const controlsWithEvidence = evidenceGroups.length;
+
   const breakdown = {
     satisfied: 0,
     partially_satisfied: 0,
@@ -368,15 +380,20 @@ async function computeReadiness(frameworkId) {
     unmapped: 0,
   };
   const gaps = [];
+  const requirements = [];
 
   for (const req of framework.requirements) {
     const controls = req.controlMappings.map((m) => {
       const latest = m.control.assessments[0] || null;
+      const ec = evidenceByControl.get(m.control.id) || 0;
       return {
         id: m.control.id,
         title: m.control.title,
+        controlStatus: m.control.status,
         latestResult: latest ? latest.result : null,
         assessedAt: latest ? latest.createdAt : null,
+        evidenceCount: ec,
+        hasEvidence: ec > 0,
       };
     });
 
@@ -400,10 +417,20 @@ async function computeReadiness(frameworkId) {
         controls,
       });
     }
+    requirements.push({
+      id: req.id,
+      code: req.code,
+      title: req.title,
+      description: req.description,
+      status,
+      controls,
+    });
   }
 
   const total = framework.requirements.length;
   const readinessPercent = total === 0 ? 0 : Math.round((breakdown.satisfied / total) * 100);
+  const mappedControlCount = controlIds.length;
+  const coveragePercent = mappedControlCount === 0 ? 0 : Math.round((controlsWithEvidence / mappedControlCount) * 100);
 
   return {
     framework: { id: framework.id, name: framework.name, enabled: framework.enabled },
@@ -411,6 +438,8 @@ async function computeReadiness(frameworkId) {
     satisfied: breakdown.satisfied,
     readinessPercent,
     breakdown,
+    evidence: { mappedControlCount, controlsWithEvidence, coveragePercent, totalEvidence },
+    requirements,
     gaps,
   };
 }
