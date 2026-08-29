@@ -135,11 +135,16 @@ model Policy {
   description String?
   content     String?
   status      String   @default("draft")
+  version     Int      @default(1)
   rules       Json?
   owner       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   evidences   Evidence[]
+  versions    PolicyVersion[]
+  changeRequests PolicyChangeRequest[]
+  reviews     PolicyReview[]
+  exceptions  PolicyException[]
 
   @@index([status])
 }
@@ -260,4 +265,268 @@ model CollectorConfig {
 
   @@index([enabled])
   @@index([nextRunAt])
+}
+
+// --- Risk Management ---
+
+model Risk {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String?
+  likelihood  Int      @default(1)
+  impact      Int      @default(1)
+  score       Int      @default(1)
+  tolerance   String?
+  status      String   @default("open")
+  owner       String?
+  scenarios   RiskScenario[]
+  kris        Kri[]
+  treatments  RiskTreatment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+}
+
+model RiskScenario {
+  id            String   @id @default(cuid())
+  riskId        String
+  title         String
+  description   String?
+  likelihood    Int      @default(1)
+  impact        Int      @default(1)
+  inherentScore Int      @default(1)
+  residualScore Int      @default(1)
+  risk          Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@index([riskId])
+}
+
+model Kri {
+  id          String    @id @default(cuid())
+  riskId      String?
+  title       String
+  description String?
+  unit        String?
+  threshold   Float?
+  currentValue Float?
+  status      String    @default("ok")
+  risk        Risk?     @relation(fields: [riskId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([riskId])
+  @@index([status])
+}
+
+model RiskTreatment {
+  id          String   @id @default(cuid())
+  riskId      String
+  title       String
+  description String?
+  status      String   @default("planned")
+  owner       String?
+  dueDate     DateTime?
+  risk        Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([riskId])
+  @@index([status])
+}
+
+// --- Incidents ---
+
+model Incident {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  category        String?
+  severity        String           @default("low")
+  classification  String?
+  status          String           @default("open")
+  owner           String?
+  occurredAt      DateTime?
+  resolvedAt      DateTime?
+  lessonsLearned  String?
+  actions         IncidentAction[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([status])
+  @@index([severity])
+}
+
+model IncidentAction {
+  id        String    @id @default(cuid())
+  incidentId String
+  action    String
+  owner     String?
+  status    String    @default("todo")
+  dueDate   DateTime?
+  doneAt    DateTime?
+  incident Incident   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([incidentId])
+}
+
+// --- ITSM ---
+
+model Asset {
+  id            String    @id @default(cuid())
+  name          String
+  type          String?
+  description   String?
+  owner         String?
+  location      String?
+  status        String    @default("active")
+  purchaseDate  DateTime?
+  warrantyExpiry DateTime?
+  changes       Change[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([type])
+  @@index([status])
+}
+
+model Change {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("requested")
+  risk        String?
+  scheduledAt DateTime?
+  assetId     String?
+  requestedBy String?
+  asset       Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([assetId])
+}
+
+model CapacityPlan {
+  id              String   @id @default(cuid())
+  resource        String
+  unit            String?
+  currentCapacity Float?
+  plannedCapacity Float?
+  asOf            DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([resource])
+}
+
+// --- Policy lifecycle extension ---
+
+model PolicyVersion {
+  id        String   @id @default(cuid())
+  policyId  String
+  version   Int
+  content   String?
+  status    String
+  createdAt DateTime @default(now())
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, version])
+  @@index([policyId])
+}
+
+model PolicyChangeRequest {
+  id              String   @id @default(cuid())
+  policyId        String
+  requestedById   String?
+  reason          String?
+  proposedContent String?
+  status          String   @default("requested")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  policy          Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([status])
+}
+
+model PolicyReview {
+  id        String   @id @default(cuid())
+  policyId  String
+  reviewerId String?
+  dueDate   DateTime?
+  status    String   @default("pending")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([status])
+}
+
+model PolicyException {
+  id          String   @id @default(cuid())
+  policyId    String
+  reason      String?
+  grantedById String?
+  expiresAt   DateTime?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([status])
+}
+
+// --- Audit management (distinct from the AuditLog trail) ---
+
+model AuditPlan {
+  id            String           @id @default(cuid())
+  title         String
+  scope         String?
+  status        String           @default("planned")
+  scheduledAt   DateTime?
+  nonconformities Nonconformity[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status])
+}
+
+model Nonconformity {
+  id          String            @id @default(cuid())
+  auditPlanId String
+  description String
+  severity    String            @default("minor")
+  status      String            @default("open")
+  actions     CorrectiveAction[]
+  auditPlan   AuditPlan         @relation(fields: [auditPlanId], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([auditPlanId])
+  @@index([status])
+}
+
+model CorrectiveAction {
+  id              String         @id @default(cuid())
+  nonconformityId String
+  description     String
+  owner           String?
+  dueDate         DateTime?
+  status          String         @default("open")
+  nonconformity   Nonconformity  @relation(fields: [nonconformityId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([nonconformityId])
+  @@index([status])
 }

@@ -136,3 +136,47 @@ Response 404:
 ```json
 { "message": "Policy not found" }
 ```
+
+## Policy Lifecycle
+
+In addition to the CRUD above, a policy supports versioning, change requests,
+reviews and exceptions. These sub-resources all reuse the `policies:*` permissions.
+
+### GET /api/policies/:id/versions
+Lists version snapshots for a policy. Requires policies:read.
+
+### POST /api/policies/:id/versions
+Snapshots the current content into a new version and increments the policy's
+`version` counter. Requires policies:create. Body: `{ "content": string, "status": string }` (both optional).
+
+Response 201:
+```json
+{ "message": "Policy version created", "data": { "version": { "id": "...", "policyId": "...", "version": 2, "content": "...", "status": "draft" } } }
+```
+
+### GET /api/policies/:id/change-requests
+Lists change requests. Requires policies:read.
+
+### POST /api/policies/:id/change-requests
+Creates a change request. Requires policies:create. Body: `{ "reason": string, "proposedContent": string, "requestedById": string }`.
+
+### PATCH /api/policies/:id/change-requests/:crid
+Updates a change request (e.g. approve/reject). Requires policies:update. Body: `{ "status": string, "reason": string, "proposedContent": string }`.
+
+### GET /api/policies/:id/reviews
+Lists scheduled reviews. Requires policies:read.
+
+### POST /api/policies/:id/reviews
+Schedules a review. Requires policies:create. Body: `{ "reviewerId": string, "dueDate": string, "notes": string, "status": string }`.
+
+### PATCH /api/policies/:id/reviews/:rid
+Updates a review (e.g. complete it). Requires policies:update.
+
+### GET /api/policies/:id/exceptions
+Lists exceptions (waivers). Requires policies:read.
+
+### POST /api/policies/:id/exceptions
+Creates an exception. Requires policies:create. Body: `{ "reason": string, "grantedById": string, "expiresAt": string }`.
+
+### PATCH /api/policies/:id/exceptions/:eid
+Updates an exception (e.g. revoke it). Requires policies:update.

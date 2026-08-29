@@ -46,6 +46,22 @@ const PERMISSIONS = [
   { name: 'frameworks:update', description: 'Update frameworks, requirements and mappings' },
   { name: 'frameworks:delete', description: 'Delete frameworks and requirements' },
   { name: 'audit:purge', description: 'Purge audit log entries' },
+  { name: 'risk:read', description: 'View risk register, scenarios, KRIs and treatments' },
+  { name: 'risk:create', description: 'Create risk entries and treatments' },
+  { name: 'risk:update', description: 'Update risk entries and treatments' },
+  { name: 'risk:delete', description: 'Delete risk entries and treatments' },
+  { name: 'incident:read', description: 'View incidents and response actions' },
+  { name: 'incident:create', description: 'Create incidents and response actions' },
+  { name: 'incident:update', description: 'Update incidents and response actions' },
+  { name: 'incident:delete', description: 'Delete incidents and response actions' },
+  { name: 'itsm:read', description: 'View IT assets, changes and capacity plans' },
+  { name: 'itsm:create', description: 'Create IT assets, changes and capacity plans' },
+  { name: 'itsm:update', description: 'Update IT assets, changes and capacity plans' },
+  { name: 'itsm:delete', description: 'Delete IT assets, changes and capacity plans' },
+  { name: 'auditplan:read', description: 'View audit plans, nonconformities and corrective actions' },
+  { name: 'auditplan:create', description: 'Create audit plans, nonconformities and corrective actions' },
+  { name: 'auditplan:update', description: 'Update audit plans, nonconformities and corrective actions' },
+  { name: 'auditplan:delete', description: 'Delete audit plans, nonconformities and corrective actions' },
 ];
 
 // Default roles and the permissions each one grants.
@@ -54,7 +70,7 @@ const ROLES = [
   {
     name: 'auditor',
     description: 'Read-only compliance and audit access',
-    permissions: ['org:read', 'users:read', 'roles:read', 'audit:read', 'controls:read', 'policies:read', 'evidence:read', 'assessments:read', 'frameworks:read'],
+    permissions: ['org:read', 'users:read', 'roles:read', 'audit:read', 'controls:read', 'policies:read', 'evidence:read', 'assessments:read', 'frameworks:read', 'risk:read', 'incident:read', 'itsm:read', 'auditplan:read'],
   },
   { name: 'member', description: 'Basic member access', permissions: ['org:read'] },
 ];
