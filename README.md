@@ -10,11 +10,12 @@ Kompro is self-hosted and uses PostgreSQL as its primary data store. Organizatio
 
 ## Project Status
 
-Kompro is currently under active development.
+Kompro has reached its first stable release, `v1.0.0`.
 
-The project is being developed toward its first stable release, `v1.0.0`.
+Kompro is production-ready and self-hostable. The current repository documentation describes the product, architecture, design principles, and operation. Complete installation, configuration, deployment, upgrade, and production operation guides are available:
 
-The current repository documentation describes the product, architecture, design principles, and development direction. Complete installation, configuration, deployment, upgrade, and production operation guides will be added and finalized before the `v1.0.0` release.
+- [SETUP.md](./SETUP.md) for installation, configuration, and deployment.
+- [SECURITY.md](./SECURITY.md) for deployment hardening and security practices.
 
 ## Core Philosophy
 
@@ -360,7 +361,7 @@ Configuration includes values such as:
 
 Secrets and credentials are not stored in the repository.
 
-Detailed environment variable documentation and deployment instructions will be provided before the `v1.0.0` release.
+Detailed environment variable documentation and deployment instructions are provided in [SETUP.md](./SETUP.md).
 
 ## Development
 
@@ -370,7 +371,7 @@ The development environment is designed to allow both applications to be started
 
 The backend and frontend run independently on their configured development ports.
 
-Detailed development setup instructions will be added as the project approaches `v1.0.0`.
+Detailed development setup instructions are available in [SETUP.md](./SETUP.md).
 
 ## Versioning
 
@@ -393,7 +394,7 @@ For example:
 
 Development versions before the first stable release may change significantly as the architecture and product evolve.
 
-Stable release documentation will be maintained alongside the corresponding release versions.
+Stable release documentation is maintained alongside the corresponding release versions.
 
 ## Contributions
 
@@ -418,7 +419,7 @@ Contributors should review the project's contribution and commit conventions bef
 
 Commit conventions are documented in [`commits.md`](./commits.md).
 
-Contribution guidelines will be expanded as the project approaches its first stable release.
+Contribution guidelines continue to expand as the project grows.
 
 ## Compliance Framework Content
 
@@ -454,7 +455,7 @@ Security-related functionality includes:
 * Automated evidence collection
 * Secure configuration through environment variables
 
-Security practices and deployment hardening requirements will be documented before the `v1.0.0` release.
+Security practices and deployment hardening are documented in [SECURITY.md](./SECURITY.md).
 
 Security issues should be reported responsibly rather than disclosed publicly before they can be investigated and addressed.
 
