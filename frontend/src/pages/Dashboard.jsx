@@ -1,8 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
+import { useAuth } from '../auth/AuthContext';
 import { Card, Badge, statusColor } from '../components/ui';
 import { ShieldIcon, CubeIcon, FlagIcon, DocumentIcon, FolderIcon, ClipboardIcon, ArrowUpRightIcon } from '../components/icons';
+
+function greetingFor(name) {
+  const h = new Date().getHours();
+  const part = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  const who = name ? `, ${name}` : '';
+  return `Good ${part}${who}`;
+}
 
 function totalOf(payload, key) {
   if (!payload) return 0;
@@ -72,6 +80,7 @@ function ReadinessCard({ data }) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const frameworks = useGet('/frameworks?pageSize=1');
   const controls = useGet('/controls?pageSize=1');
   const policies = useGet('/policies?pageSize=1');
@@ -92,10 +101,12 @@ export default function Dashboard() {
 
   const logs = (activity.data?.entries || activity.data?.logs || []).filter(Boolean);
 
+  const name = user?.name || user?.email?.split('@')[0] || '';
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Good to see you</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{greetingFor(name)}</h1>
         <p className="mt-1 text-sm text-slate-500">Here is a snapshot of your compliance program.</p>
       </div>
 

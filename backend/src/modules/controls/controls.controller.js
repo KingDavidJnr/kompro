@@ -23,6 +23,7 @@ async function list(req, res, next) {
       pageSize: req.query.pageSize,
       category: req.query.category,
       status: req.query.status,
+      search: req.query.search,
     });
     res.json({ message: 'Controls retrieved', data: result });
   } catch (err) {

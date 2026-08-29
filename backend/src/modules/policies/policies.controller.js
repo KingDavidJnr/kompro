@@ -22,6 +22,7 @@ async function list(req, res, next) {
       page: req.query.page,
       pageSize: req.query.pageSize,
       status: req.query.status,
+      search: req.query.search,
     });
     res.json({ message: 'Policies retrieved', data: result });
   } catch (err) {

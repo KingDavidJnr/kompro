@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, SearchableSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon } from '../components/icons';
 
 const SOURCES = ['manual', 'upload', 'integration', 'automated'];
@@ -53,6 +53,27 @@ export default function Evidence() {
       setError(err.response?.data?.message || 'Delete failed.');
     }
   }
+
+  const controlLabel = (c) => `${c.title}${c.category ? ` · ${c.category}` : ''}`;
+  const policyLabel = (p) => p.title;
+  const loadControls = async (q) => {
+    const res = await api.get(`/controls?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+    return (res.data.data.controls || []).map((c) => ({ value: c.id, label: controlLabel(c) }));
+  };
+  const loadControl = async (id) => {
+    const res = await api.get(`/controls/${id}`);
+    const c = res.data.data.control;
+    return { value: c.id, label: controlLabel(c) };
+  };
+  const loadPolicies = async (q) => {
+    const res = await api.get(`/policies?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+    return (res.data.data.policies || []).map((p) => ({ value: p.id, label: policyLabel(p) }));
+  };
+  const loadPolicy = async (id) => {
+    const res = await api.get(`/policies/${id}`);
+    const p = res.data.data.policy;
+    return { value: p.id, label: policyLabel(p) };
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -144,11 +165,25 @@ export default function Evidence() {
           <Field label="Content / notes">
             <textarea className="input" rows={3} value={modal?.content || ''} onChange={(e) => setModal({ ...modal, content: e.target.value })} />
           </Field>
-          <Field label="Control id" hint="Optional link to a control.">
-            <input className="input" value={modal?.controlId || ''} onChange={(e) => setModal({ ...modal, controlId: e.target.value })} />
+          <Field label="Control" hint="Optional link to a control.">
+            <SearchableSelect
+              value={modal?.controlId || null}
+              onChange={(id) => setModal({ ...modal, controlId: id })}
+              loadOptions={loadControls}
+              loadValue={loadControl}
+              placeholder="No control linked"
+              searchPlaceholder="Search controls…"
+            />
           </Field>
-          <Field label="Policy id" hint="Optional link to a policy.">
-            <input className="input" value={modal?.policyId || ''} onChange={(e) => setModal({ ...modal, policyId: e.target.value })} />
+          <Field label="Policy" hint="Optional link to a policy.">
+            <SearchableSelect
+              value={modal?.policyId || null}
+              onChange={(id) => setModal({ ...modal, policyId: id })}
+              loadOptions={loadPolicies}
+              loadValue={loadPolicy}
+              placeholder="No policy linked"
+              searchPlaceholder="Search policies…"
+            />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>

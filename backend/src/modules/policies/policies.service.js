@@ -21,15 +21,22 @@ const POLICY_STATUSES = ['draft', 'active', 'retired'];
 
 /**
  * Lists policies with optional filtering and pagination.
- * @param {object} [opts] - { page, pageSize, status }.
+ * @param {object} [opts] - { page, pageSize, status, search }.
  * @returns {object} { policies, total, page, pageSize }.
  */
-async function listPolicies({ page = 1, pageSize = DEFAULT_PAGE_SIZE, status } = {}) {
+async function listPolicies({ page = 1, pageSize = DEFAULT_PAGE_SIZE, status, search } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || DEFAULT_PAGE_SIZE));
 
   const where = {};
   if (status) where.status = status;
+  if (search) {
+    const q = String(search).trim();
+    where.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { description: { contains: q, mode: 'insensitive' } },
+    ];
+  }
 
   const [total, policies] = await Promise.all([
     prisma.policy.count({ where }),
