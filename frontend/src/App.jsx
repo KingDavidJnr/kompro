@@ -12,6 +12,10 @@ import Frameworks from './pages/Frameworks';
 import Controls from './pages/Controls';
 import Evidence from './pages/Evidence';
 import Assessments from './pages/Assessments';
+import Risk from './pages/Risk';
+import Incidents from './pages/Incidents';
+import ITSM from './pages/ITSM';
+import AuditProgram from './pages/AuditProgram';
 import { Spinner } from './components/ui';
 
 function RequireAuth({ children }) {
@@ -67,6 +71,10 @@ export default function App() {
         <Route path="controls" element={<Controls />} />
         <Route path="evidence" element={<Evidence />} />
         <Route path="assessments" element={<Assessments />} />
+        <Route path="risk" element={<Risk />} />
+        <Route path="incidents" element={<Incidents />} />
+        <Route path="itsm" element={<ITSM />} />
+        <Route path="audit-program" element={<AuditProgram />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
