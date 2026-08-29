@@ -47,7 +47,7 @@ There are **two separate env files**, one per component. Copy each
 | Variable | Default | Purpose / Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | – | **Pooled** Postgres connection used by the app at runtime. On managed Postgres (Supabase/Neon) use the transaction-pooler URL (usually port `6543`, `?pgbouncer=true`). |
-| `DIRECT_URL` | – | **Direct, non-pooled** Postgres connection used by Prisma for migrations/schema pushes (port `5432`). Must **not** be the PgBouncer pooler or migrations hang. |
+| `DIRECT_URL` | – | **Direct, non-pooled** Postgres connection used by Prisma for migrations (port `5432`). Must **not** be the PgBouncer pooler or migrations hang. |
 | `JWT_SECRET` | – | Long random string used to sign session JWTs (**HS256**). **Required in production.** |
 | `JWT_TTL` | `2h` | Access-token expiry (e.g. `2h`, `30m`). |
 | `BACKEND_PORT` | `5000` | Port the Express server binds. |
@@ -119,7 +119,7 @@ There are **two separate env files**, one per component. Copy each
 | `npm run dev` | `node --watch src/index.js` | Start the API with auto-restart on file changes. |
 | `npm run start` | `node src/index.js` | Start the API (production). |
 | `npm run generate` | `prisma generate` | (Re)generate the Prisma Client after schema changes. Runs automatically on `postinstall`. |
-| `npm run migrate` | `prisma migrate dev --name init` | Create the **initial** migration and apply it (development). Run once to bootstrap `prisma/migrations`. |
+| `npm run migrate` | `prisma migrate dev --name init` | One-time bootstrap that creates the **initial** migration. Normal use applies the committed migrations with `migrate:deploy`; create new migrations with `npx prisma migrate dev`. |
 | `npm run migrate:deploy` | `prisma migrate deploy` | Apply pending migrations **without** generating new ones (production). Uses `DATABASE_URL` + `DIRECT_URL`. |
 | `npm run seed` | `node prisma/seed.js` | Idempotently create permissions, the default `admin`/`auditor`/`member` roles, the org row, and the bootstrap admin (from `INITIAL_ADMIN_EMAIL`/`INITIAL_ADMIN_PASSWORD`). |
 | `npm run notify:due` | `node scripts/notify-due.js` | Send due-date reminders (wire to a cron job if needed). |
@@ -156,8 +156,11 @@ cp frontend/.env.example frontend/.env
 
 # 4. Create the schema + seed
 cd backend
-npx prisma db push          # quickest: pushes schema, no migration history
-#   OR, to use tracked migrations:  npm run migrate   (creates prisma/migrations)
+npm run migrate:deploy       # apply the committed migrations (creates all tables)
+#   For NEW schema changes during development, generate a migration with:
+#   npx prisma migrate dev    (prompts for a name, then applies it)
+#   If the database already has tables from an earlier `db push`, baseline it
+#   (mark the initial migration applied) before running migrate:deploy.
 npm run seed                # creates org, roles, and the bootstrap admin
 cd ..
 
@@ -187,7 +190,7 @@ managed Postgres.
 ```bash
 cd /opt/kompro/backend
 npm ci                      # install + prisma generate (postinstall)
-npm run migrate:deploy      # apply migrations (or: npx prisma db push)
+npm run migrate:deploy      # apply the committed migrations
 npm run seed                # bootstrap org/roles/admin (first time only)
 ```
 Create `backend/.env` with production values:
@@ -384,7 +387,7 @@ served over HTTPS.
 # Dev (one machine)
 npm run setup
 cp backend/.env.example backend/.env && cp frontend/.env.example frontend/.env
-cd backend && npx prisma db push && npm run seed && cd ..
+cd backend && npm run migrate:deploy && npm run seed && cd ..
 npm run dev
 
 # Backend only
