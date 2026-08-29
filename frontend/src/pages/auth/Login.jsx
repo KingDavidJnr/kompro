@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
 import Logo from '../../components/Logo';
 import { Button, Field } from '../../components/ui';
-import { GoogleIcon, MicrosoftIcon, ShieldIcon, CheckIcon } from '../../components/icons';
+import { GoogleIcon, MicrosoftIcon, CheckIcon } from '../../components/icons';
 
 const SSO_META = {
   google: { label: 'Continue with Google', Icon: GoogleIcon },
@@ -145,10 +145,6 @@ export default function Login() {
               </Button>
             </form>
           )}
-
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
-            <ShieldIcon className="h-4 w-4" /> Secured by Kompro
-          </div>
         </div>
       </div>
     </div>
