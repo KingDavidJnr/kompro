@@ -502,3 +502,29 @@ Response 200:
 { "message": "Collector run complete", "data": { "status": "success", "added": 3 } }
 ```
 
+### GET /api/evidence/collectors/:id/runs
+
+Returns a collector's run history, derived from the audit log (each run is an
+`action: "collect"` entry). Requires evidence:collect. Supports `page` and
+`pageSize` (max 100) query parameters.
+
+Response 200:
+```json
+{
+  "message": "Collector runs retrieved",
+  "data": {
+    "runs": [
+      { "id": "clr...", "action": "collect", "entity": "evidence", "entityId": "clr...", "after": { "collector": "Stale controls", "status": "success", "added": 3 }, "createdAt": "2026-08-29T12:00:00.000Z" }
+    ],
+    "total": 12,
+    "page": 1,
+    "pageSize": 25
+  }
+}
+```
+
+Response 404 (unknown collector):
+```json
+{ "message": "Collector not found" }
+```
+

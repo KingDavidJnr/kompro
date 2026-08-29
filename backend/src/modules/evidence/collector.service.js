@@ -180,10 +180,37 @@ async function runDueCollectors() {
   return results;
 }
 
+/**
+ * Returns the run history for a collector, derived from its audit entries
+ * (action "collect"). Each run records status, items added and any error.
+ * @param {string} id - CollectorConfig id.
+ * @param {object} [opts] - { page, pageSize }.
+ * @returns {Promise<object>} { runs, total, page, pageSize }.
+ * @throws {NotFoundError} When the collector does not exist.
+ */
+async function getCollectorRuns(id, { page = 1, pageSize = 25 } = {}) {
+  const collector = await prisma.collectorConfig.findUnique({ where: { id } });
+  if (!collector) {
+    throw new NotFoundError('Collector not found');
+  }
+  const where = { action: 'collect', entity: 'evidence', entityId: id };
+  const [runs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+  return { runs, total, page, pageSize };
+}
+
 module.exports = {
   listCollectors,
   createCollector,
   ingestEvidence,
   runCollectorNow,
   runDueCollectors,
+  getCollectorRuns,
 };

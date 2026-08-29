@@ -94,6 +94,40 @@ describe('Evidence collectors', () => {
     await prisma.collectorConfig.deleteMany({ where: { id } });
   });
 
+  it('returns a collector run history derived from the audit log', async () => {
+    const create = await request(app)
+      .post('/api/evidence/collectors')
+      .set('Cookie', admin.cookie)
+      .send({
+        name: 'History proof',
+        type: 'sql',
+        enabled: true,
+        cadenceMinutes: 360,
+        params: { sql: 'SELECT 1 AS title', titleColumn: 'title' },
+      });
+    expect(create.status).toBe(201);
+    const id = create.body.data.collector.id;
+
+    await request(app).post(`/api/evidence/collectors/${id}/run`).set('Cookie', admin.cookie);
+
+    const res = await request(app)
+      .get(`/api/evidence/collectors/${id}/runs`)
+      .set('Cookie', admin.cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.total).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(res.body.data.runs)).toBe(true);
+    expect(res.body.data.runs[0].action).toBe('collect');
+
+    await prisma.collectorConfig.deleteMany({ where: { id } });
+  });
+
+  it('returns 404 run history for an unknown collector', async () => {
+    const res = await request(app)
+      .get('/api/evidence/collectors/does-not-exist/runs')
+      .set('Cookie', admin.cookie);
+    expect(res.status).toBe(404);
+  });
+
   it('runs due collectors through the scheduler service', async () => {
     const created = await prisma.collectorConfig.create({
       data: {

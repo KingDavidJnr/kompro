@@ -55,4 +55,22 @@ async function runNow(req, res, next) {
   }
 }
 
-module.exports = { list, create, runNow };
+/**
+ * Handles GET /:id/runs (collector run history from the audit log).
+ * @param {object} req - Authenticated request with id param and page query.
+ * @param {object} res - Express response ({ message, data: { runs, total, page, pageSize } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function getRuns(req, res, next) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const pageSize = Math.min(Number(req.query.pageSize) || 25, 100);
+    const result = await collectorService.getCollectorRuns(req.params.id, { page, pageSize });
+    res.json({ message: 'Collector runs retrieved', data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, runNow, getRuns };

@@ -35,4 +35,7 @@ router.post(
 // Trigger an immediate run of a collector.
 router.post('/:id/run', requireAuth, requirePermission('evidence:collect'), controller.runNow);
 
+// Retrieve a collector's run history (derived from the audit log).
+router.get('/:id/runs', requireAuth, requirePermission('evidence:collect'), controller.getRuns);
+
 module.exports = router;
