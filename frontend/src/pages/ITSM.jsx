@@ -23,7 +23,7 @@ export default function ITSM() {
 
   function openCreate() {
     setError(null);
-    if (tab === 'assets') setModal({ type: 'assets', name: '', type: '', description: '', owner: '', location: '', status: 'active' });
+    if (tab === 'assets') setModal({ type: 'assets', name: '', atype: '', description: '', owner: '', location: '', status: 'active' });
     if (tab === 'changes') setModal({ type: 'changes', title: '', description: '', status: 'requested', risk: '', assetId: '' });
     if (tab === 'capacity') setModal({ type: 'capacity', resource: '', unit: '', currentCapacity: '', plannedCapacity: '', notes: '' });
   }

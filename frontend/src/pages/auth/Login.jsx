@@ -47,8 +47,7 @@ export default function Login() {
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="relative flex items-center gap-3">
-          <img src="/kompro-logo.png" alt="Kompro" className="h-9 w-auto brightness-0 invert" />
-          <span className="text-xl font-bold tracking-tight">Kompro</span>
+          <img src="/kompro-logo.png" alt="Kompro" className="h-9 w-auto" />
         </div>
         <div className="relative max-w-md">
           <h2 className="text-3xl font-bold leading-tight">Compliance you actually own.</h2>
