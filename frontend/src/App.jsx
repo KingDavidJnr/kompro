@@ -8,6 +8,10 @@ import Organization from './pages/Organization';
 import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Policies from './pages/Policies';
+import Frameworks from './pages/Frameworks';
+import Controls from './pages/Controls';
+import Evidence from './pages/Evidence';
+import Assessments from './pages/Assessments';
 import { Spinner } from './components/ui';
 
 function RequireAuth({ children }) {
@@ -59,6 +63,10 @@ export default function App() {
         <Route path="users" element={<Users />} />
         <Route path="roles" element={<Roles />} />
         <Route path="policies" element={<Policies />} />
+        <Route path="frameworks" element={<Frameworks />} />
+        <Route path="controls" element={<Controls />} />
+        <Route path="evidence" element={<Evidence />} />
+        <Route path="assessments" element={<Assessments />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
