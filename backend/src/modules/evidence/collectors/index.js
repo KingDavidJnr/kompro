@@ -10,9 +10,13 @@
  */
 
 const sqlCollector = require('./sql');
+const httpCollector = require('./http');
+const fileCollector = require('./file');
 
 const REGISTRY = {
   sql: sqlCollector,
+  http: httpCollector,
+  file: fileCollector,
 };
 
 /**

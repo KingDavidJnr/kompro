@@ -124,6 +124,7 @@ async function ingestEvidence(collectorConfig) {
       collectedAt: new Date(),
       controlId: item.controlId || null,
       policyId: item.policyId || null,
+      collectorId: collectorConfig.id,
       uploadedById: null,
     });
     added += 1;

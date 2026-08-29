@@ -115,3 +115,130 @@ describe('Evidence collectors', () => {
     await prisma.collectorConfig.deleteMany({ where: { id: created.id } });
   });
 });
+
+const httpCollector = require('../src/modules/evidence/collectors/http');
+const fileCollector = require('../src/modules/evidence/collectors/file');
+const { getCollector } = require('../src/modules/evidence/collectors');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+describe('Collector adapters', () => {
+  it('registers sql, http and file collectors', () => {
+    expect(getCollector('sql').type).toBe('sql');
+    expect(getCollector('http').type).toBe('http');
+    expect(getCollector('file').type).toBe('file');
+  });
+
+  it('http collector maps a REST response with apiKey auth', async () => {
+    const fetchMock = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ workflow_runs: [{ name: 'build', head_commit: { message: 'fixed' } }] }),
+    });
+    const items = await httpCollector.collect({
+      fetch: fetchMock,
+      params: {
+        url: 'https://api.github.com/repos/x/y/actions/runs',
+        headers: { Accept: 'application/vnd.github+json' },
+        auth: { type: 'apiKey', header: 'Authorization', prefix: 'Bearer ', value: '{{secret.token}}' },
+        itemsPath: 'workflow_runs',
+        mapping: { title: 'name', description: 'head_commit.message' },
+      },
+      secrets: { token: 'abc' },
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('build');
+    expect(items[0].description).toBe('fixed');
+  });
+
+  it('http collector performs an oauth2 client-credentials exchange', async () => {
+    let sentAuth;
+    const fetchMock = async (url, opts) => {
+      if (String(url).includes('/oauth2/v1/token')) {
+        return { ok: true, status: 200, json: async () => ({ access_token: 'tok123' }) };
+      }
+      sentAuth = opts.headers.Authorization;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ users: [{ profile: { email: 'a@b.com', login: 'a' } }] }),
+      };
+    };
+    const items = await httpCollector.collect({
+      fetch: fetchMock,
+      params: {
+        url: 'https://x.okta.com/api/v1/users',
+        auth: {
+          type: 'oauth2',
+          tokenUrl: 'https://x.okta.com/oauth2/v1/token',
+          clientId: '{{secret.clientId}}',
+          clientSecret: '{{secret.clientSecret}}',
+        },
+        itemsPath: 'users',
+        mapping: { title: 'profile.email' },
+      },
+      secrets: { clientId: 'cid', clientSecret: 'csec' },
+    });
+    expect(sentAuth).toBe('Bearer tok123');
+    expect(items[0].title).toBe('a@b.com');
+  });
+
+  it('http collector signs AWS requests with SigV4', async () => {
+    let captured;
+    const fetchMock = async (url, opts) => {
+      captured = opts.headers;
+      return { ok: true, status: 200, json: async () => ({ findings: [] }) };
+    };
+    await httpCollector.collect({
+      fetch: fetchMock,
+      params: {
+        method: 'POST',
+        url: 'https://securityhub.us-east-1.amazonaws.com/accounts/123/findings',
+        auth: {
+          type: 'aws',
+          service: 'securityhub',
+          region: 'us-east-1',
+          accessKeyId: '{{secret.accessKeyId}}',
+          secretAccessKey: '{{secret.secretAccessKey}}',
+        },
+        itemsPath: 'findings',
+        mapping: { title: 'Title' },
+      },
+      secrets: { accessKeyId: 'AKID', secretAccessKey: 'secret' },
+    });
+    expect(captured.Authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=AKID\//);
+    expect(captured['X-Amz-Date']).toMatch(/^\d{8}T\d{6}Z$/);
+  });
+
+  it('file collector reads files from a directory', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kompro-file-'));
+    fs.writeFileSync(path.join(dir, 'report.json'), 'hello compliance');
+    const items = await fileCollector.collect({ params: { path: dir, pattern: '*.json' } });
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('report.json');
+    expect(items[0].content).toContain('hello compliance');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('ingests a file collector end to end and tags the evidence', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kompro-file-e2e-'));
+    fs.writeFileSync(path.join(dir, 'proof.json'), 'end-to-end proof');
+    const cfg = await prisma.collectorConfig.create({
+      data: { name: 'File proof', type: 'file', enabled: true, params: { path: dir } },
+    });
+    const result = await collectorService.runCollectorNow(cfg.id);
+    expect(result.status).toBe('success');
+    expect(result.added).toBeGreaterThanOrEqual(1);
+
+    const evidence = await prisma.evidence.findFirst({
+      where: { collectorId: cfg.id, source: 'automated_check' },
+    });
+    expect(evidence).toBeTruthy();
+    expect(evidence.content).toContain('end-to-end proof');
+
+    await prisma.evidence.deleteMany({ where: { collectorId: cfg.id } });
+    await prisma.collectorConfig.deleteMany({ where: { id: cfg.id } });
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
