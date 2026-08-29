@@ -16,7 +16,6 @@ import {
   KeyIcon,
   ServerIcon,
   LogoutIcon,
-  BellIcon,
   ChevronDownIcon,
   PlugIcon,
 } from '../../components/icons';
@@ -203,10 +202,6 @@ export default function AppLayout() {
             <span className="font-semibold text-slate-700">{org?.displayName || org?.name || 'My Organization'}</span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-              <BellIcon className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-brand-500" />
-            </button>
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
