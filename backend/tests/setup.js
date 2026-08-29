@@ -8,6 +8,7 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { seedFrameworkCatalog } = require('../prisma/seed');
 
 const prisma = new PrismaClient();
 
@@ -40,6 +41,11 @@ beforeAll(async () => {
   }
 
   await wipe();
+
+  // Re-seed the bundled framework catalogs so readiness and catalog tests start
+  // from a known, populated state (frameworks/requirements are configuration,
+  // not tenant data, and are intentionally wiped above for isolation).
+  await seedFrameworkCatalog();
 });
 
 afterAll(async () => {

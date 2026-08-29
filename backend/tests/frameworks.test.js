@@ -122,4 +122,20 @@ describe('Frameworks, requirements and mappings', () => {
     await prisma.framework.delete({ where: { id: fw.id } });
     await prisma.control.deleteMany({ where: { id: { in: [c1.id, c2.id, c3.id] } } });
   });
+
+  it('ships the current requirement catalog for each bundled framework', async () => {
+    const list = await request(app).get('/api/frameworks').set('Cookie', admin.cookie);
+    const iso = list.body.data.frameworks.find((f) => f.name === 'ISO 27001');
+    const soc2 = list.body.data.frameworks.find((f) => f.name === 'SOC 2');
+    expect(iso).toBeTruthy();
+    expect(soc2).toBeTruthy();
+
+    const isoReqs = await request(app).get(`/api/requirements?frameworkId=${iso.id}`).set('Cookie', admin.cookie);
+    expect(isoReqs.status).toBe(200);
+    expect(isoReqs.body.data.requirements.length).toBe(93);
+
+    const soc2Reqs = await request(app).get(`/api/requirements?frameworkId=${soc2.id}`).set('Cookie', admin.cookie);
+    expect(soc2Reqs.status).toBe(200);
+    expect(soc2Reqs.body.data.requirements.length).toBe(27);
+  });
 });

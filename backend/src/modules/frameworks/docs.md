@@ -13,6 +13,15 @@ status is derived from the latest assessment of each mapped control.
 
 - Frameworks are CRUD-managed at /api/frameworks. They ship seeded (ISO 27001,
   SOC 2, GDPR) but are disabled until an admin enables them.
+- Each bundled framework ships with its current, authoritative requirement
+  catalog already seeded: ISO/IEC 27001:2022 Annex A (93 controls across the
+  organizational, people, physical and technological themes), the AICPA 2017
+  Trust Services Criteria (Security Common Criteria CC1-CC9 plus the
+  Availability, Confidentiality, Processing Integrity and Privacy criteria) and
+  the core GDPR articles. Mappings to your own controls are still added per
+  organization via /api/requirements/:id/mappings. Readiness (see
+  /api/frameworks/:id/readiness) is therefore measurable as soon as you map
+  controls and assess them.
 - Requirements belong to a framework and are managed at /api/requirements.
 - Mappings connect a requirement to a control. Creating or deleting a mapping
   uses frameworks:update. Mappings are unique per (requirement, control) pair.
