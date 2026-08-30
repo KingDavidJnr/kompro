@@ -354,6 +354,75 @@ served over HTTPS.
   not AWS) to store evidence in object storage. Recommended for ephemeral or
   scaled deployments.
 
+### 8.1 Local disk: directory permissions (Linux / other POSIX hosts)
+
+When using local disk, the **OS user that runs the Node process** must be able
+to create files and directories under `UPLOAD_DIR`. The app calls
+`mkdir(recursive: true)` on startup, but that only succeeds if the process can
+already write to the parent path, and uploads will fail at write time
+(`EACCES` / permission denied) if it cannot.
+
+This matters most when:
+
+- you point `UPLOAD_DIR` at a directory **outside** the backend folder
+  (for example `UPLOAD_DIR=/var/lib/kompro/uploads`),
+- you run the API as a dedicated, unprivileged system user (recommended) but
+  the directory is owned by `root` or another user, or
+- the directory lives on a mounted volume with restrictive options.
+
+Steps:
+
+1. **Create the directory** if it does not exist:
+   ```bash
+   sudo mkdir -p /var/lib/kompro/uploads
+   ```
+2. **Make the app user the owner** of that directory and its contents:
+   ```bash
+   sudo chown -R kompro:kompro /var/lib/kompro/uploads
+   ```
+   Replace `kompro` with the actual user that runs `node src/index.js`
+   (the systemd or pm2 user, or `node` / `www-data` depending on your setup).
+3. **Restrict permissions** so only that user can read and write the evidence
+   (evidence files may contain sensitive compliance data):
+   ```bash
+   sudo chmod 750 /var/lib/kompro/uploads
+   # recursively, in case files already exist:
+   sudo chmod -R u+rwX,go-rwx /var/lib/kompro/uploads
+   ```
+   `750` means owner read/write/execute, group read/execute, others none.
+   Use `700` if no other local user needs access.
+4. **If you run under systemd**, make sure the service runs as that same user
+   (the directory owner). Example `/etc/systemd/system/kompro-api.service`:
+   ```ini
+   [Service]
+   User=kompro
+   Group=kompro
+   ```
+   Then `sudo systemctl daemon-reload && sudo systemctl restart kompro-api`
+   and re-check the ownership from step 2.
+5. **Mounted volumes:** if `UPLOAD_DIR` is on a separate mount, ensure it is
+   mounted read-write (not `ro`) and does not strip ownership. A vfat/ntfs
+   mount maps every file to a single UID, so set its `uid` / `gid` mount
+   options to the app user.
+6. **SELinux (RHEL / CentOS / Fedora):** if SELinux is enforcing and you place
+   uploads outside the default paths, the kernel may still deny writes. Either
+   label the directory writable, for example
+   `sudo semanage fcontext -a -t httpd_sys_rw_content_t "/var/lib/kompro/uploads(/.*)?" && sudo restorecon -Rv /var/lib/kompro/uploads`,
+   or run the API in a context already permitted to write there.
+
+**macOS / Windows:** the user that starts the process normally owns its own
+directories, so permissions are rarely a problem. On Windows, make sure the
+folder is not marked read-only and that the service account (if running as a
+service) has modify rights.
+
+**Verify:** after starting the API, upload a small evidence file from the UI.
+If it fails, check the API logs for `EACCES` and confirm the owner and
+permissions above match the process user:
+
+```bash
+ps -o user= -p "$(pgrep -f 'node src/index.js')"
+```
+
 ---
 
 ## 9. Post-deployment checklist
@@ -378,6 +447,7 @@ served over HTTPS.
 | Login rate-limited during testing | The API rate-limits login to 5 attempts / 15 min per email (in-memory). Restart the API to reset during dev/testing. |
 | Frontend can't reach API in dev | Ensure `VITE_BACKEND_URL` points at the running API and the Vite dev server is up (it proxies `/api`). |
 | `404` on deep links after deploy | SPA fallback missing. On Vercel the `vercel.json` rewrite handles it; on nginx use `try_files $uri /index.html`. |
+| Evidence upload fails / 500 on upload, logs show `EACCES` | The Node process user cannot write to `UPLOAD_DIR`. Create the directory and fix ownership/permissions per §8.1 (the process user must own it). |
 
 ---
 
