@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, RoleSelect } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, UsersIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, UsersIcon, KeyIcon } from '../components/icons';
 
 export default function Users() {
   const { data, loading, refetch } = useGet('/users');
@@ -11,6 +11,9 @@ export default function Users() {
   const [modal, setModal] = useState(null); // { id?, email, name, roleId, active }
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
+  const [resetUrl, setResetUrl] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const users = data?.users || [];
 
@@ -46,6 +49,27 @@ export default function Users() {
       refetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
+    }
+  }
+
+  async function generateResetLink(u) {
+    setError(null);
+    try {
+      const res = await api.post(`/users/${u.id}/reset-link`);
+      setResetTarget(u);
+      setResetUrl(res.data.data.resetUrl);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not generate reset link.');
+    }
+  }
+
+  async function copyResetLink() {
+    try {
+      await navigator.clipboard.writeText(resetUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore; the field is selectable as a fallback
     }
   }
 
@@ -88,6 +112,9 @@ export default function Users() {
                 label: '',
                 render: (u) => (
                   <div className="flex justify-end gap-1">
+                    <button onClick={() => generateResetLink(u)} title="Generate reset link" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
+                      <KeyIcon className="h-4 w-4" />
+                    </button>
                     <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -155,6 +182,23 @@ export default function Users() {
         <p className="text-sm text-slate-600">
           Remove <span className="font-medium">{confirm?.email}</span>? This cannot be undone.
         </p>
+      </Modal>
+
+      <Modal
+        open={!!resetUrl}
+        onClose={() => { setResetUrl(null); setResetTarget(null); }}
+        title="Password reset link"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setResetUrl(null); setResetTarget(null); }}>Close</Button>
+            <Button onClick={copyResetLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Share this single-use link with <span className="font-medium">{resetTarget?.email}</span> so they can set a new password. The link expires after a short time.
+        </p>
+        <input readOnly value={resetUrl || ''} onFocus={(e) => e.target.select()} className="input mt-3 w-full" />
       </Modal>
     </div>
   );

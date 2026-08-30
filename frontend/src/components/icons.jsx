@@ -148,6 +148,12 @@ export const EyeIcon = (p) => (
   </Svg>
 );
 
+export const EyeOffIcon = (p) => (
+  <Svg {...p}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 4.2A10.9 10.9 0 0112 4c6.5 0 10 7 10 7a18 18 0 01-3.6 4.4M6.1 6.1A18 18 0 002 11s3.5 7 10 7a10.9 10.9 0 004-.8" />
+  </Svg>
+);
+
 export const CogIcon = (p) => (
   <Svg {...p}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 100-6 3 3 0 000 6z" />

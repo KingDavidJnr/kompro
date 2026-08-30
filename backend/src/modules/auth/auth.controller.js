@@ -245,4 +245,35 @@ function ssoCallback(provider) {
   };
 }
 
-module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, ssoRedirect, ssoCallback };
+/**
+ * Handles POST /api/auth/change-password.
+ *
+ * Lets the authenticated user change their own password after verifying the
+ * current one. All other active sessions are revoked so the new password is
+ * enforced everywhere, and the change is recorded in the audit log.
+ * @param {object} req - Authenticated request with { currentPassword, password }.
+ * @param {object} res - Express response ({ message, data: { user } }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function changePassword(req, res, next) {
+  try {
+    const user = await authService.changePassword({
+      userId: req.user.id,
+      currentPassword: req.body.currentPassword,
+      newPassword: req.body.password,
+    });
+    await auditService.recordFromRequest(req, {
+      action: 'change_password',
+      entity: 'user',
+      entityId: user.id,
+      before: null,
+      after: user,
+    });
+    res.json({ message: 'Password changed successfully', data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, changePassword, ssoRedirect, ssoCallback };

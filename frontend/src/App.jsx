@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import Login from './pages/auth/Login';
+import ResetPassword from './pages/auth/ResetPassword';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Organization from './pages/Organization';
@@ -10,6 +11,7 @@ import Roles from './pages/Roles';
 import Policies from './pages/Policies';
 import Frameworks from './pages/Frameworks';
 import FrameworkDetail from './pages/FrameworkDetail';
+import Settings from './pages/Settings';
 import Controls from './pages/Controls';
 import Evidence from './pages/Evidence';
 import Assessments from './pages/Assessments';
@@ -57,6 +59,7 @@ export default function App() {
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login />}
       />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/"
         element={
@@ -69,6 +72,7 @@ export default function App() {
         <Route path="organization" element={<Organization />} />
         <Route path="users" element={<Users />} />
         <Route path="roles" element={<Roles />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="policies" element={<Policies />} />
         <Route path="frameworks" element={<Frameworks />} />
         <Route path="frameworks/:id" element={<FrameworkDetail />} />
