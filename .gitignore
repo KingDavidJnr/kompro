@@ -159,3 +159,6 @@ standards.md
 
 # Local roadmap / planning notes (never committed to origin)
 roadmap.md
+
+# Landing page (kept out of this repo; deployed separately on Vercel)
+landing-page/
