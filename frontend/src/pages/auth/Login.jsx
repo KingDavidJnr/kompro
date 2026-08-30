@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
 import Logo from '../../components/Logo';
 import { Button, Field } from '../../components/ui';
-import { GoogleIcon, MicrosoftIcon, CheckIcon } from '../../components/icons';
+import { GoogleIcon, MicrosoftIcon, CheckIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
 
 const SSO_META = {
   google: { label: 'Continue with Google', Icon: GoogleIcon },
@@ -21,6 +21,7 @@ export default function Login() {
   const { user, login, loading, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const navigate = useNavigate();
 
   if (user) return <Navigate to="/" replace />;
@@ -118,15 +119,25 @@ export default function Login() {
                 />
               </Field>
               <Field label="Password">
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input"
-                />
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600"
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                  >
+                    {showPw ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  </button>
+                </div>
               </Field>
 
               {error && (
@@ -135,7 +146,7 @@ export default function Login() {
 
               <div className="flex items-center justify-between text-sm">
                 <span />
-                <a href="/api/auth/forgot-password" className="font-medium text-charcoal-700 hover:text-charcoal-900">
+                <a href="/reset-password" className="font-medium text-charcoal-700 hover:text-charcoal-900">
                   Forgot password?
                 </a>
               </div>

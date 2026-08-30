@@ -72,6 +72,16 @@ router.post(
   controller.resetPassword
 );
 
+// Self-service password change for the authenticated user.
+router.post(
+  '/change-password',
+  requireAuth,
+  body('currentPassword').exists().withMessage('Current password required'),
+  body('password').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
+  validate,
+  controller.changePassword
+);
+
 // Protected routes.
 router.post('/logout', requireAuth, controller.logout);
 router.get('/me', requireAuth, controller.me);

@@ -326,4 +326,52 @@ async function resetPassword({ token, password }) {
   return publicUser(record.user);
 }
 
-module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, isNewLoginIp, ssoLogin };
+/**
+ * Changes the authenticated user's own password after verifying the current
+ * one. All other active sessions are revoked so the new password is enforced
+ * everywhere, and the change is confirmed by email when SMTP is configured.
+ * @param {object} input - { userId, currentPassword, newPassword }.
+ * @returns {Promise<object>} Sanitized user whose password changed.
+ * @throws {UnauthorizedError} When the current password is incorrect.
+ */
+async function changePassword({ userId, currentPassword, newPassword }) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) {
+    throw new UnauthorizedError('Current password is incorrect');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    // Force a fresh login everywhere by revoking active sessions.
+    await tx.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  });
+
+  if (config.smtp.host) {
+    try {
+      await emailService.sendNotification({
+        to: user.email,
+        heading: `Your ${config.orgName} password was changed`,
+        paragraphs: [
+          `Hi ${user.name || 'there'},`,
+          `The password for your ${config.orgName} account (${user.email}) was just changed. If this was you, no action is needed.`,
+          'If you did not make this change, please contact your administrator immediately.',
+        ],
+      });
+    } catch (err) {
+      console.error(`Failed to send password-changed email to ${user.email}: ${err.message}`);
+    }
+  }
+
+  return publicUser(user);
+}
+
+module.exports = { register, login, logout, me, acceptInvite, forgotPassword, resetPassword, changePassword, isNewLoginIp, ssoLogin };
