@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
 import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon } from '../components/icons';
 
 export default function Frameworks() {
   const { data, loading, refetch } = useGet('/frameworks?pageSize=100');
@@ -15,6 +15,7 @@ export default function Frameworks() {
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState(null);
   const { confirm: ask, dialog } = useConfirm();
+  const navigate = useNavigate();
 
   const frameworks = data?.frameworks || [];
 
@@ -160,8 +161,8 @@ export default function Frameworks() {
                 key: 'name',
                 label: 'Name',
                 render: (f) => (
-                  <Link to={`/frameworks/${f.id}`} className="flex items-center gap-2 font-medium text-slate-900 hover:text-brand-700 hover:underline">
-                    <ShieldIcon className="h-4 w-4 text-charcoal-500" /> {f.name}
+                  <Link to={`/frameworks/${f.id}`} className="flex items-center gap-2 font-medium text-slate-900 hover:text-brand-700">
+                    <ShieldIcon className="h-4 w-4 text-charcoal-500 flex-none" /> {f.name}
                   </Link>
                 ),
               },
@@ -177,7 +178,7 @@ export default function Frameworks() {
                 label: 'Enabled',
                 render: (f) => (
                   <button
-                    onClick={() => toggle(f)}
+                    onClick={(e) => { e.stopPropagation(); toggle(f); }}
                     className={`relative h-6 w-11 rounded-full transition ${f.enabled ? 'bg-charcoal-800' : 'bg-slate-300'}`}
                   >
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${f.enabled ? 'left-[22px]' : 'left-0.5'}`} />
@@ -189,21 +190,33 @@ export default function Frameworks() {
                 label: '',
                 render: (f) => (
                   <div className="flex justify-end items-center gap-1">
-                    <button onClick={() => openRequirements(f)} className="rounded-lg px-2 py-1 text-xs font-medium text-charcoal-600 hover:bg-slate-100 hover:text-charcoal-900">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openRequirements(f); }}
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-charcoal-600 hover:bg-slate-100 hover:text-charcoal-900"
+                    >
                       Requirements
                     </button>
-                    <button onClick={() => openEdit(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEdit(f); }}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-charcoal-700"
+                    >
                       <PencilIcon className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setConfirm(f)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirm(f); }}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                    >
                       <TrashIcon className="h-4 w-4" />
                     </button>
+                    <ChevronRightIcon className="h-4 w-4 text-slate-300 ml-1" />
                   </div>
                 ),
               },
             ]}
             rows={frameworks}
             empty="No frameworks yet."
+            onRowClick={(f) => navigate(`/frameworks/${f.id}`)}
+            rowClassName="cursor-pointer hover:bg-slate-50 transition-colors"
           />
         )}
       </Card>

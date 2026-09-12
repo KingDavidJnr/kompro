@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../lib/api';
 import { Button, Field } from '../../components/ui';
 import Logo from '../../components/Logo';
+import { EyeIcon, EyeOffIcon } from '../../components/icons';
 
 export default function AcceptInvite() {
   const [params] = useSearchParams();
@@ -10,9 +11,13 @@ export default function AcceptInvite() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const mismatch = confirm.length > 0 && password !== confirm;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -81,26 +86,49 @@ export default function AcceptInvite() {
           )}
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <Field label="Password">
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                className="input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  className="input pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600"
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                </button>
+              </div>
             </Field>
             <Field label="Confirm password">
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                className="input"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  className={`input pr-10 ${mismatch ? 'border-rose-400 focus:ring-rose-400' : ''}`}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600"
+                  tabIndex={-1}
+                >
+                  {showConfirm ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                </button>
+              </div>
+              {mismatch && (
+                <p className="mt-1 text-xs text-rose-600">Passwords do not match.</p>
+              )}
             </Field>
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading || mismatch} className="w-full">
               {loading ? 'Activating…' : 'Activate account'}
             </Button>
           </form>

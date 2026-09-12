@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { API_URL } from '../config';
 import { PageHeader, Card, Badge, Button, Table, Modal, Spinner, statusColor } from '../components/ui';
-import { ClipboardIcon } from '../components/icons';
+import { ClipboardIcon, TrashIcon } from '../components/icons';
+import { usePermission } from '../auth/AuthContext';
 
 const ENTITIES = [
   { value: '', label: 'All entities' },
@@ -44,6 +46,12 @@ export default function AuditLogs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [purgeModal, setPurgeModal] = useState(false);
+  const [purgeDays, setPurgeDays] = useState(365);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState(null);
+  const [purgeError, setPurgeError] = useState(null);
+  const canPurge = usePermission('audit:purge');
 
   const load = useCallback(
     async (p = 1) => {
@@ -75,8 +83,23 @@ export default function AuditLogs() {
     setFilters({ from: '', to: '', entity: '', action: '' });
   }
 
-  const exportHref = `/api/audit/export?format=csv&${buildQuery(filters, 1)}`;
+  const exportHref = `${API_URL}/audit/export?format=csv&${buildQuery(filters, 1)}`;
   const totalPages = Math.max(1, Math.ceil(total / 50));
+
+  async function purge() {
+    setPurging(true);
+    setPurgeError(null);
+    setPurgeResult(null);
+    try {
+      const res = await api.post('/audit/purge', { days: purgeDays });
+      setPurgeResult(res.data.data.deleted);
+      load(1);
+    } catch (err) {
+      setPurgeError(err.response?.data?.message || 'Purge failed.');
+    } finally {
+      setPurging(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -84,9 +107,16 @@ export default function AuditLogs() {
         title="Audit logs"
         description="Immutable record of who changed what, when, and the before/after state."
         actions={
-          <a href={exportHref}>
-            <Button variant="secondary">Export CSV</Button>
-          </a>
+          <div className="flex items-center gap-2">
+            {canPurge && (
+              <Button variant="danger" onClick={() => { setPurgeModal(true); setPurgeResult(null); setPurgeError(null); }}>
+                <TrashIcon className="h-4 w-4" /> Purge old logs
+              </Button>
+            )}
+            <a href={exportHref}>
+              <Button variant="secondary">Export CSV</Button>
+            </a>
+          </div>
         }
       />
 
@@ -184,6 +214,42 @@ export default function AuditLogs() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={purgeModal}
+        onClose={() => setPurgeModal(false)}
+        title="Purge audit logs"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPurgeModal(false)}>Cancel</Button>
+            <Button variant="danger" onClick={purge} disabled={purging}>
+              {purging ? 'Purging…' : 'Purge'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-sm text-slate-700">
+          <p>Permanently delete audit log entries older than the specified number of days. This action cannot be undone and is itself recorded in the audit log.</p>
+          <label className="block">
+            <span className="label">Delete entries older than (days)</span>
+            <input
+              type="number"
+              min={1}
+              className="input"
+              value={purgeDays}
+              onChange={(e) => setPurgeDays(Number(e.target.value))}
+            />
+          </label>
+          {purgeResult !== null && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">
+              {purgeResult} {purgeResult === 1 ? 'entry' : 'entries'} deleted.
+            </div>
+          )}
+          {purgeError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">{purgeError}</div>
+          )}
+        </div>
       </Modal>
     </div>
   );

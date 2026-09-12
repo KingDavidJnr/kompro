@@ -101,7 +101,19 @@ async function logout(req, res, next) {
  */
 async function me(req, res, next) {
   try {
-    res.json({ message: 'Current user retrieved', data: { user: authService.me(req.user) } });
+    const user = authService.me(req.user);
+    // Attach the role and its permissions so the frontend can gate UI elements
+    // without a separate round-trip.
+    const role = req.user.roleId
+      ? await require('../../lib/prisma').role.findUnique({
+          where: { id: req.user.roleId },
+          include: { permissions: true },
+        })
+      : null;
+    user.role = role
+      ? { id: role.id, name: role.name, permissions: role.permissions.map((p) => p.name) }
+      : null;
+    res.json({ message: 'Current user retrieved', data: { user } });
   } catch (err) {
     next(err);
   }

@@ -84,3 +84,12 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
+/**
+ * Returns true if the current user has the given permission string.
+ * Relies on the role.permissions array included in the /auth/me response.
+ */
+export function usePermission(permission) {
+  const { user } = useAuth();
+  return Boolean(user?.role?.permissions?.includes(permission));
+}
