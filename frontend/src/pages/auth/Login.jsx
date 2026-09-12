@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
+import { API_URL, SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
 import Logo from '../../components/Logo';
 import { Button, Field } from '../../components/ui';
 import { GoogleIcon, MicrosoftIcon, CheckIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
@@ -37,7 +37,11 @@ export default function Login() {
   }
 
   function sso(provider) {
-    window.location.href = `/api/auth/${provider}`;
+    // Strip trailing /api or /api/ from API_URL to get the base, then append
+    // the SSO initiation path. Works for both /api (same-origin) and
+    // https://api.example.com/api (cross-origin) deployments.
+    const base = API_URL.replace(/\/api\/?$/, '');
+    window.location.href = `${base}/api/auth/${provider}`;
   }
 
   return (
