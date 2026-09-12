@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "${BACKEND_URL}/api/:path*"
+      "destination": "https://api.trust.monesize.com/api/:path*"
     },
     {
       "source": "/(.*)",

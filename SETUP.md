@@ -280,15 +280,17 @@ Create a project and copy **two** connection strings:
 
 1. Import the repo. The included `vercel.json` already:
    - builds from `frontend/` → `frontend/dist`,
-   - rewrites `/api/*` to `${BACKEND_URL}/api/*`,
+   - rewrites `/api/*` to the backend URL hardcoded in `vercel.json`,
    - adds an SPA fallback to `index.html`.
-2. **Add the Vercel project environment variable** `BACKEND_URL` =
-   `https://kompro-api.onrender.com` (your Render/hosted backend, **no trailing
-   slash**). This drives the `/api` proxy rewrite.
+2. Update the rewrite destination in `vercel.json` to your backend URL:
+   ```json
+   { "source": "/api/:path*", "destination": "https://your-backend.com/api/:path*" }
+   ```
+   > Note: Vercel does **not** interpolate environment variables in `vercel.json`
+   > rewrites — the destination must be a hardcoded URL.
 3. Vercel project env — set:
    | Variable | Value |
    | --- | --- |
-   | `BACKEND_URL` | `https://kompro-api.onrender.com` |
    | `VITE_API_URL` | `/api` |
    | `VITE_AUTH_TYPE` | `both` (or `password` / `sso`) |
    | `VITE_SSO_PROVIDERS` | `google,microsoft` |
@@ -303,11 +305,10 @@ the same root domain, cookies remain same-site.
    Domains → add `trust.example.com`).
 2. Point your backend at `api.trust.example.com` (via your host's custom-domain
    settings or a DNS CNAME).
-3. Set these Vercel project environment variables:
+3. Update `vercel.json` with your backend URL and set these Vercel project environment variables:
 
    | Variable | Value | Why |
    | --- | --- | --- |
-   | `BACKEND_URL` | `https://api.trust.example.com` | Vercel's server-side `/api` proxy target |
    | `VITE_API_URL` | `/api` | Browser uses the Vercel proxy — do **not** set this to the API domain |
    | `VITE_AUTH_TYPE` | `both` | Or `password` / `sso` |
    | `VITE_SSO_PROVIDERS` | `google,microsoft` | |
@@ -328,8 +329,8 @@ the same root domain, cookies remain same-site.
    proxy and is ignored in production builds.
 
 **How the `/api` proxy works:** the browser sends requests to
-`https://trust.example.com/api/...`. Vercel intercepts them server-side, reads
-`BACKEND_URL`, and forwards them to `https://api.trust.example.com/api/...`.
+`https://trust.example.com/api/...`. Vercel intercepts them server-side and
+forwards them to the hardcoded backend URL in `vercel.json`.
 The browser never contacts the API domain directly, so the session cookie is
 set on `trust.example.com` and remains **first-party** — no `sameSite` changes
 needed.
@@ -594,7 +595,7 @@ ps -o user= -p "$(pgrep -f 'node src/index.js')"
 | `npm install` fails on a native build | Install the OS build toolchain (`build-essential`, `python3`) and retry. |
 | Login rate-limited during testing | The API rate-limits login to 5 attempts / 15 min per email (in-memory). Restart the API to reset during dev/testing. |
 | Frontend can't reach API in dev | Ensure `VITE_BACKEND_URL` points at the running API and the Vite dev server is up (it proxies `/api`). |
-| Vercel deploy: API calls return 404 or go to wrong host | `BACKEND_URL` Vercel env var is missing or has a trailing slash. Set it to the bare backend URL, e.g. `https://api.example.com`. |
+| Vercel deploy: API calls return 404 or 405 | The rewrite destination in `vercel.json` is wrong or still uses the old `${BACKEND_URL}` placeholder (env var interpolation is not supported in `vercel.json`). Hardcode the backend URL directly in the rewrite destination. |
 | Custom domain split (e.g. `app.x.com` + `api.x.com`): login works but session lost on next request | `VITE_API_URL` was set to the API domain directly instead of `/api`. Keep `VITE_API_URL=/api` and let the Vercel proxy forward requests — see §6.3 Option B. |
 | SSO callback fails on custom domain split | `SSO_REDIRECT_BASE` is not set or points at the frontend. Set it to the **backend** base URL (e.g. `https://api.example.com`) and register `https://api.example.com/api/auth/<provider>/callback` in your OAuth app console. |
 | `404` on deep links after deploy | SPA fallback missing. On Vercel the `vercel.json` rewrite handles it; on nginx use `try_files $uri /index.html`. |
