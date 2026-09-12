@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { API_URL } from '../config';
 import { PageHeader, Card, Badge, Button, Table, Modal, Spinner, statusColor } from '../components/ui';
 import { ClipboardIcon, TrashIcon } from '../components/icons';
 import { usePermission } from '../auth/AuthContext';
@@ -82,7 +83,7 @@ export default function AuditLogs() {
     setFilters({ from: '', to: '', entity: '', action: '' });
   }
 
-  const exportHref = `/api/audit/export?format=csv&${buildQuery(filters, 1)}`;
+  const exportHref = `${API_URL}/audit/export?format=csv&${buildQuery(filters, 1)}`;
   const totalPages = Math.max(1, Math.ceil(total / 50));
 
   async function purge() {
