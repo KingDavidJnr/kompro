@@ -10,6 +10,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const cors = require('cors');
+const morgan = require('morgan');
 const config = require('./config');
 const errorHandler = require('./middleware/errorHandler');
 const prisma = require('./lib/prisma');
@@ -47,6 +48,7 @@ app.use(
 
 app.use(express.json({ limit: config.bodyLimitBytes }));
 app.use(cookieParser());
+app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 // Readiness / health check — queries the DB to confirm both the API and the
 // database are reachable. Returns 200 when healthy, 503 when the DB is down.
