@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import Login from './pages/auth/Login';
 import ResetPassword from './pages/auth/ResetPassword';
+import AcceptInvite from './pages/auth/AcceptInvite';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Organization from './pages/Organization';
@@ -60,6 +61,7 @@ export default function App() {
         element={user ? <Navigate to="/" replace /> : <Login />}
       />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route
         path="/"
         element={
