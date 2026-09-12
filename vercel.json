@@ -4,10 +4,6 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "${BACKEND_URL}/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

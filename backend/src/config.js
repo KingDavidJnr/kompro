@@ -41,6 +41,12 @@ module.exports = {
     .map((s) => s.trim())
     .filter(Boolean),
 
+  // SameSite attribute for the session cookie.
+  // Use 'lax' (default) when the frontend and backend share the same domain or
+  // are proxied behind one. Use 'none' when they are on separate domains
+  // (requires HTTPS on both ends). Must match how the frontend calls the API.
+  cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
+
   // Optional bootstrap admin credentials consumed by the seed script.
   initialAdminEmail: process.env.INITIAL_ADMIN_EMAIL,
   initialAdminPassword: process.env.INITIAL_ADMIN_PASSWORD,
