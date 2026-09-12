@@ -35,6 +35,10 @@ const collectorRunner = require('./modules/evidence/collector.runner');
 
 const app = express();
 
+// Trust the first proxy (nginx). Required for req.ip to reflect the real
+// client IP and for req.secure to work correctly behind HTTPS termination.
+app.set('trust proxy', 1);
+
 // Security headers on every response.
 app.use(helmet());
 
