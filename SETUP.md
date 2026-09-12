@@ -275,24 +275,71 @@ Create a project and copy **two** connection strings:
 6. Deploy. Note the backend URL, e.g. `https://kompro-api.onrender.com`.
 
 ### 6.3 Frontend on Vercel
+
+#### Option A — Vercel subdomain only (e.g. `kompro.vercel.app`)
+
 1. Import the repo. The included `vercel.json` already:
    - builds from `frontend/` → `frontend/dist`,
    - rewrites `/api/*` to `${BACKEND_URL}/api/*`,
    - adds an SPA fallback to `index.html`.
 2. **Add the Vercel project environment variable** `BACKEND_URL` =
-   `https://kompro-api.onrender.com` (your Render backend, **no trailing
+   `https://kompro-api.onrender.com` (your Render/hosted backend, **no trailing
    slash**). This drives the `/api` proxy rewrite.
-3. `frontend/.env` (Vercel project env) — leave `VITE_API_URL=/api` (default).
+3. Vercel project env — set:
+   | Variable | Value |
+   | --- | --- |
+   | `BACKEND_URL` | `https://kompro-api.onrender.com` |
+   | `VITE_API_URL` | `/api` |
+   | `VITE_AUTH_TYPE` | `both` (or `password` / `sso`) |
+   | `VITE_SSO_PROVIDERS` | `google,microsoft` |
 
-**Why this works without code changes:** the browser only ever talks to the
-Vercel domain. Vercel proxies `/api/*` to Render *server-side*, and the
-Set-Cookie comes back on the Vercel domain → the session cookie is
-**first-party**, so the default `sameSite: 'lax'` works fine.
+#### Option B — Custom domain split (e.g. `trust.example.com` + `api.trust.example.com`)
 
-> If instead you point the frontend **directly** at the Render backend
-> (e.g. `VITE_API_URL=https://kompro-api.onrender.com/api`), the cookie becomes
-> **cross-site** and `sameSite: 'lax'` blocks it. Either keep the Vercel proxy
-> (recommended) or apply the §7 patch.
+Use this when you host the frontend on a custom Vercel domain and the backend
+on a separate subdomain of the **same registrable domain**. Because both share
+the same root domain, cookies remain same-site.
+
+1. Attach your custom domain to the Vercel project (Vercel dashboard →
+   Domains → add `trust.example.com`).
+2. Point your backend at `api.trust.example.com` (via your host's custom-domain
+   settings or a DNS CNAME).
+3. Set these Vercel project environment variables:
+
+   | Variable | Value | Why |
+   | --- | --- | --- |
+   | `BACKEND_URL` | `https://api.trust.example.com` | Vercel's server-side `/api` proxy target |
+   | `VITE_API_URL` | `/api` | Browser uses the Vercel proxy — do **not** set this to the API domain |
+   | `VITE_AUTH_TYPE` | `both` | Or `password` / `sso` |
+   | `VITE_SSO_PROVIDERS` | `google,microsoft` | |
+
+4. Set the corresponding backend env vars:
+
+   ```
+   CORS_ORIGIN=https://trust.example.com
+   APP_URL=https://trust.example.com
+   SSO_REDIRECT_BASE=https://api.trust.example.com
+   ```
+
+   `SSO_REDIRECT_BASE` is required here because the OAuth callback hits the
+   backend directly (e.g. `https://api.trust.example.com/api/auth/google/callback`)
+   — register that exact URL in your Google/Microsoft OAuth app console.
+
+5. `VITE_BACKEND_URL` is **not** needed; it is only used by the local Vite dev
+   proxy and is ignored in production builds.
+
+**How the `/api` proxy works:** the browser sends requests to
+`https://trust.example.com/api/...`. Vercel intercepts them server-side, reads
+`BACKEND_URL`, and forwards them to `https://api.trust.example.com/api/...`.
+The browser never contacts the API domain directly, so the session cookie is
+set on `trust.example.com` and remains **first-party** — no `sameSite` changes
+needed.
+
+> If you bypass the Vercel proxy and point `VITE_API_URL` directly at the API
+> domain (e.g. `https://api.trust.example.com/api`), the browser contacts a
+> different origin. Even though the two subdomains share a root domain, the
+> cookie `Domain` attribute must be set explicitly to `.example.com` for it to
+> be sent cross-subdomain. The simplest fix is to keep `VITE_API_URL=/api` and
+> let the Vercel proxy handle it.
 
 ### 6.4 Seed frameworks
 After both are live, log in at the Vercel URL as admin and click
@@ -345,7 +392,108 @@ served over HTTPS.
 
 ---
 
-## 8. Evidence file storage
+## 8. SSO provider setup (Google & Microsoft)
+
+SSO is disabled by default. To enable a provider, create an OAuth 2.0 app in
+that provider's console, paste the credentials into `backend/.env`, and
+register the correct **redirect / callback URI**. Getting the URI wrong is the
+most common SSO setup mistake — the provider will reject the callback with an
+`redirect_uri_mismatch` error.
+
+### 8.1 What the callback URI looks like
+
+The callback path is always:
+
+```
+<base>/api/auth/<provider>/callback
+```
+
+Where `<base>` is determined by your deployment:
+
+| Deployment | `<base>` | Example callback URI |
+| --- | --- | --- |
+| Same-origin (nginx, single domain) | your domain | `https://kompro.example.com/api/auth/google/callback` |
+| Vercel frontend + separate backend | **backend** URL | `https://api.example.com/api/auth/google/callback` |
+| Local development | `http://localhost:5000` | `http://localhost:5000/api/auth/google/callback` |
+
+> The callback always goes to the **backend**, never the frontend. On a
+> Vercel + separate backend setup, do not use your Vercel domain here — use
+> your backend domain and set `SSO_REDIRECT_BASE` accordingly (see §2.1).
+
+---
+
+### 8.2 Google
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs &
+   Services** → **Credentials** → **Create Credentials** → **OAuth client ID**.
+2. Application type: **Web application**.
+3. Under **Authorised redirect URIs** add:
+   ```
+   https://<your-backend-domain>/api/auth/google/callback
+   ```
+   For local dev also add:
+   ```
+   http://localhost:5000/api/auth/google/callback
+   ```
+4. Copy the **Client ID** and **Client secret** into `backend/.env`:
+   ```
+   GOOGLE_CLIENT_ID=<client-id>
+   GOOGLE_CLIENT_SECRET=<client-secret>
+   ```
+5. Make sure the **OAuth consent screen** is configured (app name, support
+   email, scopes: `openid`, `email`, `profile`) and set to the correct
+   publishing status (Internal for a corporate workspace, External + test users
+   or verified for public).
+
+---
+
+### 8.3 Microsoft (Entra / Azure AD)
+
+1. Go to [Azure Portal](https://portal.azure.com/) → **Microsoft Entra ID** →
+   **App registrations** → **New registration**.
+2. **Supported account types:**
+   - *Accounts in this organizational directory only* — single-tenant (set
+     `MICROSOFT_TENANT` to your tenant ID).
+   - *Accounts in any organizational directory* — multi-tenant (keep
+     `MICROSOFT_TENANT=common`).
+   - *Accounts in any organizational directory and personal Microsoft accounts*
+     — multi-tenant + personal (keep `MICROSOFT_TENANT=common`).
+3. **Redirect URI** — select **Web** and enter:
+   ```
+   https://<your-backend-domain>/api/auth/microsoft/callback
+   ```
+   For local dev also add:
+   ```
+   http://localhost:5000/api/auth/microsoft/callback
+   ```
+4. After creating the app, go to **Certificates & secrets** → **New client
+   secret**. Copy the secret value immediately (it is only shown once).
+5. Copy credentials into `backend/.env`:
+   ```
+   MICROSOFT_CLIENT_ID=<application-id>
+   MICROSOFT_CLIENT_SECRET=<client-secret-value>
+   MICROSOFT_TENANT=common          # or your tenant ID
+   ```
+
+---
+
+### 8.4 `SSO_REDIRECT_BASE` — when to set it
+
+| Situation | Set `SSO_REDIRECT_BASE`? | Value |
+| --- | --- | --- |
+| Single domain (nginx proxy, frontend + backend on same host) | No — leave empty | |
+| Vercel proxy (`VITE_API_URL=/api`, browser never hits backend directly) | No — leave empty | |
+| Custom domain split (`app.x.com` frontend, `api.x.com` backend) | **Yes** | `https://api.x.com` |
+| Backend behind a reverse proxy that rewrites the `Host` header | **Yes** | public backend URL |
+
+When `SSO_REDIRECT_BASE` is empty the callback URI is derived from the
+incoming request's host header, which works correctly when the OAuth redirect
+lands on the same host Node.js sees. It breaks when a proxy changes the host,
+or when the frontend and backend are on separate domains.
+
+---
+
+## 9. Evidence file storage (local disk vs S3)
 
 - **Local disk (default):** files are saved under `UPLOAD_DIR` (default
   `backend/uploads`). Simple, no extra setup. Back these up if the server is
@@ -425,18 +573,18 @@ ps -o user= -p "$(pgrep -f 'node src/index.js')"
 
 ---
 
-## 9. Post-deployment checklist
+## 10. Post-deployment checklist
 
 1. Log in as the bootstrap admin.
 2. **Frameworks → Seed catalog** to load SOC 2 / ISO 27001 / GDPR.
 3. **Organization** settings → set your real org name.
 4. Configure **SMTP** (test by inviting a user) — or note email is disabled.
-5. (Optional) Configure **SSO** via Google/Microsoft env vars.
+5. (Optional) Configure **SSO** — follow §8 to create the OAuth app and register the redirect URI.
 6. Create **Roles** / **Users** as needed; invite teammates.
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Cause / Fix |
 | --- | --- |
@@ -446,6 +594,9 @@ ps -o user= -p "$(pgrep -f 'node src/index.js')"
 | `npm install` fails on a native build | Install the OS build toolchain (`build-essential`, `python3`) and retry. |
 | Login rate-limited during testing | The API rate-limits login to 5 attempts / 15 min per email (in-memory). Restart the API to reset during dev/testing. |
 | Frontend can't reach API in dev | Ensure `VITE_BACKEND_URL` points at the running API and the Vite dev server is up (it proxies `/api`). |
+| Vercel deploy: API calls return 404 or go to wrong host | `BACKEND_URL` Vercel env var is missing or has a trailing slash. Set it to the bare backend URL, e.g. `https://api.example.com`. |
+| Custom domain split (e.g. `app.x.com` + `api.x.com`): login works but session lost on next request | `VITE_API_URL` was set to the API domain directly instead of `/api`. Keep `VITE_API_URL=/api` and let the Vercel proxy forward requests — see §6.3 Option B. |
+| SSO callback fails on custom domain split | `SSO_REDIRECT_BASE` is not set or points at the frontend. Set it to the **backend** base URL (e.g. `https://api.example.com`) and register `https://api.example.com/api/auth/<provider>/callback` in your OAuth app console. |
 | `404` on deep links after deploy | SPA fallback missing. On Vercel the `vercel.json` rewrite handles it; on nginx use `try_files $uri /index.html`. |
 | Evidence upload fails / 500 on upload, logs show `EACCES` | The Node process user cannot write to `UPLOAD_DIR`. Create the directory and fix ownership/permissions per §8.1 (the process user must own it). |
 
