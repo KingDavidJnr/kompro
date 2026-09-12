@@ -197,6 +197,12 @@ export const ArrowUpRightIcon = (p) => (
   </Svg>
 );
 
+export const ChevronRightIcon = (p) => (
+  <Svg {...p}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  </Svg>
+);
+
 export const DotsIcon = (p) => (
   <Svg {...p}>
     <circle cx="5" cy="12" r="1.4" />

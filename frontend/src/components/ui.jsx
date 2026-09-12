@@ -132,7 +132,7 @@ export function Drawer({ open, onClose, title, children, footer }) {
   );
 }
 
-export function Table({ columns, rows, empty }) {
+export function Table({ columns, rows, empty, onRowClick, rowClassName }) {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
@@ -157,7 +157,11 @@ export function Table({ columns, rows, empty }) {
             </tr>
           ) : (
             rows.map((row, i) => (
-              <tr key={row.id || i} className="transition hover:bg-slate-50/60">
+              <tr
+                key={row.id || i}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={`transition hover:bg-slate-50/60 ${rowClassName || ''}`}
+              >
                 {columns.map((c) => (
                   <td key={c.key} className="px-4 py-3 text-sm text-slate-700">
                     {c.render ? c.render(row) : row[c.key]}
