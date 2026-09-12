@@ -137,7 +137,7 @@ export default function Dashboard() {
         <Card className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-900">Recent activity</h2>
-            <Link to="/audit-program" className="text-sm font-medium text-charcoal-700 hover:text-brand-600">
+            <Link to="/audit" className="text-sm font-medium text-charcoal-700 hover:text-brand-600">
               View all
             </Link>
           </div>
