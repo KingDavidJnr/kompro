@@ -12,13 +12,17 @@ const auditService = require('../audit/audit.service');
 
 /**
  * Builds the cookie options for the session token.
+ * sameSite is driven by COOKIE_SAME_SITE (default 'lax'). Set it to 'none'
+ * when the frontend and backend are on separate domains — 'none' requires
+ * secure:true and HTTPS on both ends.
  * @returns {object} Options for res.cookie (httpOnly, secure, sameSite, maxAge).
  */
 function cookieOptions() {
+  const sameSite = config.cookieSameSite;
   return {
     httpOnly: true,
-    secure: config.nodeEnv === 'production',
-    sameSite: 'lax',
+    secure: config.nodeEnv === 'production' || sameSite === 'none',
+    sameSite,
     maxAge: config.sessionTtlMs,
   };
 }
@@ -179,8 +183,8 @@ function ssoRedirect(provider) {
       const { url, state, verifier } = oauthService.buildAuthorizeUrl(req, provider);
       res.cookie(`oauth_${provider}`, JSON.stringify({ state, verifier }), {
         httpOnly: true,
-        secure: config.nodeEnv === 'production',
-        sameSite: 'lax',
+        secure: config.nodeEnv === 'production' || config.cookieSameSite === 'none',
+        sameSite: config.cookieSameSite,
         maxAge: 10 * 60 * 1000,
       });
       res.redirect(url);

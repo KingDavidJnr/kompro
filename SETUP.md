@@ -55,6 +55,7 @@ There are **two separate env files**, one per component. Copy each
 | `SESSION_TTL_DAYS` | `30` | Session cookie lifetime in days. |
 | `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated list of allowed browser origins for credentialed API calls. |
 | `APP_URL` | `http://localhost:5173` | Public base URL used to build invitation/SSO links (no trailing slash). |
+| `COOKIE_SAME_SITE` | `lax` | `sameSite` attribute for the session cookie. Use `lax` when the frontend and backend share the same domain or are behind a proxy on one domain. Use `none` when they are on **separate domains** — `none` requires HTTPS on both ends. |
 | `INVITE_TTL_HOURS` | `72` | How long an invitation link stays valid. |
 | `ORG_NAME` | `My Organization` | Default organization name seeded on first run. |
 | `INITIAL_ADMIN_EMAIL` | – | Bootstrap admin email. Used by `npm run seed`. |
@@ -84,7 +85,7 @@ There are **two separate env files**, one per component. Copy each
 | --- | --- | --- |
 | `VITE_AUTH_TYPE` | `both` | Login screen mode: `password` \| `sso` \| `both`. |
 | `VITE_SSO_PROVIDERS` | `google,microsoft,github` | Comma-separated SSO providers to show. (Backend currently supports `google` and `microsoft`.) |
-| `VITE_API_URL` | `/api` | API base path. Keep `/api` so the Vite dev proxy **and** a same-origin production build both work. |
+| `VITE_API_URL` | `/api` | Base URL for all API calls. Use `/api` for same-origin or proxied deployments. Set to the full backend URL (e.g. `https://api.example.com/api`) when the frontend and backend are on separate domains. |
 | `VITE_BACKEND_URL` | `http://localhost:5000` | Backend URL used **only by the Vite dev proxy** (`/api` → this). Ignored in production builds. |
 
 > **Why two `.env` files and no root `.env`?** Each component is started from
@@ -274,122 +275,58 @@ Create a project and copy **two** connection strings:
    - `APP_URL` = your Vercel URL
 6. Deploy. Note the backend URL, e.g. `https://kompro-api.onrender.com`.
 
-### 6.3 Frontend on Vercel
+### 6.3 Frontend on Vercel (or any static host)
 
-#### Option A — Vercel subdomain only (e.g. `kompro.vercel.app`)
+Vercel serves the built frontend only. All API calls go directly from the
+browser to wherever the backend is hosted — there is no proxy involved.
 
-1. Import the repo. The included `vercel.json` already:
-   - builds from `frontend/` → `frontend/dist`,
-   - rewrites `/api/*` to the backend URL hardcoded in `vercel.json`,
-   - adds an SPA fallback to `index.html`.
-2. Update the rewrite destination in `vercel.json` to your backend URL:
-   ```json
-   { "source": "/api/:path*", "destination": "https://your-backend.com/api/:path*" }
-   ```
-   > Note: Vercel does **not** interpolate environment variables in `vercel.json`
-   > rewrites — the destination must be a hardcoded URL.
-3. Vercel project env — set:
+1. Import the repo. `vercel.json` builds from `frontend/` and serves
+   `frontend/dist` with an SPA fallback to `index.html`.
+2. Set these Vercel project environment variables:
+
    | Variable | Value |
    | --- | --- |
-   | `VITE_API_URL` | `/api` |
+   | `VITE_API_URL` | Full backend URL e.g. `https://api.example.com/api` |
    | `VITE_AUTH_TYPE` | `both` (or `password` / `sso`) |
    | `VITE_SSO_PROVIDERS` | `google,microsoft` |
 
-#### Option B — Custom domain split (e.g. `trust.example.com` + `api.trust.example.com`)
-
-Use this when you host the frontend on a custom Vercel domain and the backend
-on a separate subdomain of the **same registrable domain**. Because both share
-the same root domain, cookies remain same-site.
-
-1. Attach your custom domain to the Vercel project (Vercel dashboard →
-   Domains → add `trust.example.com`).
-2. Point your backend at `api.trust.example.com` (via your host's custom-domain
-   settings or a DNS CNAME).
-3. Update `vercel.json` with your backend URL and set these Vercel project environment variables:
-
-   | Variable | Value | Why |
-   | --- | --- | --- |
-   | `VITE_API_URL` | `/api` | Browser uses the Vercel proxy — do **not** set this to the API domain |
-   | `VITE_AUTH_TYPE` | `both` | Or `password` / `sso` |
-   | `VITE_SSO_PROVIDERS` | `google,microsoft` | |
-
-4. Set the corresponding backend env vars:
+3. Set the corresponding backend env vars:
 
    ```
-   CORS_ORIGIN=https://trust.example.com
-   APP_URL=https://trust.example.com
-   SSO_REDIRECT_BASE=https://api.trust.example.com
+   CORS_ORIGIN=https://your-frontend-domain.com
+   APP_URL=https://your-frontend-domain.com
+   COOKIE_SAME_SITE=none
+   SSO_REDIRECT_BASE=https://api.example.com
    ```
 
-   `SSO_REDIRECT_BASE` is required here because the OAuth callback hits the
-   backend directly (e.g. `https://api.trust.example.com/api/auth/google/callback`)
-   — register that exact URL in your Google/Microsoft OAuth app console.
+   `COOKIE_SAME_SITE=none` is required because the browser is calling the
+   backend from a different origin. This forces `secure: true` on the cookie
+   automatically — HTTPS is required on both ends.
 
-5. `VITE_BACKEND_URL` is **not** needed; it is only used by the local Vite dev
-   proxy and is ignored in production builds.
-
-**How the `/api` proxy works:** the browser sends requests to
-`https://trust.example.com/api/...`. Vercel intercepts them server-side and
-forwards them to the hardcoded backend URL in `vercel.json`.
-The browser never contacts the API domain directly, so the session cookie is
-set on `trust.example.com` and remains **first-party** — no `sameSite` changes
-needed.
-
-> If you bypass the Vercel proxy and point `VITE_API_URL` directly at the API
-> domain (e.g. `https://api.trust.example.com/api`), the browser contacts a
-> different origin. Even though the two subdomains share a root domain, the
-> cookie `Domain` attribute must be set explicitly to `.example.com` for it to
-> be sent cross-subdomain. The simplest fix is to keep `VITE_API_URL=/api` and
-> let the Vercel proxy handle it.
+4. Register the SSO callback URI in your OAuth console as
+   `https://api.example.com/api/auth/<provider>/callback` (see §8).
 
 ### 6.4 Seed frameworks
-After both are live, log in at the Vercel URL as admin and click
+After both are live, log in at the frontend URL as admin and click
 **Frameworks → Seed catalog**.
 
 ---
 
 ## 7. Cross-origin cookie nuance (read this if splitting hosts)
 
-Kompro authenticates with an `httpOnly` session cookie. In
-`backend/src/modules/auth/auth.controller.js`, `cookieOptions()` currently sets:
+Kompro authenticates with an `httpOnly` session cookie. The `sameSite`
+attribute is controlled by the `COOKIE_SAME_SITE` env var (default `lax`).
 
-```js
-httpOnly: true,
-secure: config.nodeEnv === 'production',   // true on HTTPS
-sameSite: 'lax',                            // <-- hardcoded
-```
+| Setup | `COOKIE_SAME_SITE` | Why |
+| --- | --- | --- |
+| Frontend and backend on the same domain / behind a single reverse proxy | `lax` (default) | Browser sees one origin — cookie is first-party |
+| Frontend and backend on different domains (e.g. Vercel + any backend host) | `none` | Browser makes cross-origin requests — `lax` blocks the cookie |
 
-- `sameSite: 'lax'` cookies are sent for **same-site** requests (same
-  registrable domain, including subdomains) but are **not** sent on
-  cross-site `fetch`/XHR.
-- The cookie is **only** set when `secure` is true, which happens automatically
-  in `production` (HTTPS).
+`sameSite: 'none'` **requires** `secure: true` and HTTPS on both ends. The
+backend enforces this automatically when `COOKIE_SAME_SITE=none` is set.
 
-**Recommended (no code change):** ensure the UI and API are effectively
-same-site:
-- Vercel + Render behind **your own domain** as subdomains
-  (`app.yourdomain.com` and `api.yourdomain.com`) → same-site → `lax` works.
-- Or use the Vercel `/api` proxy rewrite (§6.3) so the browser only sees one
-  origin.
-
-**If you must call the backend from a different domain directly** (truly
-cross-site, e.g. `*.vercel.app` ↔ `*.onrender.com`), patch the cookie to allow
-cross-site credentialed requests:
-
-```js
-// backend/src/modules/auth/auth.controller.js
-function cookieOptions() {
-  return {
-    httpOnly: true,
-    secure: true,                       // HTTPS required
-    sameSite: 'none',                   // allow cross-site
-    maxAge: config.sessionTtlMs,
-  };
-}
-```
-`sameSite: 'none'` **requires** `secure: true` and a TLS connection on both
-ends. Also make sure `CORS_ORIGIN` lists the frontend origin and the API is
-served over HTTPS.
+Also ensure `CORS_ORIGIN` lists the exact frontend origin (no trailing slash)
+so the browser's preflight requests are accepted.
 
 ---
 
