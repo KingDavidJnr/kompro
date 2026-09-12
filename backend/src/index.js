@@ -48,9 +48,20 @@ app.use(
 app.use(express.json({ limit: config.bodyLimitBytes }));
 app.use(cookieParser());
 
-// Simple liveness checks.
-app.get('/health', (req, res) => res.json({ message: 'ok', data: { status: 'ok' } }));
-app.get('/api/health', (req, res) => res.json({ message: 'ok', data: { status: 'ok' } }));
+// Readiness / health check — queries the DB to confirm both the API and the
+// database are reachable. Returns 200 when healthy, 503 when the DB is down.
+async function healthHandler(req, res) {
+  const health = { api: 'ok', db: 'ok' };
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (err) {
+    health.db = 'unreachable';
+    return res.status(503).json({ message: 'degraded', data: health });
+  }
+  return res.json({ message: 'ok', data: health });
+}
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/org', orgRoutes);
