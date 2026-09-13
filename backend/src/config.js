@@ -41,7 +41,10 @@ module.exports = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  // SameSite attribute for the session cookie.
+  // Send an email alert when a user signs in from a new IP address.
+  // Disable this if your users have frequently changing IPs (e.g. residential
+  // or mobile connections). Defaults to false.
+  loginAlertNewIp: process.env.LOGIN_ALERT_NEW_IP === 'true',
   // Use 'lax' (default) when the frontend and backend share the same domain or
   // are proxied behind one. Use 'none' when they are on separate domains
   // (requires HTTPS on both ends). Must match how the frontend calls the API.
