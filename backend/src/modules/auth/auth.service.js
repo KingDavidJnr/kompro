@@ -92,7 +92,7 @@ async function createSessionForUser(user, ip) {
     ip: ip || null,
   });
 
-  if (newIp && config.smtp.host) {
+  if (newIp && config.smtp.host && config.loginAlertNewIp) {
     try {
       await emailService.sendNotification({
         to: user.email,
