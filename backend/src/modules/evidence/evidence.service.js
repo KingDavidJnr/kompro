@@ -242,7 +242,7 @@ async function getEvidenceFile(id) {
  * @throws {NotFoundError} When the evidence does not exist.
  * @throws {ValidationError} On invalid source or unknown control/policy.
  */
-async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId, status }) {
+async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId, status, file }) {
   const existing = await prisma.evidence.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Evidence not found');
@@ -271,6 +271,20 @@ async function updateEvidence(id, { title, description, source, content, filePat
   if (controlId !== undefined) data.controlId = controlId;
   if (policyId !== undefined) data.policyId = policyId;
   if (status !== undefined) data.status = status;
+
+  // If a new file was provided, store it (replacing any previous file).
+  if (file) {
+    if (existing.filePath) {
+      await storage.deleteFile(existing.filePath).catch(() => {});
+    }
+    const key = await storage.upload({
+      buffer: file.buffer,
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
+    data.filePath = key;
+    data.mimeType = file.mimetype;
+  }
 
   const updated = await prisma.evidence.update({
     where: { id },
