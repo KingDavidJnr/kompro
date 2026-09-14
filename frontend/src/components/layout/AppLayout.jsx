@@ -50,6 +50,7 @@ const NAV = [
     label: 'Administration',
     items: [
       { to: '/organization', label: 'Organization', Icon: UsersIcon },
+      { to: '/trust-portal', label: 'Trust Portal', Icon: ShieldIcon },
       { to: '/users', label: 'Users', Icon: UsersIcon },
       { to: '/roles', label: 'Roles', Icon: KeyIcon },
       { to: '/settings', label: 'My settings', Icon: KeyIcon },

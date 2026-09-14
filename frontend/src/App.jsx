@@ -22,6 +22,8 @@ import ITSM from './pages/ITSM';
 import AuditProgram from './pages/AuditProgram';
 import AuditLogs from './pages/AuditLogs';
 import Integrations from './pages/Integrations';
+import TrustPortal from './pages/TrustPortal';
+import TrustPortalSettings from './pages/TrustPortalSettings';
 import { Spinner } from './components/ui';
 
 function RequireAuth({ children }) {
@@ -62,6 +64,7 @@ export default function App() {
       />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
+      <Route path="/trust" element={<TrustPortal />} />
       <Route
         path="/"
         element={
@@ -87,6 +90,7 @@ export default function App() {
         <Route path="integrations" element={<Integrations />} />
         <Route path="audit-program" element={<AuditProgram />} />
         <Route path="audit" element={<AuditLogs />} />
+        <Route path="trust-portal" element={<TrustPortalSettings />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
