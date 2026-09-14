@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { API_URL } from '../config';
 import { PageHeader, Badge, Button, Card, Field, Modal, Spinner, statusColor } from '../components/ui';
 import { ArrowLeftIcon, DocumentIcon, TrashIcon, PlusIcon } from '../components/icons';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -90,12 +89,16 @@ export default function PolicyDetail() {
   const [uploadError, setUploadError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [savingVersion, setSavingVersion] = useState(false);
+  // Blob URL for PDF preview (fetched with credentials).
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const fileRef = useRef(null);
 
   const policy = data?.policy;
 
   // Initialise form from loaded policy (only once).
-  React.useEffect(() => {
+  useEffect(() => {
     if (policy && form === null) {
       setForm({
         title: policy.title,
@@ -107,6 +110,25 @@ export default function PolicyDetail() {
     }
   }, [policy]);
 
+  // When a PDF is attached, fetch it as a blob so the auth cookie is included.
+  useEffect(() => {
+    if (!policy?.filePath || policy.mimeType !== 'application/pdf') {
+      setPdfBlobUrl(null);
+      return;
+    }
+    setPdfLoading(true);
+    api.get(`/policies/${id}/file`, { responseType: 'blob' })
+      .then((res) => {
+        const url = URL.createObjectURL(res.data);
+        setPdfBlobUrl(url);
+      })
+      .catch(() => setPdfBlobUrl(null))
+      .finally(() => setPdfLoading(false));
+    return () => {
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    };
+  }, [policy?.filePath, policy?.mimeType]);
+
   async function save(e) {
     e.preventDefault();
     setSaving(true);
@@ -114,11 +136,26 @@ export default function PolicyDetail() {
     try {
       await api.patch(`/policies/${id}`, form);
       refetch();
-      versionsRes.refetch();
     } catch (err) {
       setSaveError(err.response?.data?.message || 'Save failed.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveAsVersion() {
+    setSavingVersion(true);
+    try {
+      await api.post(`/policies/${id}/versions`, {
+        content: form.content,
+        status: form.status,
+      });
+      versionsRes.refetch();
+      refetch(); // version counter bumps on policy record too
+    } catch (err) {
+      setSaveError(err.response?.data?.message || 'Failed to save version.');
+    } finally {
+      setSavingVersion(false);
     }
   }
 
@@ -132,7 +169,6 @@ export default function PolicyDetail() {
       fd.append('file', file);
       await api.post(`/policies/${id}/file`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       refetch();
-      versionsRes.refetch();
     } catch (err) {
       setUploadError(err.response?.data?.message || 'Upload failed.');
     } finally {
@@ -144,6 +180,7 @@ export default function PolicyDetail() {
   async function removeFile() {
     try {
       await api.patch(`/policies/${id}`, { filePath: null, mimeType: null });
+      setPdfBlobUrl(null);
       refetch();
     } catch (err) {
       setUploadError(err.response?.data?.message || 'Remove failed.');
@@ -168,6 +205,20 @@ export default function PolicyDetail() {
     }
   }
 
+  async function downloadFile() {
+    try {
+      const res = await api.get(`/policies/${id}/file?download=1`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${policy.title || 'policy'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setUploadError('Download failed.');
+    }
+  }
+
   if (loading || form === null) {
     return (
       <div className="flex justify-center py-24">
@@ -185,8 +236,6 @@ export default function PolicyDetail() {
     );
   }
 
-  const fileUrl = `${API_URL}/policies/${id}/file`;
-  const downloadUrl = `${API_URL}/policies/${id}/file?download=1`;
   const isPdf = policy.mimeType === 'application/pdf';
 
   const TABS = [
@@ -283,9 +332,7 @@ export default function PolicyDetail() {
               <div className="flex items-center gap-2">
                 {policy.filePath && (
                   <>
-                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="secondary" type="button">Download</Button>
-                    </a>
+                    <Button variant="secondary" type="button" onClick={downloadFile}>Download</Button>
                     <Button variant="secondary" type="button" onClick={removeFile}>Remove file</Button>
                   </>
                 )}
@@ -300,12 +347,21 @@ export default function PolicyDetail() {
 
             {policy.filePath && isPdf && (
               <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-                <embed
-                  src={fileUrl}
-                  type="application/pdf"
-                  className="h-[600px] w-full"
-                  title={policy.title}
-                />
+                {pdfLoading ? (
+                  <div className="flex h-40 items-center justify-center bg-slate-50">
+                    <Spinner className="h-6 w-6" />
+                  </div>
+                ) : pdfBlobUrl ? (
+                  <iframe
+                    src={pdfBlobUrl}
+                    className="h-[600px] w-full"
+                    title={policy.title}
+                  />
+                ) : (
+                  <div className="flex h-40 items-center justify-center bg-slate-50">
+                    <p className="text-sm text-slate-400">Could not load PDF preview.</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -316,9 +372,9 @@ export default function PolicyDetail() {
                   <p className="text-sm font-medium text-slate-800">Document attached</p>
                   <p className="text-xs text-slate-400">{policy.mimeType}</p>
                 </div>
-                <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-sm font-medium text-brand-600 hover:underline">
+                <button type="button" onClick={downloadFile} className="ml-auto text-sm font-medium text-brand-600 hover:underline">
                   Download
-                </a>
+                </button>
               </div>
             )}
           </Card>
@@ -333,11 +389,24 @@ export default function PolicyDetail() {
       {/* Versions tab */}
       {tab === 'versions' && (
         <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Version History</p>
+              <p className="mt-0.5 text-xs text-slate-400">Save a snapshot of the current content at any time. Versions are created only when you click the button below.</p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={saveAsVersion}
+              disabled={savingVersion}
+            >
+              {savingVersion ? 'Saving...' : 'Save as version'}
+            </Button>
+          </div>
           <div className="space-y-4">
             {versionsRes.loading ? (
               <div className="py-4 text-center"><Spinner className="h-5 w-5" /></div>
             ) : (versionsRes.data?.versions || []).length === 0 ? (
-              <p className="text-sm text-slate-400">No version snapshots yet. Versions are created automatically when you save content changes.</p>
+              <p className="text-sm text-slate-400">No version snapshots yet. Click "Save as version" to create the first snapshot of the current content.</p>
             ) : (
               (versionsRes.data?.versions || []).map((v) => (
                 <div key={v.id} className="rounded-xl border border-slate-100 p-4">
