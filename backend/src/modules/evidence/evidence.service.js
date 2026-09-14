@@ -38,9 +38,27 @@ async function listEvidence({ page = 1, pageSize = DEFAULT_PAGE_SIZE, controlId,
   const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || DEFAULT_PAGE_SIZE));
 
   const where = {};
-  if (controlId) where.controlId = controlId;
-  if (policyId) where.policyId = policyId;
+  if (controlId) {
+    where.OR = [
+      { controlId },
+      { controls: { some: { controlId } } },
+    ];
+  }
+  if (policyId) {
+    where.OR = [
+      ...(where.OR || []),
+      { policyId },
+      { policies: { some: { policyId } } },
+    ];
+  }
   if (source) where.source = source;
+
+  const include = {
+    control: { select: { id: true, title: true } },
+    policy: { select: { id: true, title: true } },
+    controls: { select: { control: { select: { id: true, title: true } } } },
+    policies: { select: { policy: { select: { id: true, title: true } } } },
+  };
 
   const [total, evidence] = await Promise.all([
     prisma.evidence.count({ where }),
@@ -49,7 +67,7 @@ async function listEvidence({ page = 1, pageSize = DEFAULT_PAGE_SIZE, controlId,
       skip: (safePage - 1) * safeSize,
       take: safeSize,
       orderBy: { createdAt: 'desc' },
-      include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
+      include,
     }),
   ]);
 
@@ -65,7 +83,12 @@ async function listEvidence({ page = 1, pageSize = DEFAULT_PAGE_SIZE, controlId,
 async function getEvidence(id) {
   const evidence = await prisma.evidence.findUnique({
     where: { id },
-    include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
+    include: {
+      control: { select: { id: true, title: true } },
+      policy: { select: { id: true, title: true } },
+      controls: { select: { control: { select: { id: true, title: true } } } },
+      policies: { select: { policy: { select: { id: true, title: true } } } },
+    },
   });
   if (!evidence) {
     throw new NotFoundError('Evidence not found');
@@ -106,7 +129,7 @@ async function notifyEvidenceStatus(evidence, status) {
  * @returns {object} Created evidence.
  * @throws {ValidationError} On missing title, invalid source, or unknown control/policy.
  */
-async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, collectorId, file, uploadedById }) {
+async function createEvidence({ title, description, source, content, filePath, collectedAt, controlId, policyId, controlIds, policyIds, collectorId, externalId, file, uploadedById, status }) {
   if (!title) {
     throw new ValidationError('Evidence title is required');
   }
@@ -114,7 +137,7 @@ async function createEvidence({ title, description, source, content, filePath, c
     throw new ValidationError(`Invalid source. Allowed: ${EVIDENCE_SOURCES.join(', ')}`);
   }
 
-  // Confirm any linked records exist so the relation is valid.
+  // Validate single FK links (used by automated collectors).
   if (controlId) {
     const control = await prisma.control.findUnique({ where: { id: controlId } });
     if (!control) throw new ValidationError('Linked control not found');
@@ -124,11 +147,12 @@ async function createEvidence({ title, description, source, content, filePath, c
     if (!policy) throw new ValidationError('Linked policy not found');
   }
 
-  // A manually supplied filePath (no upload) can still be recorded as-is.
+  // Validate multi-link arrays (used by manual evidence).
+  const cIds = Array.isArray(controlIds) ? controlIds.filter(Boolean) : [];
+  const pIds = Array.isArray(policyIds) ? policyIds.filter(Boolean) : [];
+
   let storedPath = filePath || null;
   let mimeType = null;
-
-  // When a file buffer is provided, persist it via the active storage driver.
   if (file && file.buffer) {
     storedPath = await storage.upload({
       buffer: file.buffer,
@@ -138,7 +162,7 @@ async function createEvidence({ title, description, source, content, filePath, c
     mimeType = file.mimetype;
   }
 
-  return prisma.evidence.create({
+  const evidence = await prisma.evidence.create({
     data: {
       title,
       description: description || null,
@@ -146,15 +170,26 @@ async function createEvidence({ title, description, source, content, filePath, c
       content: content || null,
       filePath: storedPath,
       mimeType,
-      status: 'submitted',
+      status: status || 'submitted',
       collectedAt: collectedAt ? new Date(collectedAt) : null,
       controlId: controlId || null,
       policyId: policyId || null,
       collectorId: collectorId || null,
+      externalId: externalId || null,
       uploadedById: uploadedById || null,
+      // Create join table rows for multi-link.
+      controls: cIds.length ? { create: cIds.map((id) => ({ controlId: id })) } : undefined,
+      policies: pIds.length ? { create: pIds.map((id) => ({ policyId: id })) } : undefined,
     },
-    include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
+    include: {
+      control: { select: { id: true, title: true } },
+      policy: { select: { id: true, title: true } },
+      controls: { select: { control: { select: { id: true, title: true } } } },
+      policies: { select: { policy: { select: { id: true, title: true } } } },
+    },
   });
+
+  return evidence;
 }
 
 /**
@@ -242,7 +277,7 @@ async function getEvidenceFile(id) {
  * @throws {NotFoundError} When the evidence does not exist.
  * @throws {ValidationError} On invalid source or unknown control/policy.
  */
-async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId, status, file }) {
+async function updateEvidence(id, { title, description, source, content, filePath, collectedAt, controlId, policyId, controlIds, policyIds, status, file }) {
   const existing = await prisma.evidence.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Evidence not found');
@@ -272,7 +307,6 @@ async function updateEvidence(id, { title, description, source, content, filePat
   if (policyId !== undefined) data.policyId = policyId;
   if (status !== undefined) data.status = status;
 
-  // If a new file was provided, store it (replacing any previous file).
   if (file) {
     if (existing.filePath) {
       await storage.deleteFile(existing.filePath).catch(() => {});
@@ -286,10 +320,38 @@ async function updateEvidence(id, { title, description, source, content, filePat
     data.mimeType = file.mimetype;
   }
 
+  // Replace multi-link join table rows when arrays are explicitly provided.
+  const cIds = Array.isArray(controlIds) ? controlIds.filter(Boolean) : null;
+  const pIds = Array.isArray(policyIds) ? policyIds.filter(Boolean) : null;
+
+  if (cIds !== null) {
+    await prisma.evidenceControl.deleteMany({ where: { evidenceId: id } });
+    if (cIds.length) {
+      await prisma.evidenceControl.createMany({
+        data: cIds.map((cid) => ({ evidenceId: id, controlId: cid })),
+        skipDuplicates: true,
+      });
+    }
+  }
+  if (pIds !== null) {
+    await prisma.evidencePolicy.deleteMany({ where: { evidenceId: id } });
+    if (pIds.length) {
+      await prisma.evidencePolicy.createMany({
+        data: pIds.map((pid) => ({ evidenceId: id, policyId: pid })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
   const updated = await prisma.evidence.update({
     where: { id },
     data,
-    include: { control: { select: { id: true, title: true } }, policy: { select: { id: true, title: true } } },
+    include: {
+      control: { select: { id: true, title: true } },
+      policy: { select: { id: true, title: true } },
+      controls: { select: { control: { select: { id: true, title: true } } } },
+      policies: { select: { policy: { select: { id: true, title: true } } } },
+    },
   });
 
   // Notify the uploader when a reviewer accepts or rejects their evidence.

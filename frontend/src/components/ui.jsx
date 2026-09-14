@@ -473,3 +473,103 @@ export function RoleSelect({ value, onChange, placeholder = 'Select role' }) {
     />
   );
 }
+
+/**
+ * Multi-value searchable select. Displays selected items as removable tags.
+ *
+ * Props:
+ *  values        - Array of selected ids
+ *  onChange(ids) - Called with the new array after add/remove
+ *  loadOptions(query) - async, returns [{ value, label }]
+ *  loadLabel(id)      - async, returns label string for an id
+ *  placeholder        - Input placeholder
+ */
+export function MultiSelect({ values = [], onChange, loadOptions, loadLabel, placeholder = 'Add…' }) {
+  const [labels, setLabels] = useState({});
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState([]);
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    values.forEach((id) => {
+      if (!labels[id] && loadLabel) {
+        loadLabel(id).then((label) => setLabels((prev) => ({ ...prev, [id]: label }))).catch(() => {});
+      }
+    });
+  }, [values]);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      if (loadOptions) loadOptions(query).then(setOptions).catch(() => setOptions([]));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [query, open]);
+
+  useEffect(() => {
+    function handler(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  function add(id, label) {
+    if (!values.includes(id)) {
+      setLabels((prev) => ({ ...prev, [id]: label }));
+      onChange([...values, id]);
+    }
+    setQuery('');
+    setOpen(false);
+  }
+
+  function remove(id) {
+    onChange(values.filter((v) => v !== id));
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div
+        className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-brand-300 cursor-text"
+        onClick={() => { setOpen(true); inputRef.current?.focus(); }}
+      >
+        {values.map((id) => (
+          <span key={id} className="flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+            {labels[id] || id}
+            <button type="button" onClick={(e) => { e.stopPropagation(); remove(id); }} className="text-brand-400 hover:text-brand-700">
+              <XIcon className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          className="min-w-[120px] flex-1 border-0 bg-transparent p-0 text-sm text-slate-700 outline-none placeholder-slate-400"
+          placeholder={values.length === 0 ? placeholder : 'Add more…'}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {options.filter((o) => !values.includes(o.value)).length === 0 ? (
+            <p className="px-3 py-2 text-sm text-slate-400">{query ? 'No results' : 'Type to search…'}</p>
+          ) : (
+            options.filter((o) => !values.includes(o.value)).map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-brand-50"
+                onMouseDown={(e) => { e.preventDefault(); add(o.value, o.label); }}
+              >
+                {o.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

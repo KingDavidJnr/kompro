@@ -127,6 +127,7 @@ model Control {
   evidences   Evidence[]
   assessments Assessment[]
   frameworkMappings Mapping[]
+  evidenceLinks EvidenceControl[]
 
   @@index([category])
   @@index([status])
@@ -150,6 +151,7 @@ model Policy {
   changeRequests PolicyChangeRequest[]
   reviews     PolicyReview[]
   exceptions  PolicyException[]
+  evidenceLinks EvidencePolicy[]
 
   @@index([status])
 }
@@ -175,6 +177,8 @@ model Evidence {
   policy      Policy?    @relation(fields: [policyId], references: [id], onDelete: SetNull)
   uploadedBy  User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   assessmentLinks AssessmentEvidence[]
+  controls    EvidenceControl[]
+  policies    EvidencePolicy[]
 
   @@index([controlId])
   @@index([policyId])
@@ -183,6 +187,26 @@ model Evidence {
   @@index([uploadedById])
   @@index([collectorId])
   @@unique([collectorId, externalId])
+}
+
+model EvidenceControl {
+  evidenceId String
+  controlId  String
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  control    Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, controlId])
+  @@index([controlId])
+}
+
+model EvidencePolicy {
+  evidenceId String
+  policyId   String
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  policy     Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, policyId])
+  @@index([policyId])
 }
 
 model Assessment {
