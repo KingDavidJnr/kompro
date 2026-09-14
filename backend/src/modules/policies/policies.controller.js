@@ -10,6 +10,7 @@ const policyService = require('./policies.service');
 const auditService = require('../audit/audit.service');
 const storage = require('../../lib/storage');
 const prisma = require('../../lib/prisma');
+const { evaluatePolicy, validateRules } = require('./engine/evaluator');
 
 /**
  * Handles GET /api/policies.
@@ -127,6 +128,9 @@ module.exports = {
   remove,
   uploadFile,
   downloadFile,
+  evaluate,
+  listEvaluations,
+  validateRulesEndpoint,
   listVersions,
   createVersion,
   listChangeRequests,
@@ -334,6 +338,78 @@ async function updateException(req, res, next) {
     const exception = await policyService.updateException(req.params.eid, req.body);
     await auditService.recordFromRequest(req, { action: 'update', entity: 'policyException', entityId: exception.id, after: exception });
     res.json({ message: 'Policy exception updated', data: { exception } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/policies/:id/evaluate
+ * Runs the policy-as-code engine against live compliance data and
+ * persists the result in the PolicyEvaluation table.
+ */
+async function evaluate(req, res, next) {
+  try {
+    const policy = await policyService.getPolicy(req.params.id);
+    const evalResult = await evaluatePolicy(prisma, policy);
+    const saved = await prisma.policyEvaluation.create({
+      data: {
+        policyId: policy.id,
+        result: evalResult.result,
+        score: evalResult.score,
+        passedCount: evalResult.passedCount,
+        failedCount: evalResult.failedCount,
+        totalCount: evalResult.totalCount,
+        conditions: evalResult.conditions,
+      },
+    });
+    await auditService.recordFromRequest(req, {
+      action: 'evaluate',
+      entity: 'policy',
+      entityId: policy.id,
+      before: null,
+      after: { result: evalResult.result, score: evalResult.score },
+    });
+    res.json({
+      message: 'Policy evaluated',
+      data: { evaluation: { ...saved, context: evalResult.context } },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/policies/:id/evaluations
+ * Returns the evaluation history for a policy, most recent first.
+ */
+async function listEvaluations(req, res, next) {
+  try {
+    const evaluations = await prisma.policyEvaluation.findMany({
+      where: { policyId: req.params.id },
+      orderBy: { evaluatedAt: 'desc' },
+      take: 20,
+    });
+    res.json({ message: 'Evaluations retrieved', data: { evaluations } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/policies/:id/validate-rules
+ * Dry-runs rules validation without saving. Returns any errors.
+ */
+async function validateRulesEndpoint(req, res, next) {
+  try {
+    const errors = validateRules(req.body.rules);
+    if (errors.length > 0) {
+      return res.status(400).json({ message: 'Invalid rules', data: { errors } });
+    }
+    // Also do a dry evaluation to show what results would look like.
+    const policy = await policyService.getPolicy(req.params.id);
+    const preview = await evaluatePolicy(prisma, { ...policy, rules: req.body.rules });
+    res.json({ message: 'Rules are valid', data: { preview } });
   } catch (err) {
     next(err);
   }

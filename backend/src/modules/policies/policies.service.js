@@ -45,6 +45,13 @@ async function listPolicies({ page = 1, pageSize = DEFAULT_PAGE_SIZE, status, se
       skip: (safePage - 1) * safeSize,
       take: safeSize,
       orderBy: { createdAt: 'asc' },
+      include: {
+        evaluations: {
+          orderBy: { evaluatedAt: 'desc' },
+          take: 1,
+          select: { result: true, score: true, evaluatedAt: true },
+        },
+      },
     }),
   ]);
 

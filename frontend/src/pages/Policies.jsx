@@ -66,7 +66,7 @@ export default function Policies() {
 
       <Card>
         {loading ? (
-          <TableSkeleton columns={6} />
+          <TableSkeleton columns={7} />
         ) : (
           <Table
             numbered
@@ -78,6 +78,17 @@ export default function Policies() {
               { key: 'owner', label: 'Owner', render: (p) => <span className="text-slate-500">{p.owner || '—'}</span> },
               { key: 'version', label: 'Version', render: (p) => <Badge color="neutral">v{p.version}</Badge> },
               { key: 'status', label: 'Status', render: (p) => <Badge color={statusColor(p.status)}>{p.status}</Badge> },
+              {
+                key: 'compliance',
+                label: 'Compliance',
+                render: (p) => {
+                  const ev = p.evaluations?.[0];
+                  if (!ev) return <span className="text-xs text-slate-300">Not evaluated</span>;
+                  const color = ev.result === 'pass' ? 'success' : ev.result === 'partial' ? 'warning' : ev.result === 'fail' ? 'danger' : 'neutral';
+                  const label = ev.result === 'pass' ? `Compliant ${ev.score}%` : ev.result === 'partial' ? `Partial ${ev.score}%` : ev.result === 'fail' ? `Non-compliant ${ev.score}%` : 'N/A';
+                  return <Badge color={color}>{label}</Badge>;
+                },
+              },
             ]}
             rows={policies}
             empty="No policies yet. Click New policy to create one."

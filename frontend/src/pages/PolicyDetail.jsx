@@ -4,8 +4,9 @@ import { marked } from 'marked';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Badge, Button, Card, Field, Modal, Spinner, statusColor } from '../components/ui';
-import { ArrowLeftIcon, DocumentIcon, TrashIcon, PlusIcon } from '../components/icons';
+import { ArrowLeftIcon, DocumentIcon, TrashIcon, PlusIcon, CheckIcon } from '../components/icons';
 import MarkdownEditor from '../components/MarkdownEditor';
+import RuleBuilder from '../components/RuleBuilder';
 
 const STATUSES = ['draft', 'active', 'retired'];
 
@@ -81,6 +82,7 @@ export default function PolicyDetail() {
   const changesRes = useGet(`/policies/${id}/change-requests`);
   const reviewsRes = useGet(`/policies/${id}/reviews`);
   const exceptionsRes = useGet(`/policies/${id}/exceptions`);
+  const evaluationsRes = useGet(`/policies/${id}/evaluations`);
 
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -92,9 +94,14 @@ export default function PolicyDetail() {
   const [savingVersion, setSavingVersion] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
   const [versionError, setVersionError] = useState(null);
-  // Blob URL for PDF preview (fetched with credentials).
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  // Rules state
+  const [rules, setRules] = useState(null);
+  const [evaluating, setEvaluating] = useState(false);
+  const [evalResult, setEvalResult] = useState(null);
+  const [savingRules, setSavingRules] = useState(false);
+  const [rulesError, setRulesError] = useState(null);
   const fileRef = useRef(null);
 
   const policy = data?.policy;
@@ -109,6 +116,8 @@ export default function PolicyDetail() {
         status: policy.status,
         owner: policy.owner || '',
       });
+      // Initialize rules editor from stored rules.
+      setRules(policy.rules || { match: 'all', conditions: [] });
     }
   }, [policy]);
 
@@ -214,6 +223,39 @@ export default function PolicyDetail() {
     }
   }
 
+  async function saveRules() {
+    setSavingRules(true);
+    setRulesError(null);
+    try {
+      // Validate first.
+      const valRes = await api.post(`/policies/${id}/validate-rules`, { rules });
+      if (valRes.data.data?.errors?.length) {
+        setRulesError(valRes.data.data.errors.join('; '));
+        return;
+      }
+      await api.patch(`/policies/${id}`, { rules });
+      refetch();
+    } catch (err) {
+      setRulesError(err.response?.data?.message || 'Save failed.');
+    } finally {
+      setSavingRules(false);
+    }
+  }
+
+  async function runEvaluate() {
+    setEvaluating(true);
+    setEvalResult(null);
+    try {
+      const res = await api.post(`/policies/${id}/evaluate`);
+      setEvalResult(res.data.data.evaluation);
+      evaluationsRes.refetch();
+    } catch (err) {
+      setRulesError(err.response?.data?.message || 'Evaluation failed.');
+    } finally {
+      setEvaluating(false);
+    }
+  }
+
   async function downloadFile() {
     try {
       const res = await api.get(`/policies/${id}/file?download=1`, { responseType: 'blob' });
@@ -247,8 +289,11 @@ export default function PolicyDetail() {
 
   const isPdf = policy.mimeType === 'application/pdf';
 
+  const latestEval = evaluationsRes.data?.evaluations?.[0];
+
   const TABS = [
     { id: 'content', label: 'Content' },
+    { id: 'rules', label: 'Rules' + (latestEval ? ` (${latestEval.score}%)` : '') },
     { id: 'versions', label: `Versions (${versionsRes.data?.versions?.length ?? 0})` },
     { id: 'changes', label: 'Change Requests' },
     { id: 'reviews', label: 'Reviews' },
@@ -269,6 +314,11 @@ export default function PolicyDetail() {
           <div className="flex items-center gap-2">
             <Badge color={statusColor(policy.status)}>{policy.status}</Badge>
             <Badge color="neutral">v{policy.version}</Badge>
+            {latestEval && (
+              <Badge color={latestEval.result === 'pass' ? 'success' : latestEval.result === 'partial' ? 'warning' : latestEval.result === 'fail' ? 'danger' : 'neutral'}>
+                {latestEval.result === 'pass' ? 'Compliant' : latestEval.result === 'partial' ? `Partial ${latestEval.score}%` : latestEval.result === 'fail' ? 'Non-compliant' : 'Not evaluated'}
+              </Badge>
+            )}
             <Link to="/policies">
               <Button variant="secondary"><ArrowLeftIcon className="h-4 w-4" /> Policies</Button>
             </Link>
@@ -393,6 +443,101 @@ export default function PolicyDetail() {
             {saving ? 'Saving...' : 'Save changes'}
           </Button>
         </form>
+      )}
+
+      {/* Rules tab */}
+      {tab === 'rules' && (
+        <div className="space-y-5">
+          <Card className="p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Policy-as-Code Rules</p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Define conditions that must be satisfied for this policy to be considered compliant.
+                  Kompro evaluates these rules against live evidence, control statuses, and assessment results.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={saveRules} disabled={savingRules}>
+                  {savingRules ? 'Saving...' : 'Save rules'}
+                </Button>
+                <Button
+                  onClick={runEvaluate}
+                  disabled={evaluating || !rules?.conditions?.length}
+                >
+                  {evaluating ? 'Evaluating...' : 'Evaluate now'}
+                </Button>
+              </div>
+            </div>
+
+            {rulesError && <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{rulesError}</p>}
+
+            <RuleBuilder rules={rules || { match: 'all', conditions: [] }} onChange={setRules} />
+          </Card>
+
+          {/* Live evaluation result */}
+          {evalResult && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">Latest Evaluation Result</p>
+                <span className="text-xs text-slate-400">{new Date(evalResult.evaluatedAt).toLocaleString()}</span>
+              </div>
+              <div className="mt-3 flex items-center gap-4">
+                <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white ${evalResult.result === 'pass' ? 'bg-emerald-500' : evalResult.result === 'partial' ? 'bg-amber-400' : evalResult.result === 'fail' ? 'bg-rose-500' : 'bg-slate-300'}`}>
+                  {evalResult.score}%
+                </div>
+                <div>
+                  <p className={`text-lg font-semibold ${evalResult.result === 'pass' ? 'text-emerald-700' : evalResult.result === 'partial' ? 'text-amber-700' : evalResult.result === 'fail' ? 'text-rose-700' : 'text-slate-500'}`}>
+                    {evalResult.result === 'pass' ? 'Compliant' : evalResult.result === 'partial' ? 'Partially Compliant' : evalResult.result === 'fail' ? 'Non-Compliant' : 'Not Configured'}
+                  </p>
+                  <p className="text-sm text-slate-500">{evalResult.passedCount} of {evalResult.totalCount} conditions passed</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {(evalResult.conditions || []).map((c, i) => (
+                  <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2 ${c.passed ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                    <span className={`shrink-0 text-sm font-bold ${c.passed ? 'text-emerald-600' : 'text-rose-600'}`}>{c.passed ? '✓' : '✗'}</span>
+                    <div className="flex-1 text-sm">
+                      <span className="font-mono text-xs text-slate-600">{c.field}</span>
+                      <span className="mx-1.5 text-slate-400">{c.op}</span>
+                      {c.value !== undefined && <span className="font-medium text-slate-700">{String(c.value)}</span>}
+                    </div>
+                    {c.actual !== undefined && (
+                      <span className="text-xs text-slate-400">
+                        actual: {Array.isArray(c.actual) ? c.actual.join(', ') || 'none' : String(c.actual ?? 'null')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Evaluation history */}
+          <Card className="p-5">
+            <p className="mb-3 text-sm font-semibold text-slate-700">Evaluation History</p>
+            {evaluationsRes.loading ? (
+              <div className="py-4 text-center"><Spinner className="h-5 w-5" /></div>
+            ) : (evaluationsRes.data?.evaluations || []).length === 0 ? (
+              <p className="text-sm text-slate-400">No evaluations yet. Click "Evaluate now" to run the first evaluation.</p>
+            ) : (
+              <div className="space-y-2">
+                {(evaluationsRes.data?.evaluations || []).map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-3 rounded-lg border border-slate-100 px-4 py-2.5">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${ev.result === 'pass' ? 'bg-emerald-500' : ev.result === 'partial' ? 'bg-amber-400' : ev.result === 'fail' ? 'bg-rose-500' : 'bg-slate-300'}`} />
+                    <span className="flex-1 text-sm font-medium text-slate-700">
+                      {ev.result === 'pass' ? 'Compliant' : ev.result === 'partial' ? 'Partial' : ev.result === 'fail' ? 'Non-Compliant' : 'Not Configured'}
+                    </span>
+                    <span className="text-sm font-bold text-slate-900">{ev.score}%</span>
+                    <span className="text-xs text-slate-400">{ev.passedCount}/{ev.totalCount} passed</span>
+                    <span className="text-xs text-slate-400">{new Date(ev.evaluatedAt).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* Versions tab */}
