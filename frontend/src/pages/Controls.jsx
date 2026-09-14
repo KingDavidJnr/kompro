@@ -8,7 +8,7 @@ import { exportCsv } from '../lib/csv';
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
 export default function Controls() {
-  const { data, loading, refetch, setData } = useGet('/controls?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/controls?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -38,7 +38,7 @@ export default function Controls() {
         setData((prev) => ({ ...prev, controls: [...(prev.controls || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -49,7 +49,7 @@ export default function Controls() {
       await api.delete(`/controls/${confirm.id}`);
       setData((prev) => ({ ...prev, controls: (prev.controls || []).filter((c) => c.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

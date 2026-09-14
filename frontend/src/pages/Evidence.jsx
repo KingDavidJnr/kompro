@@ -8,7 +8,7 @@ import { exportCsv } from '../lib/csv';
 const SOURCES = ['manual', 'upload', 'integration', 'automated'];
 
 export default function Evidence() {
-  const { data, loading, refetch, setData } = useGet('/evidence?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/evidence?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -46,7 +46,7 @@ export default function Evidence() {
         setData((prev) => ({ ...prev, evidence: [...(prev.evidence || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -57,7 +57,7 @@ export default function Evidence() {
       await api.delete(`/evidence/${confirm.id}`);
       setData((prev) => ({ ...prev, evidence: (prev.evidence || []).filter((e) => e.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

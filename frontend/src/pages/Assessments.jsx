@@ -8,7 +8,7 @@ import { exportCsv } from '../lib/csv';
 const STATUSES = ['draft', 'in_progress', 'complete'];
 
 export default function Assessments() {
-  const { data, loading, refetch, setData } = useGet('/assessments?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/assessments?pageSize=100');
   const frameworksRes = useGet('/frameworks?pageSize=100');
   const frameworks = frameworksRes.data?.frameworks || [];
   const [modal, setModal] = useState(null);
@@ -47,7 +47,7 @@ export default function Assessments() {
         setData((prev) => ({ ...prev, assessments: [...(prev.assessments || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -58,7 +58,7 @@ export default function Assessments() {
       await api.delete(`/assessments/${confirm.id}`);
       setData((prev) => ({ ...prev, assessments: (prev.assessments || []).filter((x) => x.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

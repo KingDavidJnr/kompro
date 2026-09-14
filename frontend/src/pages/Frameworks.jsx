@@ -8,7 +8,7 @@ import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIco
 import { exportCsv } from '../lib/csv';
 
 export default function Frameworks() {
-  const { data, loading, refetch, setData } = useGet('/frameworks?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/frameworks?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [reqModal, setReqModal] = useState(null);
@@ -43,7 +43,7 @@ export default function Frameworks() {
         setData((prev) => ({ ...prev, frameworks: [...(prev.frameworks || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -54,7 +54,7 @@ export default function Frameworks() {
       const res = await api.patch(`/frameworks/${f.id}`, { enabled: !f.enabled });
       const updated = res.data.data.framework;
       setData((prev) => ({ ...prev, frameworks: (prev.frameworks || []).map((x) => x.id === updated.id ? updated : x) }));
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Update failed.');
     }
@@ -65,7 +65,7 @@ export default function Frameworks() {
       await api.delete(`/frameworks/${confirm.id}`);
       setData((prev) => ({ ...prev, frameworks: (prev.frameworks || []).filter((f) => f.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

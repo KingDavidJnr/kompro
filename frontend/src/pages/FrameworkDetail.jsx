@@ -45,7 +45,7 @@ function readinessColor(pct) {
 
 export default function FrameworkDetail() {
   const { id } = useParams();
-  const { data, loading, error, setData, refetch } = useGet(`/frameworks/${id}/readiness`);
+  const { data, loading, error, setData, silentRefetch } = useGet(`/frameworks/${id}/readiness`);
   const [mappingReqId, setMappingReqId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
@@ -87,7 +87,7 @@ export default function FrameworkDetail() {
         return { ...prev, requirements };
       });
       // Background sync to get accurate counts.
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       // silently ignore (e.g. duplicate mapping)
     } finally {
@@ -109,7 +109,7 @@ export default function FrameworkDetail() {
         });
         return { ...prev, requirements };
       });
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       // silently ignore
     } finally {

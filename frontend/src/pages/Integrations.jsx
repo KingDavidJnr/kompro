@@ -57,7 +57,7 @@ function statusBadge(status) {
 }
 
 export default function Integrations() {
-  const { data, loading, refetch, setData } = useGet('/evidence/collectors');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/evidence/collectors');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [runs, setRuns] = useState(null);
@@ -130,7 +130,7 @@ export default function Integrations() {
         setData((prev) => ({ ...prev, collectors: [...(prev.collectors || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -140,7 +140,7 @@ export default function Integrations() {
     try {
       await api.patch(`/evidence/collectors/${c.id}`, { enabled: !c.enabled });
       setData((prev) => ({ ...prev, collectors: (prev.collectors || []).map((col) => col.id === c.id ? { ...col, enabled: !col.enabled } : col) }));
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Update failed.');
     }
@@ -151,7 +151,7 @@ export default function Integrations() {
       await api.delete(`/evidence/collectors/${confirm.id}`);
       setData((prev) => ({ ...prev, collectors: (prev.collectors || []).filter((c) => c.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

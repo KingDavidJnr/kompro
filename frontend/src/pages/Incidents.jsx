@@ -54,7 +54,7 @@ function IncidentDrawer({ incident, onClose, onChanged }) {
 }
 
 export default function Incidents() {
-  const { data, loading, refetch, setData } = useGet('/incidents?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/incidents?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -86,7 +86,7 @@ export default function Incidents() {
         setData((prev) => ({ ...prev, incidents: [...(prev.incidents || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -97,7 +97,7 @@ export default function Incidents() {
       await api.delete(`/incidents/${confirm.id}`);
       setData((prev) => ({ ...prev, incidents: (prev.incidents || []).filter((i) => i.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
