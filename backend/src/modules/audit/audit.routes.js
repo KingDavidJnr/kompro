@@ -18,4 +18,9 @@ router.get('/:id', requireAuth, requirePermission('audit:read'), controller.get)
 // Purge entries older than N days (audit:purge). The action is itself audited.
 router.post('/purge', requireAuth, requirePermission('audit:purge'), controller.purge);
 
+// Record a client-side CSV export in the audit trail. Any authenticated user
+// can log their own exports (the permission check is implicit: they must have
+// had read access to fetch the data in the first place).
+router.post('/export-log', requireAuth, controller.logExport);
+
 module.exports = router;
