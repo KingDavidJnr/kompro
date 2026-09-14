@@ -26,6 +26,7 @@ router.post(
   requirePermission('frameworks:create'),
   body('name').isString().withMessage('Framework name is required'),
   body('description').optional().isString(),
+  body('version').optional().isString(),
   body('enabled').optional().isBoolean(),
   validate,
   controller.create
@@ -38,6 +39,7 @@ router.patch(
   requirePermission('frameworks:update'),
   body('name').optional().isString(),
   body('description').optional().isString(),
+  body('version').optional().isString(),
   body('enabled').optional().isBoolean(),
   validate,
   controller.update
