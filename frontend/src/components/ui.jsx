@@ -280,12 +280,17 @@ export function SearchableSelect({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [open, query]);
 
-  // Close on outside click.
+  // Close on outside click AND on scroll (dropdown position becomes stale when scrolling).
   useEffect(() => {
     if (!open) return undefined;
     const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onScroll, true); // capture: fires on any scroll container
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onScroll, true);
+    };
   }, [open]);
 
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
@@ -306,12 +311,18 @@ export function SearchableSelect({
   function openDropdown() {
     if (wrapRef.current) {
       const rect = wrapRef.current.getBoundingClientRect();
+      const DROPDOWN_HEIGHT = 280; // max-h-60 (240px) + search bar (~40px)
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUpward = spaceBelow < DROPDOWN_HEIGHT && spaceAbove > spaceBelow;
       setDropdownStyle({
         position: 'fixed',
-        top: rect.bottom + 4,
         left: rect.left,
         width: rect.width,
         zIndex: 9999,
+        ...(openUpward
+          ? { bottom: window.innerHeight - rect.top + 4 }
+          : { top: rect.bottom + 4 }),
       });
     }
     setOpen((v) => !v);
@@ -489,6 +500,7 @@ export function MultiSelect({ values = [], onChange, loadOptions, loadLabel, pla
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState([]);
   const [open, setOpen] = useState(false);
+  const [dropStyle, setDropStyle] = useState({});
   const inputRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -512,9 +524,34 @@ export function MultiSelect({ values = [], onChange, loadOptions, loadLabel, pla
     function handler(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
     }
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', onScroll, true);
+    };
   }, []);
+
+  function openWithPosition() {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const DROPDOWN_HEIGHT = 220;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpward = spaceBelow < DROPDOWN_HEIGHT && rect.top > spaceBelow;
+      setDropStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+        ...(openUpward
+          ? { bottom: window.innerHeight - rect.top + 4 }
+          : { top: rect.bottom + 4 }),
+      });
+    }
+    setOpen(true);
+    inputRef.current?.focus();
+  }
 
   function add(id, label) {
     if (!values.includes(id)) {
@@ -533,7 +570,7 @@ export function MultiSelect({ values = [], onChange, loadOptions, loadLabel, pla
     <div ref={containerRef} className="relative">
       <div
         className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-brand-300 cursor-text"
-        onClick={() => { setOpen(true); inputRef.current?.focus(); }}
+        onClick={openWithPosition}
       >
         {values.map((id) => (
           <span key={id} className="flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
@@ -548,12 +585,12 @@ export function MultiSelect({ values = [], onChange, loadOptions, loadLabel, pla
           className="min-w-[120px] flex-1 border-0 bg-transparent p-0 text-sm text-slate-700 outline-none placeholder-slate-400"
           placeholder={values.length === 0 ? placeholder : 'Add more…'}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onChange={(e) => { setQuery(e.target.value); if (!open) openWithPosition(); }}
+          onFocus={openWithPosition}
         />
       </div>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div style={dropStyle} className="max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
           {options.filter((o) => !values.includes(o.value)).length === 0 ? (
             <p className="px-3 py-2 text-sm text-slate-400">{query ? 'No results' : 'Type to search…'}</p>
           ) : (
