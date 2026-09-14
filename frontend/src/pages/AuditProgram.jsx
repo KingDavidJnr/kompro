@@ -73,7 +73,7 @@ function PlanDrawer({ plan, onClose, onChanged }) {
 }
 
 export default function AuditProgram() {
-  const { data, loading, refetch, setData } = useGet('/audit-program?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/audit-program?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -105,7 +105,7 @@ export default function AuditProgram() {
         setData((prev) => ({ ...prev, plans: [...(prev.plans || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -116,7 +116,7 @@ export default function AuditProgram() {
       await api.delete(`/audit-program/${confirm.id}`);
       setData((prev) => ({ ...prev, plans: (prev.plans || []).filter((p) => p.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

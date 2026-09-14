@@ -5,7 +5,8 @@ import api from './api';
  * Minimal data-fetching hook for GET endpoints.
  *
  * Returns the unwrapped `data` payload (the backend uses { message, data }),
- * a loading flag, any error message, a refetch function, and a setData function
+ * a loading flag, any error message, a refetch function, a silent refetch
+ * (background sync without setting loading: true), and a setData function
  * for optimistic local updates without re-fetching.
  */
 export function useGet(path, { immediate = true } = {}) {
@@ -27,6 +28,18 @@ export function useGet(path, { immediate = true } = {}) {
       });
   }, [path]);
 
+  // Silent background sync -- updates data without ever showing loading state.
+  const silentRefetch = useCallback(() => {
+    return api
+      .get(path)
+      .then((res) => {
+        const payload = res.data.data;
+        setState((s) => ({ ...s, data: payload }));
+        return payload;
+      })
+      .catch(() => {});
+  }, [path]);
+
   const setData = useCallback((updater) => {
     setState((s) => ({
       ...s,
@@ -38,5 +51,5 @@ export function useGet(path, { immediate = true } = {}) {
     if (immediate) load().catch(() => {});
   }, [load, immediate]);
 
-  return { ...state, refetch: load, setData };
+  return { ...state, refetch: load, silentRefetch, setData };
 }

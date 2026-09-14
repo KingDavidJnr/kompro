@@ -105,7 +105,7 @@ function Section({ title, path, add, fields, items, render }) {
 }
 
 export default function Risk() {
-  const { data, loading, refetch, setData } = useGet('/risks?pageSize=100');
+  const { data, loading, refetch, silentRefetch, setData } = useGet('/risks?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -154,7 +154,7 @@ export default function Risk() {
         setData((prev) => ({ ...prev, risks: [...(prev.risks || []), created] }));
       }
       setModal(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -165,7 +165,7 @@ export default function Risk() {
       await api.delete(`/risks/${confirm.id}`);
       setData((prev) => ({ ...prev, risks: (prev.risks || []).filter((r) => r.id !== confirm.id) }));
       setConfirm(null);
-      refetch().catch(() => {});
+      silentRefetch();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

@@ -62,11 +62,12 @@ router.post(
   controller.create
 );
 
-// Updates require evidence:update.
+// Updates require evidence:update. File replacement is optional.
 router.patch(
   '/:id',
   requireAuth,
   requirePermission('evidence:update'),
+  upload.single('file'),
   body('title').optional().isString(),
   body('description').optional().isString(),
   body('source').optional().isIn(EVIDENCE_SOURCES).withMessage(`Source must be one of: ${EVIDENCE_SOURCES.join(', ')}`),

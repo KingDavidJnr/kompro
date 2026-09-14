@@ -13,9 +13,9 @@ const TABS = [
 
 export default function ITSM() {
   const [tab, setTab] = useState('assets');
-  const { setData: setAssetData, ...assets } = useGet('/itsm/assets?pageSize=100');
-  const { setData: setChangeData, ...changes } = useGet('/itsm/changes?pageSize=100');
-  const { setData: setCapacityData, ...capacity } = useGet('/itsm/capacity?pageSize=100');
+  const { setData: setAssetData, silentRefetch: silentRefetchAssets, ...assets } = useGet('/itsm/assets?pageSize=100');
+  const { setData: setChangeData, silentRefetch: silentRefetchChanges, ...changes } = useGet('/itsm/changes?pageSize=100');
+  const { setData: setCapacityData, silentRefetch: silentRefetchCapacity, ...capacity } = useGet('/itsm/capacity?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -60,7 +60,8 @@ export default function ITSM() {
         setCapacityData((prev) => ({ ...prev, plans: [...(prev.plans || []), created] }));
       }
       setModal(null);
-      res.refetch().catch(() => {});
+      const sr = tab === 'assets' ? silentRefetchAssets : tab === 'changes' ? silentRefetchChanges : silentRefetchCapacity;
+      sr();
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -77,7 +78,8 @@ export default function ITSM() {
         setCapacityData((prev) => ({ ...prev, plans: (prev.plans || []).filter((p) => p.id !== confirm.id) }));
       }
       setConfirm(null);
-      res.refetch().catch(() => {});
+      const sr = confirm.type === 'assets' ? silentRefetchAssets : confirm.type === 'changes' ? silentRefetchChanges : silentRefetchCapacity;
+      sr();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }

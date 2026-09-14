@@ -110,7 +110,11 @@ async function download(req, res, next) {
 async function update(req, res, next) {
   try {
     const before = await evidenceService.getEvidence(req.params.id);
-    const evidence = await evidenceService.updateEvidence(req.params.id, req.body);
+    // If a new file was uploaded, include it in the update.
+    const file = req.file
+      ? { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype }
+      : null;
+    const evidence = await evidenceService.updateEvidence(req.params.id, { ...req.body, file });
     await auditService.recordFromRequest(req, {
       action: 'update',
       entity: 'evidence',
