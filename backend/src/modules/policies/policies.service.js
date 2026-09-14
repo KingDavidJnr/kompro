@@ -130,7 +130,7 @@ async function notifyPolicyPublished(policy) {
  * @throws {NotFoundError} When the policy does not exist.
  * @throws {ValidationError} On invalid status.
  */
-async function updatePolicy(id, { title, description, content, status, rules, owner }) {
+async function updatePolicy(id, { title, description, content, status, rules, owner, version, filePath, mimeType }) {
   const existing = await prisma.policy.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Policy not found');
@@ -147,6 +147,9 @@ async function updatePolicy(id, { title, description, content, status, rules, ow
   if (status) data.status = status;
   if (rules !== undefined) data.rules = rules;
   if (owner !== undefined) data.owner = owner;
+  if (version !== undefined) data.version = version;
+  if (filePath !== undefined) data.filePath = filePath;
+  if (mimeType !== undefined) data.mimeType = mimeType;
 
   const updated = await prisma.policy.update({ where: { id }, data });
   if (updated.status === 'active' && existing.status !== 'active') {
@@ -207,20 +210,33 @@ async function listVersions(policyId) {
  * @returns {object} Created PolicyVersion.
  * @throws {NotFoundError} When the policy does not exist.
  */
-async function createVersion(policyId, { content, status } = {}) {
+/**
+ * Snapshots the current policy content into a new version identified by a
+ * user-supplied string label (e.g. "1.0", "2.1.3", "Draft A").
+ * @param {string} policyId - Policy id.
+ * @param {object} [input] - { version, content, status }.
+ * @returns {object} Created PolicyVersion.
+ * @throws {NotFoundError} When the policy does not exist.
+ * @throws {ValidationError} When the version label is missing or already used.
+ */
+async function createVersion(policyId, { version, content, status } = {}) {
   const policy = await prisma.policy.findUnique({ where: { id: policyId } });
   if (!policy) throw new NotFoundError('Policy not found');
-  const nextVersion = policy.version + 1;
-  const version = await prisma.policyVersion.create({
+  if (!version || !String(version).trim()) {
+    throw new ValidationError('Version label is required (e.g. "1.0", "2.1.3")');
+  }
+  const label = String(version).trim();
+  const snapshot = await prisma.policyVersion.create({
     data: {
       policyId,
-      version: nextVersion,
+      version: label,
       content: content || policy.content || null,
       status: status || policy.status || 'draft',
     },
   });
-  await prisma.policy.update({ where: { id: policyId }, data: { version: nextVersion } });
-  return version;
+  // Update the policy's current version label to match the snapshot.
+  await prisma.policy.update({ where: { id: policyId }, data: { version: label } });
+  return snapshot;
 }
 
 /**

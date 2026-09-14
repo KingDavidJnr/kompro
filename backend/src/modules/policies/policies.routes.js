@@ -65,7 +65,16 @@ router.post(
 // Policy lifecycle sub-resources (versions, change requests, reviews, exceptions).
 // All reuse the existing policies:* permissions for consistency.
 router.get('/:id/versions', requireAuth, requirePermission('policies:read'), controller.listVersions);
-router.post('/:id/versions', requireAuth, requirePermission('policies:create'), controller.createVersion);
+router.post(
+  '/:id/versions',
+  requireAuth,
+  requirePermission('policies:create'),
+  body('version').isString().withMessage('Version label is required'),
+  body('content').optional().isString(),
+  body('status').optional().isIn(POLICY_STATUSES),
+  validate,
+  controller.createVersion
+);
 
 router.get('/:id/change-requests', requireAuth, requirePermission('policies:read'), controller.listChangeRequests);
 router.post('/:id/change-requests', requireAuth, requirePermission('policies:create'), controller.createChangeRequest);

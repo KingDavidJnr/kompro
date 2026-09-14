@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Button, Field } from './ui';
+import { marked } from 'marked';
 
 const TOOLBAR = [
   { label: 'B', title: 'Bold', wrap: ['**', '**'] },
@@ -14,16 +14,15 @@ const TOOLBAR = [
 ];
 
 /**
- * Simple split-pane Markdown editor with toolbar.
- * No external dependencies -- uses a plain textarea + dangerouslySetInnerHTML
- * with the `marked` library for rendering.
+ * Markdown editor with toolbar and collapsed-by-default behaviour.
  *
  * Props:
  *  value    - Markdown string
  *  onChange - Called with new string on every keystroke
- *  rows     - Textarea row height (default 18)
+ *  rows     - Textarea row height when expanded (default 18)
  */
 export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
+  const [expanded, setExpanded] = useState(false);
   const [preview, setPreview] = useState(false);
   const textRef = useRef(null);
 
@@ -33,42 +32,43 @@ export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
     const start = el.selectionStart;
     const end = el.selectionEnd;
     const selected = value.slice(start, end);
-    let next;
 
     if (action.wrap) {
       const [before, after] = action.wrap;
-      next = value.slice(0, start) + before + selected + after + value.slice(end);
+      const next = value.slice(0, start) + before + selected + after + value.slice(end);
       onChange(next);
-      setTimeout(() => {
-        el.focus();
-        el.setSelectionRange(start + before.length, end + before.length);
-      }, 0);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); }, 0);
     } else if (action.line) {
-      // Insert prefix at start of selected lines.
       const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      next = value.slice(0, lineStart) + action.line + value.slice(lineStart);
+      const next = value.slice(0, lineStart) + action.line + value.slice(lineStart);
       onChange(next);
-      setTimeout(() => {
-        el.focus();
-        el.setSelectionRange(start + action.line.length, end + action.line.length);
-      }, 0);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + action.line.length, end + action.line.length); }, 0);
     } else if (action.insert) {
-      next = value.slice(0, start) + action.insert + value.slice(end);
+      const next = value.slice(0, start) + action.insert + value.slice(end);
       onChange(next);
-      setTimeout(() => {
-        el.focus();
-        el.setSelectionRange(start + action.insert.length, start + action.insert.length);
-      }, 0);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + action.insert.length, start + action.insert.length); }, 0);
     }
   }
 
-  function renderHtml() {
-    try {
-      const { marked } = require('marked');
-      return marked.parse(value || '');
-    } catch {
-      return value;
-    }
+  // Collapsed state: show a preview of the current content (or a placeholder).
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left hover:border-brand-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+      >
+        {value ? (
+          <div
+            className="prose prose-sm pointer-events-none max-w-none text-slate-600 line-clamp-4"
+            dangerouslySetInnerHTML={{ __html: marked.parse(value) }}
+          />
+        ) : (
+          <p className="text-sm text-slate-400">Click to write policy content in Markdown...</p>
+        )}
+        <p className="mt-2 text-xs text-brand-500">Click to edit</p>
+      </button>
+    );
   }
 
   return (
@@ -86,20 +86,30 @@ export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
             {t.label}
           </button>
         ))}
-        <div className="ml-auto flex rounded border border-slate-200 bg-white text-xs">
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex rounded border border-slate-200 bg-white text-xs">
+            <button
+              type="button"
+              onClick={() => setPreview(false)}
+              className={`px-2.5 py-1 ${!preview ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreview(true)}
+              className={`px-2.5 py-1 ${preview ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+            >
+              Preview
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => setPreview(false)}
-            className={`px-2.5 py-1 ${!preview ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+            onClick={() => setExpanded(false)}
+            className="rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            title="Collapse editor"
           >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreview(true)}
-            className={`px-2.5 py-1 ${preview ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
-          >
-            Preview
+            Collapse
           </button>
         </div>
       </div>
@@ -108,16 +118,17 @@ export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
       {preview ? (
         <div
           className="prose prose-sm max-w-none p-4 text-slate-700"
-          dangerouslySetInnerHTML={{ __html: renderHtml() }}
+          dangerouslySetInnerHTML={{ __html: marked.parse(value || '') }}
         />
       ) : (
         <textarea
           ref={textRef}
-          className="block w-full resize-none border-0 bg-white p-3 font-mono text-sm text-slate-800 outline-none focus:ring-0"
+          autoFocus
+          className="block w-full resize-y border-0 bg-white p-3 font-mono text-sm text-slate-800 outline-none focus:ring-0"
           rows={rows}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Write policy content in Markdown...&#10;&#10;## Section heading&#10;&#10;- Bullet point&#10;**Bold text**"
+          placeholder={'Write policy content in Markdown...\n\n## Section heading\n\n- Bullet point\n**Bold text**'}
           spellCheck={false}
         />
       )}
