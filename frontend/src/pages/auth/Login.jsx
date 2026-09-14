@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { API_URL, SHOW_PASSWORD_LOGIN, SHOW_SSO_LOGIN, SSO_PROVIDERS } from '../../config';
 import Logo from '../../components/Logo';
 import { Button, Field } from '../../components/ui';
-import { GoogleIcon, MicrosoftIcon, CheckIcon, EyeIcon, EyeOffIcon } from '../../components/icons';
+import { GoogleIcon, MicrosoftIcon, CheckIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../../components/icons';
+import api from '../../lib/api';
 
 const SSO_META = {
   google: { label: 'Continue with Google', Icon: GoogleIcon },
@@ -22,9 +23,17 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [portalOrg, setPortalOrg] = useState(null);
   const navigate = useNavigate();
 
   if (user) return <Navigate to="/" replace />;
+
+  // Check once on mount whether the trust portal is publicly enabled.
+  useEffect(() => {
+    api.get('/public/trust')
+      .then((res) => setPortalOrg(res.data.data?.organization?.displayName || res.data.data?.organization?.name || true))
+      .catch(() => setPortalOrg(null));
+  }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -161,6 +170,19 @@ export default function Login() {
             </form>
           )}
         </div>
+
+        {/* Trust portal link */}
+        {portalOrg && (
+          <div className="mt-8 border-t border-slate-200 pt-6 text-center">
+            <Link
+              to="/trust"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
+            >
+              <ShieldIcon className="h-4 w-4" />
+              View {typeof portalOrg === 'string' ? `${portalOrg}'s` : 'our'} Trust Portal
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import Organization from './pages/Organization';
 import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Policies from './pages/Policies';
+import PolicyDetail from './pages/PolicyDetail';
 import Frameworks from './pages/Frameworks';
 import FrameworkDetail from './pages/FrameworkDetail';
 import Settings from './pages/Settings';
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="roles" element={<Roles />} />
         <Route path="settings" element={<Settings />} />
         <Route path="policies" element={<Policies />} />
+        <Route path="policies/:id" element={<PolicyDetail />} />
         <Route path="frameworks" element={<Frameworks />} />
         <Route path="frameworks/:id" element={<FrameworkDetail />} />
         <Route path="controls" element={<Controls />} />
