@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
-import { PageHeader, Card, Badge, Spinner, Button } from '../components/ui';
-import { ShieldIcon, ArrowLeftIcon, DocumentIcon } from '../components/icons';
+import api from '../lib/api';
+import { PageHeader, Card, Badge, Spinner, Button, SearchableSelect } from '../components/ui';
+import { ShieldIcon, ArrowLeftIcon, DocumentIcon, PlusIcon, XIcon } from '../components/icons';
 
 // Status → badge colour + human label.
 const REQUIREMENT_STATUS = {
@@ -45,7 +46,42 @@ function readinessColor(pct) {
 
 export default function FrameworkDetail() {
   const { id } = useParams();
-  const { data, loading, error } = useGet(`/frameworks/${id}/readiness`);
+  const { data, loading, error, refetch } = useGet(`/frameworks/${id}/readiness`);
+  const [mappingReqId, setMappingReqId] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const controlLabel = (c) => `${c.title}${c.category ? ` · ${c.category}` : ''}`;
+  const loadControls = async (q) => {
+    const res = await api.get(`/controls?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+    return (res.data.data.controls || []).map((c) => ({ value: c.id, label: controlLabel(c) }));
+  };
+
+  async function mapControl(requirementId, controlId) {
+    if (!controlId) return;
+    setBusy(true);
+    try {
+      await api.post(`/requirements/${requirementId}/mappings`, { controlId });
+      setMappingReqId(null);
+      refetch();
+    } catch (err) {
+      // silently ignore (e.g. duplicate mapping)
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unmapControl(requirementId, controlId) {
+    if (!window.confirm('Remove this control mapping?')) return;
+    setBusy(true);
+    try {
+      await api.delete(`/requirements/${requirementId}/mappings/${controlId}`);
+      refetch();
+    } catch (err) {
+      // silently ignore
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -186,10 +222,49 @@ export default function FrameworkDetail() {
                             <DocumentIcon className="mr-1 h-3 w-3" />
                             {c.evidenceCount}
                           </Badge>
+                          <button
+                            onClick={() => unmapControl(req.id, c.id)}
+                            disabled={busy}
+                            className="ml-1 rounded p-0.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+                            title="Remove mapping"
+                          >
+                            <XIcon className="h-3.5 w-3.5" />
+                          </button>
                         </span>
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {/* Add control mapping */}
+                {mappingReqId === req.id ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="flex-1">
+                      <SearchableSelect
+                        value={null}
+                        onChange={(controlId) => mapControl(req.id, controlId)}
+                        loadOptions={loadControls}
+                        placeholder="Select a control to map..."
+                        searchPlaceholder="Search controls..."
+                        allowClear={false}
+                        disabled={busy}
+                      />
+                    </div>
+                    <button
+                      onClick={() => setMappingReqId(null)}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      title="Cancel"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setMappingReqId(req.id)}
+                    className="mt-3 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" /> Map control
+                  </button>
                 )}
               </li>
             ))}
