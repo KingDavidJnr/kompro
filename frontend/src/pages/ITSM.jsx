@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, UserSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton, UserSelect } from '../components/ui';
 import { PlusIcon, TrashIcon, ServerIcon, CogIcon, ChartIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
@@ -13,9 +13,9 @@ const TABS = [
 
 export default function ITSM() {
   const [tab, setTab] = useState('assets');
-  const assets = useGet('/itsm/assets?pageSize=100');
-  const changes = useGet('/itsm/changes?pageSize=100');
-  const capacity = useGet('/itsm/capacity?pageSize=100');
+  const { setData: setAssetData, ...assets } = useGet('/itsm/assets?pageSize=100');
+  const { setData: setChangeData, ...changes } = useGet('/itsm/changes?pageSize=100');
+  const { setData: setCapacityData, ...capacity } = useGet('/itsm/capacity?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -48,9 +48,19 @@ export default function ITSM() {
           notes: m.notes,
         };
       }
-      await api.post(`/itsm/${m.type}`, body);
+      const apiRes = await api.post(`/itsm/${m.type}`, body);
+      if (m.type === 'assets') {
+        const created = apiRes.data.data.asset;
+        setAssetData((prev) => ({ ...prev, assets: [...(prev.assets || []), created] }));
+      } else if (m.type === 'changes') {
+        const created = apiRes.data.data.change;
+        setChangeData((prev) => ({ ...prev, changes: [...(prev.changes || []), created] }));
+      } else {
+        const created = apiRes.data.data.plan;
+        setCapacityData((prev) => ({ ...prev, plans: [...(prev.plans || []), created] }));
+      }
       setModal(null);
-      res.refetch();
+      res.refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -59,8 +69,15 @@ export default function ITSM() {
   async function remove() {
     try {
       await api.delete(`/itsm/${confirm.type}/${confirm.id}`);
+      if (confirm.type === 'assets') {
+        setAssetData((prev) => ({ ...prev, assets: (prev.assets || []).filter((a) => a.id !== confirm.id) }));
+      } else if (confirm.type === 'changes') {
+        setChangeData((prev) => ({ ...prev, changes: (prev.changes || []).filter((c) => c.id !== confirm.id) }));
+      } else {
+        setCapacityData((prev) => ({ ...prev, plans: (prev.plans || []).filter((p) => p.id !== confirm.id) }));
+      }
       setConfirm(null);
-      res.refetch();
+      res.refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -95,7 +112,7 @@ export default function ITSM() {
 
       <Card>
         {res.loading ? (
-          <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
+          <TableSkeleton columns={tab === 'changes' ? 4 : 5} />
         ) : tab === 'assets' ? (
           <TableWithAdd
             rows={assets.data?.assets || []}

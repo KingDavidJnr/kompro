@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
@@ -105,7 +105,7 @@ function Section({ title, path, add, fields, items, render }) {
 }
 
 export default function Risk() {
-  const { data, loading, refetch } = useGet('/risks?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/risks?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -144,10 +144,17 @@ export default function Risk() {
         status: modal.status,
         owner: modal.owner,
       };
-      if (modal.id) await api.patch(`/risks/${modal.id}`, body);
-      else await api.post('/risks', body);
+      if (modal.id) {
+        const res = await api.patch(`/risks/${modal.id}`, body);
+        const updated = res.data.data.risk;
+        setData((prev) => ({ ...prev, risks: (prev.risks || []).map((r) => r.id === updated.id ? updated : r) }));
+      } else {
+        const res = await api.post('/risks', body);
+        const created = res.data.data.risk;
+        setData((prev) => ({ ...prev, risks: [...(prev.risks || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -156,8 +163,9 @@ export default function Risk() {
   async function remove() {
     try {
       await api.delete(`/risks/${confirm.id}`);
+      setData((prev) => ({ ...prev, risks: (prev.risks || []).filter((r) => r.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -186,7 +194,7 @@ export default function Risk() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
+          <TableSkeleton columns={6} />
         ) : (
           <Table
             numbered

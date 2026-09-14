@@ -5,9 +5,8 @@ import api from './api';
  * Minimal data-fetching hook for GET endpoints.
  *
  * Returns the unwrapped `data` payload (the backend uses { message, data }),
- * a loading flag, any error message, and a refetch function. It is intentionally
- * tiny; pages that need create/update/delete call `api` directly and then
- * refetch.
+ * a loading flag, any error message, a refetch function, and a setData function
+ * for optimistic local updates without re-fetching.
  */
 export function useGet(path, { immediate = true } = {}) {
   const [state, setState] = useState({ data: null, loading: !!immediate, error: null });
@@ -28,9 +27,16 @@ export function useGet(path, { immediate = true } = {}) {
       });
   }, [path]);
 
+  const setData = useCallback((updater) => {
+    setState((s) => ({
+      ...s,
+      data: typeof updater === 'function' ? updater(s.data) : updater,
+    }));
+  }, []);
+
   useEffect(() => {
     if (immediate) load().catch(() => {});
   }, [load, immediate]);
 
-  return { ...state, refetch: load };
+  return { ...state, refetch: load, setData };
 }

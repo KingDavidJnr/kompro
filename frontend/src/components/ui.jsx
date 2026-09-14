@@ -132,6 +132,35 @@ export function Drawer({ open, onClose, title, children, footer }) {
   );
 }
 
+export function TableSkeleton({ columns = 4, rows = 5 }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+      <table className="min-w-full divide-y divide-slate-100">
+        <thead className="bg-slate-50">
+          <tr>
+            {Array.from({ length: columns }).map((_, i) => (
+              <th key={i} className="px-4 py-3">
+                <div className="h-3 w-20 animate-pulse rounded bg-slate-200" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {Array.from({ length: rows }).map((_, r) => (
+            <tr key={r}>
+              {Array.from({ length: columns }).map((_, c) => (
+                <td key={c} className="px-4 py-3">
+                  <div className={`h-3 animate-pulse rounded bg-slate-100 ${c === 0 ? 'w-40' : c === columns - 1 ? 'w-16' : 'w-28'}`} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function Table({ columns, rows, empty, onRowClick, rowClassName, numbered }) {
   const allColumns = numbered
     ? [{ key: '_row_num', label: '#', render: (_row, _col, index) => index + 1 }, ...columns]

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
@@ -54,7 +54,7 @@ function IncidentDrawer({ incident, onClose, onChanged }) {
 }
 
 export default function Incidents() {
-  const { data, loading, refetch } = useGet('/incidents?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/incidents?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -76,10 +76,17 @@ export default function Incidents() {
     setError(null);
     try {
       const body = { title: modal.title, description: modal.description, category: modal.category, severity: modal.severity, classification: modal.classification, status: modal.status, owner: modal.owner };
-      if (modal.id) await api.patch(`/incidents/${modal.id}`, body);
-      else await api.post('/incidents', body);
+      if (modal.id) {
+        const res = await api.patch(`/incidents/${modal.id}`, body);
+        const updated = res.data.data.incident;
+        setData((prev) => ({ ...prev, incidents: (prev.incidents || []).map((i) => i.id === updated.id ? updated : i) }));
+      } else {
+        const res = await api.post('/incidents', body);
+        const created = res.data.data.incident;
+        setData((prev) => ({ ...prev, incidents: [...(prev.incidents || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -88,8 +95,9 @@ export default function Incidents() {
   async function remove() {
     try {
       await api.delete(`/incidents/${confirm.id}`);
+      setData((prev) => ({ ...prev, incidents: (prev.incidents || []).filter((i) => i.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -103,7 +111,7 @@ export default function Incidents() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
+          <TableSkeleton columns={5} />
         ) : (
           <Table
             numbered

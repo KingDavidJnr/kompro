@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { exportCsv } from '../lib/csv';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
 
@@ -73,7 +73,7 @@ function PlanDrawer({ plan, onClose, onChanged }) {
 }
 
 export default function AuditProgram() {
-  const { data, loading, refetch } = useGet('/audit-program?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/audit-program?pageSize=100');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -95,10 +95,17 @@ export default function AuditProgram() {
     setError(null);
     try {
       const body = { title: modal.title, scope: modal.scope, status: modal.status, scheduledAt: modal.scheduledAt || null };
-      if (modal.id) await api.patch(`/audit-program/${modal.id}`, body);
-      else await api.post('/audit-program', body);
+      if (modal.id) {
+        const res = await api.patch(`/audit-program/${modal.id}`, body);
+        const updated = res.data.data.plan;
+        setData((prev) => ({ ...prev, plans: (prev.plans || []).map((p) => p.id === updated.id ? updated : p) }));
+      } else {
+        const res = await api.post('/audit-program', body);
+        const created = res.data.data.plan;
+        setData((prev) => ({ ...prev, plans: [...(prev.plans || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -107,8 +114,9 @@ export default function AuditProgram() {
   async function remove() {
     try {
       await api.delete(`/audit-program/${confirm.id}`);
+      setData((prev) => ({ ...prev, plans: (prev.plans || []).filter((p) => p.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -122,7 +130,7 @@ export default function AuditProgram() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
+          <TableSkeleton columns={5} />
         ) : (
           <Table
             numbered
