@@ -56,24 +56,24 @@ export default function TrustPortal() {
   const { organization, portal, readiness, stats, frameworks, policies } = data;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{organization.displayName}</h1>
             <p className="text-xs text-slate-500 sm:text-sm">Trust Portal</p>
           </div>
-          <ShieldIcon className="h-7 w-7 shrink-0 text-brand-600 sm:h-8 sm:w-8" />
+          <ShieldIcon className="ml-3 h-7 w-7 shrink-0 text-brand-600 sm:h-8 sm:w-8" />
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
         {/* Hero */}
         <section className="mb-6 sm:mb-10">
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">{portal.headline}</h2>
+          <h2 className="break-words text-xl font-bold text-slate-900 sm:text-3xl">{portal.headline}</h2>
           {portal.description && (
-            <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:mt-3 sm:max-w-3xl sm:text-base">{portal.description}</p>
+            <p className="mt-2 break-words text-sm leading-relaxed text-slate-600 sm:mt-3 sm:max-w-3xl sm:text-base">{portal.description}</p>
           )}
         </section>
 
@@ -82,8 +82,8 @@ export default function TrustPortal() {
           <section className="mb-6 sm:mb-10">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-                <div className="text-center sm:min-w-[120px]">
-                  <p className={`text-4xl font-bold sm:text-5xl ${readinessColor(readiness.score)}`}>{readiness.score}%</p>
+                <div className="text-center">
+                  <p className={`text-3xl font-bold sm:text-5xl ${readinessColor(readiness.score)}`}>{readiness.score}%</p>
                   <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">Overall Readiness</p>
                 </div>
                 <div className="min-w-0 flex-1 space-y-2.5 sm:space-y-3">
@@ -94,8 +94,8 @@ export default function TrustPortal() {
                     { label: 'Assessment Pass Rate', value: readiness.components.assessmentPassRate },
                   ].map((c) => (
                     <div key={c.label}>
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span className="truncate pr-2">{c.label}</span>
+                      <div className="flex items-baseline justify-between gap-2 text-xs text-slate-500">
+                        <span className="min-w-0 shrink truncate">{c.label}</span>
                         <span className="shrink-0 font-semibold text-slate-700">{c.value}%</span>
                       </div>
                       <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
@@ -198,7 +198,7 @@ export default function TrustPortal() {
             {portal.contactEmail && (
               <p className="mt-2 text-xs text-slate-600 sm:mt-3 sm:text-sm">
                 Email us at{' '}
-                <a href={`mailto:${portal.contactEmail}`} className="font-medium text-brand-600 hover:underline">
+                <a href={`mailto:${portal.contactEmail}`} className="break-all font-medium text-brand-600 hover:underline">
                   {portal.contactEmail}
                 </a>
               </p>
