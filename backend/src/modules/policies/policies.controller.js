@@ -82,10 +82,6 @@ async function update(req, res, next) {
   try {
     const before = await policyService.getPolicy(req.params.id);
     const policy = await policyService.updatePolicy(req.params.id, req.body);
-    // Auto-snapshot a new version when content or status changes.
-    if (req.body.content !== undefined && req.body.content !== before.content) {
-      await policyService.createVersion(policy.id, { content: policy.content, status: policy.status }).catch(() => {});
-    }
     await auditService.recordFromRequest(req, {
       action: 'update',
       entity: 'policy',
@@ -169,8 +165,7 @@ async function uploadFile(req, res, next) {
       where: { id: policy.id },
       data: { filePath: key, mimeType: req.file.mimetype },
     });
-    // Auto-snapshot version on file upload.
-    await policyService.createVersion(policy.id, { content: policy.content, status: policy.status });
+    // No auto-snapshot on file upload -- user controls versioning explicitly.
     await auditService.recordFromRequest(req, {
       action: 'update',
       entity: 'policy',
