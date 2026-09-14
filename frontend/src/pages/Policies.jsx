@@ -18,17 +18,22 @@ export default function Policies() {
 
   function openCreate() {
     setError(null);
-    setModal({ title: '', description: '', status: 'draft', owner: '' });
+    setModal({ title: '', description: '', status: 'draft', owner: '', version: '1.0' });
   }
 
   async function save(e) {
     e.preventDefault();
     setError(null);
+    if (!modal.version?.trim()) {
+      setError('Version label is required (e.g. "1.0").');
+      return;
+    }
     try {
-      const res = await api.post('/policies', modal);
+      const res = await api.post('/policies', { ...modal, version: modal.version.trim() });
       const created = res.data.data.policy;
+      setData((prev) => ({ ...prev, policies: [...(prev?.policies || []), created] }));
       setModal(null);
-      // Navigate directly to the new policy's detail page.
+      // Navigate to the detail page so the user can add content.
       navigate(`/policies/${created.id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
@@ -98,11 +103,22 @@ export default function Policies() {
           <Field label="Description" hint="Short summary shown in the policies list.">
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} placeholder="What this policy covers" />
           </Field>
-          <Field label="Status">
-            <select className="input" value={modal?.status || 'draft'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Initial version" hint='e.g. "1.0" or "2.1.3"'>
+              <input
+                required
+                className="input"
+                value={modal?.version || ''}
+                onChange={(e) => setModal({ ...modal, version: e.target.value })}
+                placeholder="1.0"
+              />
+            </Field>
+            <Field label="Status">
+              <select className="input" value={modal?.status || 'draft'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
+                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </Field>
+          </div>
           <Field label="Owner">
             <UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} />
           </Field>

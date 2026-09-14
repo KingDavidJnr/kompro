@@ -71,7 +71,7 @@ async function getPolicy(id) {
  * @returns {object} Created policy.
  * @throws {ValidationError} On missing title or invalid status.
  */
-async function createPolicy({ title, description, content, status, rules, owner }) {
+async function createPolicy({ title, description, content, status, rules, owner, version }) {
   if (!title) {
     throw new ValidationError('Policy title is required');
   }
@@ -87,6 +87,7 @@ async function createPolicy({ title, description, content, status, rules, owner 
       status: status || 'draft',
       rules: rules || null,
       owner: owner || null,
+      version: version || '1.0',
     },
   });
 

@@ -115,8 +115,9 @@ async function ingestEvidence(collectorConfig) {
   }
 
   let added = 0;
+  let updated = 0;
   for (const item of items) {
-    await createEvidence({
+    const payload = {
       title: item.title,
       description: item.description || null,
       source: 'automated_check',
@@ -126,8 +127,30 @@ async function ingestEvidence(collectorConfig) {
       policyId: item.policyId || null,
       collectorId: collectorConfig.id,
       uploadedById: null,
-    });
-    added += 1;
+    };
+
+    if (item.externalId) {
+      // Upsert: update the existing record if found, otherwise create.
+      const existing = await prisma.evidence.findFirst({
+        where: { collectorId: collectorConfig.id, externalId: String(item.externalId) },
+      });
+      if (existing) {
+        await prisma.evidence.update({
+          where: { id: existing.id },
+          data: { ...payload, externalId: String(item.externalId), updatedAt: new Date() },
+        });
+        updated += 1;
+      } else {
+        await prisma.evidence.create({
+          data: { ...payload, externalId: String(item.externalId), status: 'submitted' },
+        });
+        added += 1;
+      }
+    } else {
+      // No externalId -- always create (legacy / append behaviour).
+      await createEvidence({ ...payload, status: 'submitted' });
+      added += 1;
+    }
   }
 
   await prisma.collectorConfig.update({
@@ -144,9 +167,9 @@ async function ingestEvidence(collectorConfig) {
     action: 'collect',
     entity: 'evidence',
     entityId: collectorConfig.id,
-    after: { collector: collectorConfig.name, status: 'success', added },
+    after: { collector: collectorConfig.name, status: 'success', added, updated },
   });
-  return { status: 'success', added };
+  return { status: 'success', added, updated };
 }
 
 /**

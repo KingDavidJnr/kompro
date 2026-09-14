@@ -168,6 +168,7 @@ model Evidence {
   policyId     String?
   uploadedById String?
   collectorId  String?
+  externalId   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   control     Control?   @relation(fields: [controlId], references: [id], onDelete: SetNull)
@@ -181,6 +182,7 @@ model Evidence {
   @@index([status])
   @@index([uploadedById])
   @@index([collectorId])
+  @@unique([collectorId, externalId])
 }
 
 model Assessment {
