@@ -33,6 +33,7 @@ router.post(
   body('status').optional().isIn(POLICY_STATUSES).withMessage(`Status must be one of: ${POLICY_STATUSES.join(', ')}`),
   body('owner').optional().isString(),
   body('version').optional().isString(),
+  body('rules').optional(),
   validate,
   controller.create
 );
@@ -88,5 +89,10 @@ router.patch('/:id/reviews/:rid', requireAuth, requirePermission('policies:updat
 router.get('/:id/exceptions', requireAuth, requirePermission('policies:read'), controller.listExceptions);
 router.post('/:id/exceptions', requireAuth, requirePermission('policies:create'), controller.createException);
 router.patch('/:id/exceptions/:eid', requireAuth, requirePermission('policies:update'), controller.updateException);
+
+// Policy-as-code: evaluate rules and view history.
+router.post('/:id/evaluate', requireAuth, requirePermission('policies:read'), controller.evaluate);
+router.get('/:id/evaluations', requireAuth, requirePermission('policies:read'), controller.listEvaluations);
+router.post('/:id/validate-rules', requireAuth, requirePermission('policies:update'), controller.validateRulesEndpoint);
 
 module.exports = router;

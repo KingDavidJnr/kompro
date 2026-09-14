@@ -152,6 +152,7 @@ model Policy {
   reviews     PolicyReview[]
   exceptions  PolicyException[]
   evidenceLinks EvidencePolicy[]
+  evaluations PolicyEvaluation[]
 
   @@index([status])
 }
@@ -516,6 +517,22 @@ model PolicyException {
 
   @@index([policyId])
   @@index([status])
+}
+
+model PolicyEvaluation {
+  id            String   @id @default(cuid())
+  policyId      String
+  result        String
+  score         Int
+  passedCount   Int
+  failedCount   Int
+  totalCount    Int
+  conditions    Json
+  evaluatedAt   DateTime @default(now())
+  policy        Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([result])
 }
 
 // --- Audit management (distinct from the AuditLog trail) ---
