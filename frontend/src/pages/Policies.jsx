@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton, UserSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
@@ -203,7 +203,7 @@ function Section({ loading, items, onAdd, fields, render }) {
 }
 
 export default function Policies() {
-  const { data, loading, refetch } = useGet('/policies');
+  const { data, loading, refetch, setData } = useGet('/policies');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -224,10 +224,17 @@ export default function Policies() {
     e.preventDefault();
     setError(null);
     try {
-      if (modal.id) await api.patch(`/policies/${modal.id}`, modal);
-      else await api.post('/policies', modal);
+      if (modal.id) {
+        const res = await api.patch(`/policies/${modal.id}`, modal);
+        const updated = res.data.data.policy;
+        setData((prev) => ({ ...prev, policies: (prev.policies || []).map((p) => p.id === updated.id ? updated : p) }));
+      } else {
+        const res = await api.post('/policies', modal);
+        const created = res.data.data.policy;
+        setData((prev) => ({ ...prev, policies: [...(prev.policies || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -236,8 +243,9 @@ export default function Policies() {
   async function remove() {
     try {
       await api.delete(`/policies/${confirm.id}`);
+      setData((prev) => ({ ...prev, policies: (prev.policies || []).filter((p) => p.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -263,9 +271,7 @@ export default function Policies() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={6} />
         ) : (
           <Table
             numbered

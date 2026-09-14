@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, SearchableSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton, SearchableSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
 const SOURCES = ['manual', 'upload', 'integration', 'automated'];
 
 export default function Evidence() {
-  const { data, loading, refetch } = useGet('/evidence?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/evidence?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -36,10 +36,17 @@ export default function Evidence() {
         controlId: modal.controlId || null,
         policyId: modal.policyId || null,
       };
-      if (modal.id) await api.patch(`/evidence/${modal.id}`, body);
-      else await api.post('/evidence', body);
+      if (modal.id) {
+        const res = await api.patch(`/evidence/${modal.id}`, body);
+        const updated = res.data.data.evidence;
+        setData((prev) => ({ ...prev, evidence: (prev.evidence || []).map((e) => e.id === updated.id ? updated : e) }));
+      } else {
+        const res = await api.post('/evidence', body);
+        const created = res.data.data.evidence;
+        setData((prev) => ({ ...prev, evidence: [...(prev.evidence || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -48,8 +55,9 @@ export default function Evidence() {
   async function remove() {
     try {
       await api.delete(`/evidence/${confirm.id}`);
+      setData((prev) => ({ ...prev, evidence: (prev.evidence || []).filter((e) => e.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -87,9 +95,7 @@ export default function Evidence() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={6} />
         ) : (
           <Table
             numbered

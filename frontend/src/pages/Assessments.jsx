@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, FrameworkSelect } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton, FrameworkSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
 const STATUSES = ['draft', 'in_progress', 'complete'];
 
 export default function Assessments() {
-  const { data, loading, refetch } = useGet('/assessments?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/assessments?pageSize=100');
   const frameworksRes = useGet('/frameworks?pageSize=100');
   const frameworks = frameworksRes.data?.frameworks || [];
   const [modal, setModal] = useState(null);
@@ -37,10 +37,17 @@ export default function Assessments() {
         status: modal.status,
         dueDate: modal.dueDate || null,
       };
-      if (modal.id) await api.patch(`/assessments/${modal.id}`, body);
-      else await api.post('/assessments', body);
+      if (modal.id) {
+        const res = await api.patch(`/assessments/${modal.id}`, body);
+        const updated = res.data.data.assessment;
+        setData((prev) => ({ ...prev, assessments: (prev.assessments || []).map((x) => x.id === updated.id ? updated : x) }));
+      } else {
+        const res = await api.post('/assessments', body);
+        const created = res.data.data.assessment;
+        setData((prev) => ({ ...prev, assessments: [...(prev.assessments || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -49,8 +56,9 @@ export default function Assessments() {
   async function remove() {
     try {
       await api.delete(`/assessments/${confirm.id}`);
+      setData((prev) => ({ ...prev, assessments: (prev.assessments || []).filter((x) => x.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -67,9 +75,7 @@ export default function Assessments() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={6} />
         ) : (
           <Table
             numbered

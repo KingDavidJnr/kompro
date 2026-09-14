@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, CubeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
 export default function Controls() {
-  const { data, loading, refetch } = useGet('/controls?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/controls?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -28,10 +28,17 @@ export default function Controls() {
     e.preventDefault();
     setError(null);
     try {
-      if (modal.id) await api.patch(`/controls/${modal.id}`, modal);
-      else await api.post('/controls', modal);
+      if (modal.id) {
+        const res = await api.patch(`/controls/${modal.id}`, modal);
+        const updated = res.data.data.control;
+        setData((prev) => ({ ...prev, controls: (prev.controls || []).map((c) => c.id === updated.id ? updated : c) }));
+      } else {
+        const res = await api.post('/controls', modal);
+        const created = res.data.data.control;
+        setData((prev) => ({ ...prev, controls: [...(prev.controls || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -40,8 +47,9 @@ export default function Controls() {
   async function remove() {
     try {
       await api.delete(`/controls/${confirm.id}`);
+      setData((prev) => ({ ...prev, controls: (prev.controls || []).filter((c) => c.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -67,9 +75,7 @@ export default function Controls() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={5} />
         ) : (
           <Table
             numbered

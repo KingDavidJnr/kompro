@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
 import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
 export default function Frameworks() {
-  const { data, loading, refetch } = useGet('/frameworks?pageSize=100');
+  const { data, loading, refetch, setData } = useGet('/frameworks?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [reqModal, setReqModal] = useState(null);
@@ -33,10 +33,17 @@ export default function Frameworks() {
     e.preventDefault();
     setError(null);
     try {
-      if (modal.id) await api.patch(`/frameworks/${modal.id}`, modal);
-      else await api.post('/frameworks', modal);
+      if (modal.id) {
+        const res = await api.patch(`/frameworks/${modal.id}`, modal);
+        const updated = res.data.data.framework;
+        setData((prev) => ({ ...prev, frameworks: (prev.frameworks || []).map((f) => f.id === updated.id ? updated : f) }));
+      } else {
+        const res = await api.post('/frameworks', modal);
+        const created = res.data.data.framework;
+        setData((prev) => ({ ...prev, frameworks: [...(prev.frameworks || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -44,8 +51,10 @@ export default function Frameworks() {
 
   async function toggle(f) {
     try {
-      await api.patch(`/frameworks/${f.id}`, { enabled: !f.enabled });
-      refetch();
+      const res = await api.patch(`/frameworks/${f.id}`, { enabled: !f.enabled });
+      const updated = res.data.data.framework;
+      setData((prev) => ({ ...prev, frameworks: (prev.frameworks || []).map((x) => x.id === updated.id ? updated : x) }));
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Update failed.');
     }
@@ -54,8 +63,9 @@ export default function Frameworks() {
   async function remove() {
     try {
       await api.delete(`/frameworks/${confirm.id}`);
+      setData((prev) => ({ ...prev, frameworks: (prev.frameworks || []).filter((f) => f.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -155,9 +165,7 @@ export default function Frameworks() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={7} />
         ) : (
           <Table
             numbered
