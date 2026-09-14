@@ -29,11 +29,12 @@ This guide covers every feature in the product, how they relate to each other, a
 7. [Audit Logs](#7-audit-logs)
 8. [Organization Settings](#8-organization-settings)
 9. [Trust Portal](#9-trust-portal)
-10. [User Management](#10-user-management)
-11. [Roles and Permissions](#11-roles-and-permissions)
-12. [Authentication](#12-authentication)
-13. [How Everything Connects](#13-how-everything-connects)
-14. [Environment Configuration](#14-environment-configuration)
+10. [General UI Behavior](#10-general-ui-behavior)
+11. [User Management](#11-user-management)
+12. [Roles and Permissions](#12-roles-and-permissions)
+13. [Authentication](#13-authentication)
+14. [How Everything Connects](#14-how-everything-connects)
+15. [Environment Configuration](#15-environment-configuration)
 
 ---
 
@@ -145,13 +146,20 @@ Each requirement has:
 
 #### Mapping Controls to Requirements
 
-On the framework detail page, you can map your organization's controls to each requirement. This is the core mechanism that connects your internal controls to external compliance standards.
+On the framework detail page, each requirement has a **Map control** button. Click it to open a searchable control picker and select a control to link. The control appears immediately without a page refresh. Click the X next to any mapped control to remove the mapping.
 
 - One control can satisfy requirements across multiple frameworks
 - One requirement can be satisfied by multiple controls
 - Mappings can include optional notes explaining how the control satisfies the requirement
 
-Mappings are created through the requirements API: `POST /api/requirements/:requirementId/mappings` with a `controlId` and optional `notes`.
+#### Filtering and Searching Requirements
+
+The requirements list on the framework detail page supports client-side filtering with no extra API calls:
+
+- **Search box** in the requirements section header -- searches requirement code, title, and description instantly as you type
+- **Status filter** -- click any segment on the breakdown bar or any legend item to filter requirements to that status only. Click again to clear. An active filter highlights the selected status and shows a "Clear filter" link.
+
+When a filter is active, the prioritised gaps section is hidden (since you are already viewing a filtered subset).
 
 #### Framework Detail Page
 
@@ -173,9 +181,9 @@ Clicking into a framework shows:
 | Unassessed | Controls are mapped but some have no assessment at all |
 | Unmapped | No controls are mapped to this requirement |
 
-**Requirements list** showing each requirement with its mapped controls, their implementation status, latest assessment result, and evidence count.
+**Requirements list** showing each requirement with its mapped controls, their implementation status, latest assessment result, and evidence count. Each requirement has a **Map control** button to add mappings and an X button on each mapped control to remove them. All changes reflect instantly without a page reload.
 
-**Prioritized gaps** listing requirements that are not satisfied, ordered for remediation.
+**Prioritized gaps** listing requirements that are not satisfied, ordered for remediation. Hidden when a search or status filter is active.
 
 #### Framework Table Columns
 
@@ -237,19 +245,21 @@ Controls are the central object in Kompro's compliance model:
 
 ### 3.3 Policies
 
-Policies are your organization's formal documents that define rules, standards, and procedures. Kompro supports a full policy lifecycle including versioning, change requests, reviews, and exceptions.
+Policies are your organization's formal documents that define rules, standards, and procedures. Kompro supports a full policy lifecycle including a rich text editor, file attachments with inline preview, user-controlled versioning, change requests, reviews, and exceptions.
 
 #### Creating a Policy
 
-Click **New policy** and fill in:
+Click **New policy** and fill in the creation modal:
 
 | Field | Required | Description |
 |-------|----------|-------------|
 | Title | Yes | Policy name |
-| Description | No | Short summary |
-| Content | No | Full policy text |
+| Description | No | Short summary shown in the policies list |
+| Initial version | Yes | Your version label (e.g., "1.0", "2.1.3", "Draft A") |
 | Status | No | Defaults to "draft" |
 | Owner | No | Searchable user picker |
+
+After clicking **Create**, you are taken directly to the policy detail page where you can add content, upload a document, and manage the full lifecycle.
 
 #### Policy Statuses
 
@@ -261,21 +271,21 @@ Click **New policy** and fill in:
 
 When a policy transitions to **active** (either on creation or update), all active users in the organization receive an email notification.
 
-#### Policy Detail Drawer
+#### Policy Detail Page
 
-Click the view (eye) icon on any policy to open a detail drawer with five tabs:
+The detail page is organized into five tabs:
 
-**Overview tab:**
-- Status badge
-- Version number
-- Description
-- Full content as preformatted text
+**Content tab:**
+- Title, Description, Status, and Owner fields
+- A **Markdown editor** for writing policy content with formatting. The editor is collapsed by default -- click it to expand. The toolbar supports: Bold, Italic, H1, H2, Horizontal rule, Unordered list, Ordered list, Blockquote, Inline code. An Edit/Preview toggle renders the Markdown live. A Collapse button minimizes the editor again.
+- A **Document attachment** section for uploading PDF, Word, or text files. Supports drag-and-drop or click-to-browse. When a PDF is attached, it renders inline in the page. Non-PDF files show a download link. The Download button fetches the file with authentication. Replace file or Remove file buttons manage the attachment.
+- A **Save changes** button that saves metadata and content together.
 
 **Versions tab:**
-- Lists all version snapshots
-- Each version captures the content and status at the time it was created
-- Creating a new version auto-increments the version number on the policy
-- Fields: Content, Status (draft/active/retired)
+- Lists all version snapshots in reverse order showing version label, status, timestamp, and the rendered Markdown content
+- A version label input (e.g., "1.0", "2.1.3") and **Save as version** button to snapshot the current content at any time
+- Versioning is entirely user-controlled. No automatic snapshots are created.
+- Version labels are free-form strings, not auto-incremented integers. The policy's current version badge in the header updates to match the last saved version label.
 
 **Change Requests tab:**
 - For tracking proposed modifications to the policy
@@ -284,37 +294,55 @@ Click the view (eye) icon on any policy to open a detail drawer with five tabs:
 
 **Reviews tab:**
 - For scheduling and tracking periodic policy reviews
-- Fields: Reviewer ID, Due date, Notes, Status (pending/complete)
+- Fields: Due date, Notes, Status (pending/complete)
 
 **Exceptions tab:**
 - For documenting approved departures from the policy
-- Fields: Reason, Granted by, Expiration date
+- Fields: Reason, Expiration date
 - Status defaults to "active"
 
 #### How Policies Connect to Other Features
 
-- **Evidence**: Evidence records can be linked to a policy via the policy field on the evidence form. This lets you attach proof that a policy is being followed.
+- **Evidence**: Evidence records can be linked to one or more policies. A single piece of evidence (e.g., a document) can prove adherence to multiple policies simultaneously.
 - **Dashboard**: Policy count is displayed as a stat card.
-- There is no direct link between policies and controls. They are connected indirectly through evidence: a single evidence record can reference both a control and a policy.
+- **Trust Portal**: Active policy titles and descriptions can be exposed on the public trust portal.
 
 ---
 
 ### 3.4 Evidence
 
-Evidence records are the proof that your controls are implemented and your policies are being followed. Evidence can be documents, screenshots, logs, configuration exports, or any artifact that demonstrates compliance.
+Evidence records are the proof that your controls are implemented and your policies are being followed. Evidence can be documents, screenshots, PDFs, images, logs, or any artifact that demonstrates compliance.
 
 #### Creating Evidence
 
-Click **New evidence** and fill in:
+Click **Add evidence** and fill in the modal:
 
 | Field | Required | Description |
 |-------|----------|-------------|
 | Title | Yes | Descriptive name for the evidence |
 | Description | No | Additional context |
-| Source | No | Where the evidence came from |
+| Source | No | Where the evidence came from (see sources below) |
+| File attachment | No | Drag-and-drop or browse to upload an image, PDF, Word doc, or text file |
 | Content/Notes | No | Text content or notes |
-| Control | No | Searchable picker to link to a control |
-| Policy | No | Searchable picker to link to a policy |
+| Controls | No | Multi-select: link to one or more controls |
+| Policies | No | Multi-select: link to one or more policies |
+
+#### Multi-linking to Controls and Policies
+
+A single piece of evidence can be linked to **multiple controls and multiple policies** simultaneously. For example, a security policy document can serve as evidence for five different controls at once. Use the searchable multi-select fields to add as many links as needed. Each selected item appears as a removable tag.
+
+This replaces the old single-select approach. Automated collectors still use a single control/policy link for simplicity.
+
+#### File Attachments
+
+The evidence form includes a drag-and-drop file upload zone. Accepted types: images (jpg, png, gif, etc.), PDF, Word (.doc/.docx), text files, CSV, Excel.
+
+When viewing an evidence record in the detail drawer:
+- **Images** are rendered inline
+- **PDFs** are rendered in an embedded viewer
+- **Other files** show a download link
+
+Files are stored on local disk or in S3 depending on your configuration. Maximum file size defaults to 10 MB.
 
 #### Evidence Sources
 
@@ -328,17 +356,17 @@ Click **New evidence** and fill in:
 | infrastructure | Infrastructure configuration |
 | other | Anything else |
 
-#### File Uploads
+#### Viewing Evidence
 
-Evidence supports file attachments. Files are stored either on local disk or in S3 (depending on your configuration). Maximum file size defaults to 10 MB but is configurable.
-
-File storage uses two drivers that are auto-selected:
-- **S3**: When `S3_BUCKET` and `S3_REGION` environment variables are set
-- **Local disk**: Default fallback, stores in the `backend/uploads/` directory
+Click the eye icon on any evidence row to open the detail drawer. It shows:
+- Status and source badges, collection date
+- Description and notes
+- All linked controls and policies as badges
+- Inline file preview (image or PDF) with a Download button
 
 #### Requesting Evidence
 
-You can request evidence from another user. This sends them an email notification with the evidence title and which control/policy it relates to. The evidence record is created in "requested" status until the user fulfills it.
+You can request evidence from another user. This sends them an email notification. The evidence record is created in "requested" status until the user fulfills it.
 
 #### Evidence Status Transitions
 
@@ -647,7 +675,24 @@ When editing, leaving the Secrets field blank preserves the existing encrypted s
 
 ### Run History
 
-Click the run history button on any collector to see a log of past runs, showing timestamp, status (success/error), number of items collected, and any error messages.
+Click the run history button on any collector to see a log of past runs, showing timestamp, status (success/error), number of items added, number of items updated, and any error messages.
+
+### Deduplication
+
+By default, collectors that run on a schedule would accumulate duplicate evidence records on every run. Kompro prevents this through **deduplication via an external ID**.
+
+When a collector item includes an `externalId`, the system upserts instead of always creating:
+- If a record with the same `collectorId + externalId` already exists, it is **updated** (title, description, content, linked control/policy, collection timestamp)
+- If no existing record is found, a new one is **created**
+- If no `externalId` is provided, the old append-only behavior applies
+
+Each connector type exposes deduplication differently:
+
+| Connector | How to enable deduplication |
+|-----------|---------------------------|
+| HTTP | Add `"id": "field.path"` to the `mapping` object. The value at that dot-path in each response item becomes the externalId. |
+| SQL | Add `"idColumn": "your_column_name"` to params. The value in that column becomes the externalId. |
+| File | Automatically uses the filename as the stable externalId. Re-running always updates the existing record for each file. |
 
 ---
 
@@ -664,6 +709,7 @@ No external credentials are needed since it uses the app's database connection.
 | sql | Yes | The SQL query to execute |
 | titleColumn | No | Column to use as evidence title (default: "title") |
 | descriptionColumn | No | Column to use as evidence description (default: "description") |
+| idColumn | No | Column to use as the stable externalId for deduplication |
 | controlIdColumn | No | Column containing a control ID to link evidence to |
 | policyIdColumn | No | Column containing a policy ID to link evidence to |
 | defaultTitle | No | Fallback title if the title column is empty |
@@ -672,10 +718,10 @@ No external credentials are needed since it uses the app's database connection.
 **Example parameters:**
 ```json
 {
-  "sql": "SELECT name AS title, description, id AS control_id FROM \"Control\" WHERE status = 'implemented'",
+  "sql": "SELECT id, name AS title, description FROM \"Control\" WHERE status = 'implemented'",
   "titleColumn": "title",
   "descriptionColumn": "description",
-  "controlIdColumn": "control_id",
+  "idColumn": "id",
   "includeRowJson": true
 }
 ```
@@ -703,6 +749,7 @@ HTTP collectors make API calls to external services and convert the responses in
 
 | Key | Description |
 |-----|-------------|
+| id | Dot-path to a unique identifier for deduplication (becomes the externalId) |
 | title | Dot-path to item title |
 | description | Dot-path to item description |
 | content | Dot-path to item content |
@@ -875,6 +922,8 @@ File collectors read files from the server's filesystem and create evidence reco
 | controlId | No | Control ID to link all collected files to |
 | policyId | No | Policy ID to link all collected files to |
 
+The file collector automatically uses the filename as the `externalId`, so re-running the collector updates the existing evidence record for each file instead of creating a duplicate.
+
 **Example parameters:**
 ```json
 {
@@ -996,6 +1045,12 @@ Click the export button to download logs in JSON or CSV format. CSV exports incl
 
 When SMTP is configured, the exporting user receives an email notification confirming the export.
 
+### CSV Data Exports (All Feature Pages)
+
+Every feature page (Controls, Frameworks, Policies, Evidence, Assessments, Risk, Incidents, ITSM, Integrations, Audit Program) has an **Export CSV** button in the page header. This exports the currently loaded data as a CSV file directly in your browser.
+
+**Important:** Every CSV export is recorded in the audit log with action `export`, the entity name (e.g., "controls"), the filename, and the row count. This ensures data-out events are traceable. The audit entry captures who exported what, from which page, and how many records were included.
+
 ### Purging Old Logs
 
 Admins with the `audit:purge` permission can purge audit entries older than a specified number of days (default retention: 365 days, configurable via `AUDIT_RETENTION_DAYS`). The purge action itself is recorded in the audit log.
@@ -1030,6 +1085,10 @@ The trust portal is a public-facing page that lets external stakeholders -- cust
 4. Click **Save settings**
 
 Once enabled, the portal is publicly accessible. Anyone with the URL can view it. No login is required.
+
+### Login Page Link
+
+When the trust portal is enabled, a link automatically appears at the bottom of the Kompro login page: **"View [Org Name]'s Trust Portal"**. This makes it easy for stakeholders who land on the login page to navigate to the public portal without needing to know the direct URL. The link is hidden when the portal is disabled.
 
 ### Portal Content
 
@@ -1113,7 +1172,36 @@ All changes to trust portal settings are recorded in the audit log, including wh
 
 ---
 
-## 10. User Management
+## 10. General UI Behavior
+
+### Numbered Rows
+
+Every table across the app has a `#` column that shows the sequential row number. This makes it easy to reference specific records in conversations, reports, or support tickets.
+
+### Skeleton Loading
+
+When navigating to a page, tables display an animated skeleton placeholder while data loads instead of a spinner in the middle of the page. This gives a better sense of the page structure before data arrives.
+
+### Optimistic UI Updates
+
+Creating, updating, and deleting records updates the UI immediately without waiting for a full page reload. After the local state is updated, a silent background sync confirms the change with the server. This means:
+
+- Creating a record appends it to the list instantly
+- Updating a record reflects the change in the list instantly
+- Deleting a record removes it from the list instantly
+- No full-page flash or spinner appears during these operations
+
+### Smart Dropdowns
+
+All searchable select dropdowns (controls, policies, users, frameworks, etc.) behave intelligently with respect to viewport position:
+
+- When there is enough room below the trigger, the dropdown opens downward as normal
+- When the trigger is near the bottom of the viewport, the dropdown opens **upward** so it stays visible
+- When you scroll the page while a dropdown is open, it closes automatically to avoid the dropdown staying stuck in the wrong position
+
+---
+
+## 11. User Management
 
 ### Inviting Users
 
@@ -1163,7 +1251,7 @@ When a user's password or role is changed by an admin, the user receives an emai
 
 ---
 
-## 11. Roles and Permissions
+## 12. Roles and Permissions
 
 Kompro uses role-based access control (RBAC). Each user is assigned one role, and each role has a set of granular permissions.
 
@@ -1213,7 +1301,7 @@ The frontend also fetches the current user's permissions via the `/api/auth/me` 
 
 ---
 
-## 12. Authentication
+## 13. Authentication
 
 ### Registration
 
@@ -1275,7 +1363,7 @@ Logging out revokes the current session and clears the authentication cookie.
 
 ---
 
-## 13. How Everything Connects
+## 14. How Everything Connects
 
 Here is how all the modules in Kompro relate to each other:
 
@@ -1340,7 +1428,7 @@ They all share the common audit log and user/permission system.
 
 ---
 
-## 14. Environment Configuration
+## 15. Environment Configuration
 
 All configuration is done via environment variables. Here is the complete reference:
 
