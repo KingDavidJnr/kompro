@@ -3,7 +3,8 @@ import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
-import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 function scoreOf(r) {
   return r.score != null ? r.score : (Number(r.likelihood) || 0) * (Number(r.impact) || 0);
@@ -167,7 +168,7 @@ export default function Risk() {
       <PageHeader
         title="Risk"
         description="Risk register with scenarios, indicators and treatments."
-        actions={<Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New risk</Button>}
+        actions={<><Button variant="secondary" onClick={() => exportCsv('risks.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'category', label: 'Category' }, { key: 'score', label: 'Score', format: (r) => String(r.score ?? (r.likelihood || 1) * (r.impact || 1)) }, { key: 'status', label: 'Status' }], risks)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New risk</Button></>}
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
@@ -188,6 +189,7 @@ export default function Risk() {
           <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
         ) : (
           <Table
+            numbered
             columns={[
               { key: 'title', label: 'Title', render: (r) => <span className="flex items-center gap-2 font-medium text-slate-900"><FlagIcon className="h-4 w-4 text-charcoal-500" /> {r.title}</span> },
               { key: 'category', label: 'Category', render: (r) => <span className="text-slate-500">{r.category || '—'}</span> },

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, CubeIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, CubeIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
@@ -52,9 +53,14 @@ export default function Controls() {
         title="Controls"
         description="Security, operational and compliance controls mapped to frameworks."
         actions={
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> New control
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => exportCsv('controls.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Name' }, { key: 'category', label: 'Category' }, { key: 'status', label: 'Status' }], controls)}>
+              <DocumentIcon className="h-4 w-4" /> Export CSV
+            </Button>
+            <Button onClick={openCreate}>
+              <PlusIcon className="h-4 w-4" /> New control
+            </Button>
+          </>
         }
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
@@ -66,6 +72,7 @@ export default function Controls() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               {
                 key: 'name',

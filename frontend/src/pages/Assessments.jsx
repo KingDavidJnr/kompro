@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, FrameworkSelect } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const STATUSES = ['draft', 'in_progress', 'complete'];
 
@@ -60,11 +61,7 @@ export default function Assessments() {
       <PageHeader
         title="Assessments"
         description="Evaluations of controls and their supporting evidence."
-        actions={
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> New assessment
-          </Button>
-        }
+        actions={<><Button variant="secondary" onClick={() => exportCsv('assessments.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'status', label: 'Status' }, { key: 'dueDate', label: 'Due' }], assessments)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New assessment</Button></>}
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
@@ -75,6 +72,7 @@ export default function Assessments() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               {
                 key: 'name',

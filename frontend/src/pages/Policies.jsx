@@ -3,6 +3,7 @@ import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, DocumentIcon, EyeIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const STATUSES = ['draft', 'active', 'retired'];
 
@@ -248,9 +249,14 @@ export default function Policies() {
         title="Policies"
         description="Organization rules and requirements, with versioning and review workflows."
         actions={
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> New policy
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => exportCsv('policies.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'owner', label: 'Owner' }, { key: 'version', label: 'Version' }, { key: 'status', label: 'Status' }], policies)}>
+              <DocumentIcon className="h-4 w-4" /> Export CSV
+            </Button>
+            <Button onClick={openCreate}>
+              <PlusIcon className="h-4 w-4" /> New policy
+            </Button>
+          </>
         }
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
@@ -262,6 +268,7 @@ export default function Policies() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               { key: 'title', label: 'Title', render: (p) => <span className="font-medium text-slate-900">{p.title}</span> },
               { key: 'owner', label: 'Owner' },

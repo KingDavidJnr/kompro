@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, SearchableSelect } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, FolderIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const SOURCES = ['manual', 'upload', 'integration', 'automated'];
 
@@ -80,11 +81,7 @@ export default function Evidence() {
       <PageHeader
         title="Evidence"
         description="Proof supporting your controls and assessments."
-        actions={
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" /> Add evidence
-          </Button>
-        }
+        actions={<><Button variant="secondary" onClick={() => exportCsv('evidence.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'source', label: 'Source' }, { key: 'status', label: 'Status' }, { key: 'collectedAt', label: 'Collected' }], evidence)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> Add evidence</Button></>}
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
@@ -95,6 +92,7 @@ export default function Evidence() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               {
                 key: 'title',
