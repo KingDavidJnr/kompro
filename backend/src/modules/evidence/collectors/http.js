@@ -214,6 +214,7 @@ async function collect({ params, secrets, fetch: fetchImpl }) {
 
   const mapping = params.mapping || {};
   return (items || []).map((item) => ({
+    externalId: resolveField(item, mapping.id, ctx) || null,
     title: resolveField(item, mapping.title, ctx) || params.defaultTitle || 'Collected evidence',
     description: resolveField(item, mapping.description, ctx) || null,
     content: resolveField(item, mapping.content, ctx) || null,

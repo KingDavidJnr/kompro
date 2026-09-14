@@ -62,11 +62,14 @@ async function collect({ params }) {
   return files.map((filePath) => {
     const raw = fs.readFileSync(filePath, 'utf8');
     const content = raw.length > maxBytes ? raw.slice(0, maxBytes) : raw;
+    const filename = path.basename(filePath);
     const title =
       params.titleFrom === 'content'
-        ? content.split('\n')[0].trim() || path.basename(filePath)
-        : path.basename(filePath);
+        ? content.split('\n')[0].trim() || filename
+        : filename;
     return {
+      // Use the filename as the stable externalId so re-runs update, not duplicate.
+      externalId: filename,
       title,
       description: params.description || `Collected from ${filePath}`,
       content,

@@ -57,12 +57,16 @@ async function get(req, res, next) {
  */
 async function create(req, res, next) {
   try {
-    // Multer populates req.file when an attachment is uploaded.
     const file = req.file
       ? { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype }
       : null;
+    // FormData sends arrays as repeated fields or comma-separated strings.
+    const controlIds = parseIds(req.body.controlIds);
+    const policyIds = parseIds(req.body.policyIds);
     const evidence = await evidenceService.createEvidence({
       ...req.body,
+      controlIds,
+      policyIds,
       file,
       uploadedById: req.user.id,
     });
@@ -110,11 +114,17 @@ async function download(req, res, next) {
 async function update(req, res, next) {
   try {
     const before = await evidenceService.getEvidence(req.params.id);
-    // If a new file was uploaded, include it in the update.
     const file = req.file
       ? { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype }
       : null;
-    const evidence = await evidenceService.updateEvidence(req.params.id, { ...req.body, file });
+    const controlIds = parseIds(req.body.controlIds);
+    const policyIds = parseIds(req.body.policyIds);
+    const evidence = await evidenceService.updateEvidence(req.params.id, {
+      ...req.body,
+      controlIds,
+      policyIds,
+      file,
+    });
     await auditService.recordFromRequest(req, {
       action: 'update',
       entity: 'evidence',
@@ -126,6 +136,21 @@ async function update(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+// Helper: parse controlIds / policyIds from FormData (may be a JSON array
+// string, a comma-separated string, or already an array).
+function parseIds(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {}
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return undefined;
 }
 
 /**

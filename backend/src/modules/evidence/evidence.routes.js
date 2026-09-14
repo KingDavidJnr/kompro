@@ -57,6 +57,8 @@ router.post(
   body('content').optional().isString(),
   body('controlId').optional().isString(),
   body('policyId').optional().isString(),
+  body('controlIds').optional(),
+  body('policyIds').optional(),
   body('collectedAt').optional().isISO8601().withMessage('collectedAt must be a valid date'),
   validate,
   controller.create
@@ -75,6 +77,8 @@ router.patch(
   body('filePath').optional().isString(),
   body('controlId').optional({ nullable: true }).isString().withMessage('controlId must be a string'),
   body('policyId').optional({ nullable: true }).isString().withMessage('policyId must be a string'),
+  body('controlIds').optional(),
+  body('policyIds').optional(),
   body('collectedAt').optional().isISO8601().withMessage('collectedAt must be a valid date'),
   validate,
   controller.update

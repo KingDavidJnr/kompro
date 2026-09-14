@@ -3,7 +3,7 @@ import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import {
   PageHeader, Button, Card, Badge, Modal, Field, Table,
-  statusColor, TableSkeleton, SearchableSelect, Drawer, Spinner,
+  statusColor, TableSkeleton, Drawer, Spinner, MultiSelect,
 } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, DocumentIcon, EyeIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
@@ -86,10 +86,26 @@ function EvidenceDrawer({ evidenceId, onClose, onEdit }) {
           )}
 
           {/* Linked resources */}
-          {(ev.controlId || ev.policyId) && (
-            <div className="flex flex-wrap gap-2">
-              {ev.control && <Badge color="neutral">Control: {ev.control.title}</Badge>}
-              {ev.policy && <Badge color="neutral">Policy: {ev.policy.title}</Badge>}
+          {(ev.controls?.length > 0 || ev.policies?.length > 0 || ev.control || ev.policy) && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Linked to</p>
+              <div className="flex flex-wrap gap-2">
+                {/* Multi-link controls */}
+                {(ev.controls || []).map((c) => (
+                  <Badge key={c.control.id} color="neutral">Control: {c.control.title}</Badge>
+                ))}
+                {/* Fallback single FK for auto-collected */}
+                {ev.controls?.length === 0 && ev.control && (
+                  <Badge color="neutral">Control: {ev.control.title}</Badge>
+                )}
+                {/* Multi-link policies */}
+                {(ev.policies || []).map((p) => (
+                  <Badge key={p.policy.id} color="neutral">Policy: {p.policy.title}</Badge>
+                ))}
+                {ev.policies?.length === 0 && ev.policy && (
+                  <Badge color="neutral">Policy: {ev.policy.title}</Badge>
+                )}
+              </div>
             </div>
           )}
 
@@ -151,18 +167,25 @@ export default function Evidence() {
 
   function openCreate() {
     setError(null);
-    setModal({ title: '', description: '', source: 'manual', content: '', controlId: '', policyId: '', file: null });
+    setModal({ title: '', description: '', source: 'manual', content: '', controlIds: [], policyIds: [], file: null });
   }
   function openEdit(e) {
     setError(null);
+    // Collect multi-link ids from the join table, falling back to the single FK.
+    const controlIds = e.controls?.length
+      ? e.controls.map((c) => c.control.id)
+      : e.controlId ? [e.controlId] : [];
+    const policyIds = e.policies?.length
+      ? e.policies.map((p) => p.policy.id)
+      : e.policyId ? [e.policyId] : [];
     setModal({
       id: e.id,
       title: e.title,
       description: e.description || '',
       source: e.source || 'manual',
       content: e.content || '',
-      controlId: e.controlId || '',
-      policyId: e.policyId || '',
+      controlIds,
+      policyIds,
       file: null,
       existingFile: !!e.filePath,
       mimeType: e.mimeType,
@@ -180,8 +203,9 @@ export default function Evidence() {
       if (modal.description) fd.append('description', modal.description);
       if (modal.source) fd.append('source', modal.source);
       if (modal.content) fd.append('content', modal.content);
-      if (modal.controlId) fd.append('controlId', modal.controlId);
-      if (modal.policyId) fd.append('policyId', modal.policyId);
+      // Send multi-link arrays as JSON strings for the backend to parse.
+      fd.append('controlIds', JSON.stringify(modal.controlIds || []));
+      fd.append('policyIds', JSON.stringify(modal.policyIds || []));
       if (modal.file) fd.append('file', modal.file);
 
       let result;
@@ -407,24 +431,22 @@ export default function Evidence() {
           <Field label="Content / notes">
             <textarea className="input" rows={3} value={modal?.content || ''} onChange={(e) => setModal({ ...modal, content: e.target.value })} />
           </Field>
-          <Field label="Control" hint="Optional link to a control.">
-            <SearchableSelect
-              value={modal?.controlId || null}
-              onChange={(id) => setModal({ ...modal, controlId: id })}
+          <Field label="Controls" hint="Link this evidence to one or more controls.">
+            <MultiSelect
+              values={modal?.controlIds || []}
+              onChange={(ids) => setModal({ ...modal, controlIds: ids })}
               loadOptions={loadControls}
-              loadValue={loadControl}
-              placeholder="No control linked"
-              searchPlaceholder="Search controls…"
+              loadLabel={async (id) => { const r = await loadControl(id); return r.label; }}
+              placeholder="Search controls to link…"
             />
           </Field>
-          <Field label="Policy" hint="Optional link to a policy.">
-            <SearchableSelect
-              value={modal?.policyId || null}
-              onChange={(id) => setModal({ ...modal, policyId: id })}
+          <Field label="Policies" hint="Link this evidence to one or more policies.">
+            <MultiSelect
+              values={modal?.policyIds || []}
+              onChange={(ids) => setModal({ ...modal, policyIds: ids })}
               loadOptions={loadPolicies}
-              loadValue={loadPolicy}
-              placeholder="No policy linked"
-              searchPlaceholder="Search policies…"
+              loadLabel={async (id) => { const r = await loadPolicy(id); return r.label; }}
+              placeholder="Search policies to link…"
             />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
