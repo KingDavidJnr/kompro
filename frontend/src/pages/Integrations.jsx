@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
-import { PageHeader, Button, Card, Badge, Modal, Field, Table, Spinner } from '../components/ui';
+import { PageHeader, Button, Card, Badge, Modal, Field, Table, TableSkeleton, Spinner } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PlugIcon, ClockIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
 
@@ -57,7 +57,7 @@ function statusBadge(status) {
 }
 
 export default function Integrations() {
-  const { data, loading, refetch } = useGet('/evidence/collectors');
+  const { data, loading, refetch, setData } = useGet('/evidence/collectors');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [runs, setRuns] = useState(null);
@@ -120,10 +120,17 @@ export default function Integrations() {
         params,
       };
       if (secrets !== undefined) payload.secrets = secrets;
-      if (modal.id) await api.patch(`/evidence/collectors/${modal.id}`, payload);
-      else await api.post('/evidence/collectors', payload);
+      if (modal.id) {
+        const apiRes = await api.patch(`/evidence/collectors/${modal.id}`, payload);
+        const updated = apiRes.data.data.collector;
+        setData((prev) => ({ ...prev, collectors: (prev.collectors || []).map((c) => c.id === updated.id ? updated : c) }));
+      } else {
+        const apiRes = await api.post('/evidence/collectors', payload);
+        const created = apiRes.data.data.collector;
+        setData((prev) => ({ ...prev, collectors: [...(prev.collectors || []), created] }));
+      }
       setModal(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
     }
@@ -132,7 +139,8 @@ export default function Integrations() {
   async function toggle(c) {
     try {
       await api.patch(`/evidence/collectors/${c.id}`, { enabled: !c.enabled });
-      refetch();
+      setData((prev) => ({ ...prev, collectors: (prev.collectors || []).map((col) => col.id === c.id ? { ...col, enabled: !col.enabled } : col) }));
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Update failed.');
     }
@@ -141,8 +149,9 @@ export default function Integrations() {
   async function remove() {
     try {
       await api.delete(`/evidence/collectors/${confirm.id}`);
+      setData((prev) => ({ ...prev, collectors: (prev.collectors || []).filter((c) => c.id !== confirm.id) }));
       setConfirm(null);
-      refetch();
+      refetch().catch(() => {});
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed.');
     }
@@ -190,9 +199,7 @@ export default function Integrations() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="h-8 w-8" />
-          </div>
+          <TableSkeleton columns={6} />
         ) : (
           <Table
             numbered

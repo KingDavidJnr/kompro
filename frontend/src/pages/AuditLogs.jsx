@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { exportCsv } from '../lib/csv';
 import { API_URL } from '../config';
-import { PageHeader, Card, Badge, Button, Table, Modal, Spinner, statusColor } from '../components/ui';
+import { PageHeader, Card, Badge, Button, Table, Modal, TableSkeleton, Spinner, statusColor } from '../components/ui';
 import { ClipboardIcon, TrashIcon } from '../components/icons';
 import { usePermission } from '../auth/AuthContext';
 
@@ -161,7 +161,7 @@ export default function AuditLogs() {
 
       <Card>
         {loading ? (
-          <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
+          <TableSkeleton columns={8} />
         ) : (
           <Table
             numbered
