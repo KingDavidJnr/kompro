@@ -138,7 +138,7 @@ model Policy {
   description String?
   content     String?
   status      String   @default("draft")
-  version     Int      @default(1)
+  version     String   @default("1.0")
   rules       Json?
   owner       String?
   filePath    String?
@@ -437,7 +437,7 @@ model CapacityPlan {
 model PolicyVersion {
   id        String   @id @default(cuid())
   policyId  String
-  version   Int
+  version   String
   content   String?
   status    String
   createdAt DateTime @default(now())

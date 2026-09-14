@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Card, Badge, Spinner, Button, SearchableSelect } from '../components/ui';
-import { ShieldIcon, ArrowLeftIcon, DocumentIcon, PlusIcon, XIcon } from '../components/icons';
+import { ShieldIcon, ArrowLeftIcon, DocumentIcon, PlusIcon, XIcon, SearchIcon } from '../components/icons';
 
 // Status → badge colour + human label.
 const REQUIREMENT_STATUS = {
@@ -23,7 +23,6 @@ const CONTROL_STATUS = {
   retired: { color: 'neutral', label: 'Retired' },
 };
 
-// Colours for the stacked breakdown bar.
 const BAR_COLOR = {
   satisfied: 'bg-emerald-500',
   partially_satisfied: 'bg-amber-400',
@@ -46,9 +45,11 @@ function readinessColor(pct) {
 
 export default function FrameworkDetail() {
   const { id } = useParams();
-  const { data, loading, error, refetch } = useGet(`/frameworks/${id}/readiness`);
+  const { data, loading, error, setData, refetch } = useGet(`/frameworks/${id}/readiness`);
   const [mappingReqId, setMappingReqId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState(null);
 
   const controlLabel = (c) => `${c.title}${c.category ? ` · ${c.category}` : ''}`;
   const loadControls = async (q) => {
@@ -62,7 +63,31 @@ export default function FrameworkDetail() {
     try {
       await api.post(`/requirements/${requirementId}/mappings`, { controlId });
       setMappingReqId(null);
-      refetch();
+      // Fetch the control detail so we can inject it optimistically.
+      const res = await api.get(`/controls/${controlId}`);
+      const ctrl = res.data.data.control;
+      const newControl = {
+        id: ctrl.id,
+        title: ctrl.title,
+        controlStatus: ctrl.status,
+        latestResult: null,
+        assessedAt: null,
+        evidenceCount: 0,
+        hasEvidence: false,
+      };
+      setData((prev) => {
+        if (!prev) return prev;
+        const requirements = prev.requirements.map((req) => {
+          if (req.id !== requirementId) return req;
+          // Don't double-add if already mapped.
+          if (req.controls.some((c) => c.id === controlId)) return req;
+          const controls = [...req.controls, newControl];
+          return { ...req, controls, status: req.status === 'unmapped' ? 'unassessed' : req.status };
+        });
+        return { ...prev, requirements };
+      });
+      // Background sync to get accurate counts.
+      refetch().catch(() => {});
     } catch (err) {
       // silently ignore (e.g. duplicate mapping)
     } finally {
@@ -75,13 +100,38 @@ export default function FrameworkDetail() {
     setBusy(true);
     try {
       await api.delete(`/requirements/${requirementId}/mappings/${controlId}`);
-      refetch();
+      setData((prev) => {
+        if (!prev) return prev;
+        const requirements = prev.requirements.map((req) => {
+          if (req.id !== requirementId) return req;
+          const controls = req.controls.filter((c) => c.id !== controlId);
+          return { ...req, controls, status: controls.length === 0 ? 'unmapped' : req.status };
+        });
+        return { ...prev, requirements };
+      });
+      refetch().catch(() => {});
     } catch (err) {
       // silently ignore
     } finally {
       setBusy(false);
     }
   }
+
+  // Client-side filtered requirements.
+  const filteredRequirements = useMemo(() => {
+    if (!data?.requirements) return [];
+    let reqs = data.requirements;
+    if (statusFilter) reqs = reqs.filter((r) => r.status === statusFilter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      reqs = reqs.filter((r) =>
+        r.title.toLowerCase().includes(q) ||
+        (r.code && r.code.toLowerCase().includes(q)) ||
+        (r.description && r.description.toLowerCase().includes(q))
+      );
+    }
+    return reqs;
+  }, [data?.requirements, statusFilter, search]);
 
   if (loading) {
     return (
@@ -167,35 +217,72 @@ export default function FrameworkDetail() {
         </Card>
       </div>
 
-      {/* Status breakdown */}
+      {/* Status breakdown -- clicking a segment filters requirements */}
       <Card className="mt-4 p-5">
         <p className="mb-3 text-sm font-semibold text-slate-700">Requirement status breakdown</p>
         <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
           {ordered.map((s) =>
             breakdown[s] ? (
-              <div key={s} className={BAR_COLOR[s]} style={{ width: `${(breakdown[s] / total) * 100}%` }} title={`${REQUIREMENT_STATUS[s].label}: ${breakdown[s]}`} />
+              <div
+                key={s}
+                className={`${BAR_COLOR[s]} cursor-pointer transition-opacity ${statusFilter && statusFilter !== s ? 'opacity-40' : ''}`}
+                style={{ width: `${(breakdown[s] / total) * 100}%` }}
+                title={`${REQUIREMENT_STATUS[s].label}: ${breakdown[s]} — click to filter`}
+                onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+              />
             ) : null
           )}
         </div>
         <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ordered.map((s) => (
-            <li key={s} className="flex items-center gap-2 text-sm text-slate-600">
+            <li
+              key={s}
+              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+              className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm transition hover:bg-slate-50 ${statusFilter === s ? 'bg-slate-100 font-semibold' : 'text-slate-600'}`}
+            >
               <span className={`h-2.5 w-2.5 rounded-full ${BAR_COLOR[s]}`} />
               {REQUIREMENT_STATUS[s].label}
               <span className="font-medium text-slate-900">{breakdown[s]}</span>
             </li>
           ))}
         </ul>
+        {statusFilter && (
+          <button
+            onClick={() => setStatusFilter(null)}
+            className="mt-3 text-xs text-brand-600 hover:underline"
+          >
+            Clear filter
+          </button>
+        )}
       </Card>
 
       {/* Requirements & Controls */}
       <Card className="mt-4 p-5">
-        <p className="mb-4 text-sm font-semibold text-slate-700">Requirements &amp; mapped controls</p>
+        {/* Search + filter bar */}
+        <div className="mb-4 flex items-center gap-3">
+          <p className="shrink-0 text-sm font-semibold text-slate-700">Requirements &amp; mapped controls</p>
+          <div className="relative ml-auto">
+            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search requirements..."
+              className="h-8 w-48 rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300 sm:w-64"
+            />
+          </div>
+        </div>
+
         {requirements.length === 0 ? (
           <p className="text-sm text-slate-400">This framework has no requirements yet.</p>
+        ) : filteredRequirements.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            No requirements match{statusFilter ? ` status "${REQUIREMENT_STATUS[statusFilter]?.label}"` : ''}{search ? ` "${search}"` : ''}.{' '}
+            <button onClick={() => { setSearch(''); setStatusFilter(null); }} className="text-brand-600 hover:underline">Clear filters</button>
+          </p>
         ) : (
           <ul className="space-y-4">
-            {requirements.map((req) => (
+            {filteredRequirements.map((req) => (
               <li key={req.id} className="rounded-xl border border-slate-100 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -268,11 +355,11 @@ export default function FrameworkDetail() {
                 )}
               </li>
             ))}
-                  </ul>
-                )}
-          </Card>
+          </ul>
+        )}
+      </Card>
 
-      {gaps.length > 0 && (
+      {gaps.length > 0 && !statusFilter && !search && (
         <Card className="mt-4 p-5">
           <p className="mb-3 text-sm font-semibold text-slate-700">Prioritised gaps</p>
           <ul className="space-y-2">

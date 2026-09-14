@@ -90,6 +90,8 @@ export default function PolicyDetail() {
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [savingVersion, setSavingVersion] = useState(false);
+  const [versionLabel, setVersionLabel] = useState('');
+  const [versionError, setVersionError] = useState(null);
   // Blob URL for PDF preview (fetched with credentials).
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -144,16 +146,23 @@ export default function PolicyDetail() {
   }
 
   async function saveAsVersion() {
+    if (!versionLabel.trim()) {
+      setVersionError('Please enter a version label.');
+      return;
+    }
     setSavingVersion(true);
+    setVersionError(null);
     try {
       await api.post(`/policies/${id}/versions`, {
+        version: versionLabel.trim(),
         content: form.content,
         status: form.status,
       });
       versionsRes.refetch();
-      refetch(); // version counter bumps on policy record too
+      refetch();
+      setVersionLabel('');
     } catch (err) {
-      setSaveError(err.response?.data?.message || 'Failed to save version.');
+      setVersionError(err.response?.data?.message || 'Failed to save version.');
     } finally {
       setSavingVersion(false);
     }
@@ -389,18 +398,30 @@ export default function PolicyDetail() {
       {/* Versions tab */}
       {tab === 'versions' && (
         <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
+          <div className="mb-4 flex flex-wrap items-start gap-3">
+            <div className="flex-1">
               <p className="text-sm font-semibold text-slate-700">Version History</p>
-              <p className="mt-0.5 text-xs text-slate-400">Save a snapshot of the current content at any time. Versions are created only when you click the button below.</p>
+              <p className="mt-0.5 text-xs text-slate-400">Snapshot the current content with a version label you choose (e.g. "1.0", "2.1.3", "Draft A").</p>
             </div>
-            <Button
-              variant="secondary"
-              onClick={saveAsVersion}
-              disabled={savingVersion}
-            >
-              {savingVersion ? 'Saving...' : 'Save as version'}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <input
+                  className="input w-32 text-sm"
+                  placeholder="e.g. 1.2.0"
+                  value={versionLabel}
+                  onChange={(e) => { setVersionLabel(e.target.value); setVersionError(null); }}
+                  onKeyDown={(e) => e.key === 'Enter' && saveAsVersion()}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={saveAsVersion}
+                  disabled={savingVersion}
+                >
+                  {savingVersion ? 'Saving...' : 'Save as version'}
+                </Button>
+              </div>
+              {versionError && <p className="text-xs text-rose-600">{versionError}</p>}
+            </div>
           </div>
           <div className="space-y-4">
             {versionsRes.loading ? (
