@@ -141,6 +141,8 @@ model Policy {
   version     Int      @default(1)
   rules       Json?
   owner       String?
+  filePath    String?
+  mimeType    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   evidences   Evidence[]

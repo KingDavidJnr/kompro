@@ -8,6 +8,8 @@
 
 const policyService = require('./policies.service');
 const auditService = require('../audit/audit.service');
+const storage = require('../../lib/storage');
+const prisma = require('../../lib/prisma');
 
 /**
  * Handles GET /api/policies.
@@ -80,6 +82,10 @@ async function update(req, res, next) {
   try {
     const before = await policyService.getPolicy(req.params.id);
     const policy = await policyService.updatePolicy(req.params.id, req.body);
+    // Auto-snapshot a new version when content or status changes.
+    if (req.body.content !== undefined && req.body.content !== before.content) {
+      await policyService.createVersion(policy.id, { content: policy.content, status: policy.status }).catch(() => {});
+    }
     await auditService.recordFromRequest(req, {
       action: 'update',
       entity: 'policy',
@@ -123,6 +129,8 @@ module.exports = {
   create,
   update,
   remove,
+  uploadFile,
+  downloadFile,
   listVersions,
   createVersion,
   listChangeRequests,
@@ -135,6 +143,67 @@ module.exports = {
   createException,
   updateException,
 };
+
+/**
+ * Handles POST /api/policies/:id/file
+ * Accepts a multipart file upload (PDF, Word, etc.) and stores it via the
+ * active storage driver, saving the key and MIME type on the policy record.
+ * Also auto-snapshots a new version at the time of upload.
+ */
+async function uploadFile(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file provided' });
+    }
+    const policy = await policyService.getPolicy(req.params.id);
+    // Delete previous file if one exists.
+    if (policy.filePath) {
+      await storage.deleteFile(policy.filePath).catch(() => {});
+    }
+    const key = await storage.upload({
+      buffer: req.file.buffer,
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
+    const updated = await prisma.policy.update({
+      where: { id: policy.id },
+      data: { filePath: key, mimeType: req.file.mimetype },
+    });
+    // Auto-snapshot version on file upload.
+    await policyService.createVersion(policy.id, { content: policy.content, status: policy.status });
+    await auditService.recordFromRequest(req, {
+      action: 'update',
+      entity: 'policy',
+      entityId: policy.id,
+      before: { filePath: policy.filePath },
+      after: { filePath: key, mimeType: req.file.mimetype },
+    });
+    res.json({ message: 'File uploaded', data: { policy: updated } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Handles GET /api/policies/:id/file
+ * Streams the attached file back to the client with the correct content-type
+ * and a Content-Disposition header for inline display or download.
+ */
+async function downloadFile(req, res, next) {
+  try {
+    const policy = await policyService.getPolicy(req.params.id);
+    if (!policy.filePath) {
+      return res.status(404).json({ message: 'No file attached to this policy' });
+    }
+    const { stream, contentType } = await storage.getFile(policy.filePath, policy.mimeType || 'application/octet-stream');
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `${disposition}; filename="${policy.title.replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf"`);
+    stream.pipe(res);
+  } catch (err) {
+    next(err);
+  }
+}
 
 /**
  * Lists version snapshots for a policy.

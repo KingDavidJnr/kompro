@@ -6,16 +6,21 @@
  */
 
 const router = require('express').Router();
+const multer = require('multer');
 const { body } = require('express-validator');
 const controller = require('./policies.controller');
 const validate = require('../../middleware/validate');
 const requireAuth = require('../../middleware/requireAuth');
 const requirePermission = require('../../middleware/requirePermission');
 const { POLICY_STATUSES } = require('./policies.service');
+const config = require('../../config');
+
+const upload = multer({ limits: { fileSize: config.maxUploadBytes } });
 
 // Read access requires policies:read.
 router.get('/', requireAuth, requirePermission('policies:read'), controller.list);
 router.get('/:id', requireAuth, requirePermission('policies:read'), controller.get);
+router.get('/:id/file', requireAuth, requirePermission('policies:read'), controller.downloadFile);
 
 // Creation requires policies:create.
 router.post(
@@ -47,6 +52,15 @@ router.patch(
 
 // Deletion requires policies:delete.
 router.delete('/:id', requireAuth, requirePermission('policies:delete'), controller.remove);
+
+// File attachment upload/download.
+router.post(
+  '/:id/file',
+  requireAuth,
+  requirePermission('policies:update'),
+  upload.single('file'),
+  controller.uploadFile
+);
 
 // Policy lifecycle sub-resources (versions, change requests, reviews, exceptions).
 // All reuse the existing policies:* permissions for consistency.

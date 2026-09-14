@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Policy" ADD COLUMN IF NOT EXISTS "filePath" TEXT;
+ALTER TABLE "Policy" ADD COLUMN IF NOT EXISTS "mimeType" TEXT;
