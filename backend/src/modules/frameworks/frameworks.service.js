@@ -70,12 +70,12 @@ async function getFramework(id) {
  * @returns {object} Created framework.
  * @throws {ValidationError} On missing name.
  */
-async function createFramework({ name, description, enabled }) {
+async function createFramework({ name, description, version, enabled }) {
   if (!name) {
     throw new ValidationError('Framework name is required');
   }
   return prisma.framework.create({
-    data: { name, description: description || null, enabled: enabled === true },
+    data: { name, description: description || null, version: version || null, enabled: enabled === true },
   });
 }
 
@@ -86,7 +86,7 @@ async function createFramework({ name, description, enabled }) {
  * @returns {object} Updated framework.
  * @throws {NotFoundError} When the framework does not exist.
  */
-async function updateFramework(id, { name, description, enabled }) {
+async function updateFramework(id, { name, description, version, enabled }) {
   const existing = await prisma.framework.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Framework not found');
@@ -94,6 +94,7 @@ async function updateFramework(id, { name, description, enabled }) {
   const data = {};
   if (typeof name === 'string') data.name = name;
   if (description !== undefined) data.description = description;
+  if (version !== undefined) data.version = version;
   if (typeof enabled === 'boolean') data.enabled = enabled;
   return prisma.framework.update({ where: { id }, data });
 }
