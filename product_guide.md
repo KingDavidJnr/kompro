@@ -28,11 +28,12 @@ This guide covers every feature in the product, how they relate to each other, a
 6. [Audit Program](#6-audit-program)
 7. [Audit Logs](#7-audit-logs)
 8. [Organization Settings](#8-organization-settings)
-9. [User Management](#9-user-management)
-10. [Roles and Permissions](#10-roles-and-permissions)
-11. [Authentication](#11-authentication)
-12. [How Everything Connects](#12-how-everything-connects)
-13. [Environment Configuration](#13-environment-configuration)
+9. [Trust Portal](#9-trust-portal)
+10. [User Management](#10-user-management)
+11. [Roles and Permissions](#11-roles-and-permissions)
+12. [Authentication](#12-authentication)
+13. [How Everything Connects](#13-how-everything-connects)
+14. [Environment Configuration](#14-environment-configuration)
 
 ---
 
@@ -1017,7 +1018,102 @@ The organization record is auto-created on first update if it does not exist. Th
 
 ---
 
-## 9. User Management
+## 9. Trust Portal
+
+The trust portal is a public-facing page that lets external stakeholders -- customers, auditors, partners, and prospects -- view your organization's compliance posture without needing to log in. It is accessible at `/trust` on your Kompro instance.
+
+### Enabling the Portal
+
+1. Go to **Administration > Trust Portal** in the sidebar
+2. Toggle the portal status to **Enabled**
+3. Configure what content to show
+4. Click **Save settings**
+
+Once enabled, the portal is publicly accessible. Anyone with the URL can view it. No login is required.
+
+### Portal Content
+
+The admin settings page lets you configure the portal text and content:
+
+| Setting | Description |
+|---------|-------------|
+| Headline | The main heading shown at the top of the portal (e.g., "Security & Compliance") |
+| Description | An introductory paragraph below the headline explaining your organization's commitment to security |
+
+### Contact and Access Requests
+
+External stakeholders often need to request detailed audit reports, SOC 2 packages, or NDA-protected documents. The portal includes a dedicated contact section:
+
+| Setting | Description |
+|---------|-------------|
+| Contact Email | The email address for compliance inquiries (e.g., compliance@yourcompany.com) |
+| Access Request Instructions | Freeform text explaining how stakeholders can request access to full audit reports, what information they need to provide, typical response times, etc. |
+
+### Visibility Controls
+
+You control exactly which sections appear on the public portal using toggles:
+
+| Toggle | What It Shows |
+|--------|---------------|
+| Overall readiness score | The composite compliance readiness percentage (0-100) and its four component progress bars: framework adoption, control implementation, evidence coverage, and assessment pass rate |
+| Framework readiness | A card for each enabled framework showing its name, version, readiness percentage, and how many requirements are satisfied |
+| Active policies | A list of all policies with status "active", showing only their titles and descriptions (never the full policy content) |
+| Aggregate statistics | Summary cards showing total controls, implemented controls, total evidence items, and assessment pass/total counts |
+
+### Custom Sections
+
+You can add any number of freeform content sections to the portal. Each section has a title and body text. Use these for:
+
+- Describing your security practices
+- Listing certifications or attestations
+- Explaining your data handling procedures
+- Linking to external resources
+- Providing FAQ answers for common stakeholder questions
+
+Click **Add section** to create a new one. Sections can be reordered by removing and re-adding them.
+
+### What Is Exposed Publicly
+
+The portal is designed to share only aggregate, safe-to-publish data:
+
+**Shown:**
+- Organization name and display name
+- Readiness percentages (overall and per-framework)
+- Aggregate counts (total controls, evidence items, assessments)
+- Active policy titles and descriptions
+- Custom text content you configure
+
+**Never shown:**
+- Individual control names or details
+- Gap analysis or unsatisfied requirements
+- Evidence content or file attachments
+- Assessment notes or findings
+- Internal user information
+- Risk, incident, or ITSM data
+
+### What Stakeholders See
+
+When a stakeholder visits your portal URL (`/trust`), they see:
+
+1. A branded header with your organization name
+2. Your headline and description
+3. The overall readiness score with component breakdowns (if enabled)
+4. Aggregate stats cards (if enabled)
+5. Per-framework readiness cards (if enabled)
+6. Active policy list (if enabled)
+7. Any custom sections you have added
+8. A contact/request access section with your email and instructions
+9. A "Powered by Kompro" footer
+
+If the portal is disabled, visitors see a simple message saying the portal is not available.
+
+### Audit Logging
+
+All changes to trust portal settings are recorded in the audit log, including who changed the settings and the before/after values.
+
+---
+
+## 10. User Management
 
 ### Inviting Users
 
@@ -1067,7 +1163,7 @@ When a user's password or role is changed by an admin, the user receives an emai
 
 ---
 
-## 10. Roles and Permissions
+## 11. Roles and Permissions
 
 Kompro uses role-based access control (RBAC). Each user is assigned one role, and each role has a set of granular permissions.
 
@@ -1117,7 +1213,7 @@ The frontend also fetches the current user's permissions via the `/api/auth/me` 
 
 ---
 
-## 11. Authentication
+## 12. Authentication
 
 ### Registration
 
@@ -1179,7 +1275,7 @@ Logging out revokes the current session and clears the authentication cookie.
 
 ---
 
-## 12. How Everything Connects
+## 13. How Everything Connects
 
 Here is how all the modules in Kompro relate to each other:
 
@@ -1244,7 +1340,7 @@ They all share the common audit log and user/permission system.
 
 ---
 
-## 13. Environment Configuration
+## 14. Environment Configuration
 
 All configuration is done via environment variables. Here is the complete reference:
 

@@ -3,7 +3,8 @@ import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, UserSelect } from '../components/ui';
 import { AddList } from '../components/SubList';
-import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 function IncidentDrawer({ incident, onClose, onChanged }) {
   const detail = useGet(`/incidents/${incident.id}`);
@@ -97,7 +98,7 @@ export default function Incidents() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Incidents" description="Security and operational incidents and their response."
-        actions={<Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New incident</Button>} />
+        actions={<><Button variant="secondary" onClick={() => exportCsv('incidents.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'severity', label: 'Severity' }, { key: 'status', label: 'Status' }], incidents)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New incident</Button></>} />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <Card>
@@ -105,6 +106,7 @@ export default function Incidents() {
           <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
         ) : (
           <Table
+            numbered
             columns={[
               { key: 'title', label: 'Title', render: (i) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {i.title}</span> },
               { key: 'severity', label: 'Severity', render: (i) => <Badge color={i.severity === 'high' ? 'danger' : i.severity === 'medium' ? 'warning' : 'neutral'}>{i.severity}</Badge> },

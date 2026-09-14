@@ -155,4 +155,31 @@ async function purge(req, res, next) {
   }
 }
 
-module.exports = { list, get, exportAudit, purge };
+/**
+ * Handles POST /api/audit/export-log.
+ *
+ * Records that the authenticated user exported data from a feature page.
+ * The frontend calls this after a client-side CSV download so the action
+ * appears in the audit trail.
+ * @param {object} req - Authenticated request. Body: { entity, filename, rowCount }.
+ * @param {object} res - Express response ({ message }).
+ * @param {function} next - Express next callback.
+ * @returns {void}
+ */
+async function logExport(req, res, next) {
+  try {
+    const { entity, filename, rowCount } = req.body || {};
+    await auditService.recordFromRequest(req, {
+      action: 'export',
+      entity: entity || 'unknown',
+      entityId: null,
+      before: null,
+      after: { filename: filename || null, rowCount: rowCount ?? null },
+    });
+    res.json({ message: 'Export logged' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, get, exportAudit, purge, logExport };

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Spinner } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PlugIcon, ClockIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PlugIcon, ClockIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const TYPES = [
   {
@@ -179,9 +180,9 @@ export default function Integrations() {
         title="Integrations"
         description="Automated evidence collectors that pull data from databases, REST APIs and files on a schedule."
         actions={
-          <Button onClick={openCreate}>
+          <><Button variant="secondary" onClick={() => exportCsv('integrations.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'type', label: 'Type' }, { key: 'enabled', label: 'Enabled', format: (c) => c.enabled ? 'Yes' : 'No' }, { key: 'lastStatus', label: 'Last Status' }, { key: 'lastRunAt', label: 'Last Run' }], collectors)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}>
             <PlusIcon className="h-4 w-4" /> New collector
-          </Button>
+          </Button></>
         }
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
@@ -194,6 +195,7 @@ export default function Integrations() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               {
                 key: 'name',

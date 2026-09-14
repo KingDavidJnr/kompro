@@ -4,7 +4,8 @@ import { useGet } from '../lib/hooks';
 import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 export default function Frameworks() {
   const { data, loading, refetch } = useGet('/frameworks?pageSize=100');
@@ -139,6 +140,9 @@ export default function Frameworks() {
               {seeding ? <Spinner className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
               {seeding ? 'Seeding…' : 'Seed catalog'}
             </Button>
+            <Button variant="secondary" onClick={() => exportCsv('frameworks.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' }, { key: 'version', label: 'Version' }, { key: 'enabled', label: 'Enabled', format: (f) => f.enabled ? 'Yes' : 'No' }], frameworks)}>
+              <DocumentIcon className="h-4 w-4" /> Export CSV
+            </Button>
             <Button onClick={openCreate}>
               <PlusIcon className="h-4 w-4" /> New framework
             </Button>
@@ -156,6 +160,7 @@ export default function Frameworks() {
           </div>
         ) : (
           <Table
+            numbered
             columns={[
               {
                 key: 'name',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { exportCsv } from '../lib/csv';
 import { API_URL } from '../config';
 import { PageHeader, Card, Badge, Button, Table, Modal, Spinner, statusColor } from '../components/ui';
 import { ClipboardIcon, TrashIcon } from '../components/icons';
@@ -163,6 +164,7 @@ export default function AuditLogs() {
           <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
         ) : (
           <Table
+            numbered
             columns={[
               { key: 'createdAt', label: 'When', render: (r) => <span className="whitespace-nowrap text-slate-500">{fmt(r.createdAt)}</span> },
               { key: 'actor', label: 'Actor', render: (r) => <span className="text-slate-700">{r.actor?.email || r.actor?.name || 'system'}</span> },

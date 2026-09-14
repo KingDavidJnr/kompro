@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
+import { exportCsv } from '../lib/csv';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner } from '../components/ui';
 import { AddList } from '../components/SubList';
-import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
 
 function PlanDrawer({ plan, onClose, onChanged }) {
   const detail = useGet(`/audit-program/${plan.id}`);
@@ -116,7 +117,7 @@ export default function AuditProgram() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Audit Program" description="Audit plans, nonconformities and corrective actions."
-        actions={<Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New plan</Button>} />
+        actions={<><Button variant="secondary" onClick={() => exportCsv('audit-program.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'scope', label: 'Scope' }, { key: 'status', label: 'Status' }], plans)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New plan</Button></>} />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <Card>
@@ -124,6 +125,7 @@ export default function AuditProgram() {
           <div className="flex justify-center py-16"><Spinner className="h-8 w-8" /></div>
         ) : (
           <Table
+            numbered
             columns={[
               { key: 'title', label: 'Title', render: (p) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {p.title}</span> },
               { key: 'scope', label: 'Scope', render: (p) => <span className="text-slate-500">{p.scope || '—'}</span> },

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, UserSelect } from '../components/ui';
-import { PlusIcon, TrashIcon, ServerIcon, CogIcon, ChartIcon } from '../components/icons';
+import { PlusIcon, TrashIcon, ServerIcon, CogIcon, ChartIcon, DocumentIcon } from '../components/icons';
+import { exportCsv } from '../lib/csv';
 
 const TABS = [
   { id: 'assets', label: 'Assets', Icon: ServerIcon },
@@ -67,7 +68,14 @@ export default function ITSM() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="IT Service Management" description="Assets, changes and capacity plans." />
+      <PageHeader title="IT Service Management" description="Assets, changes and capacity plans."
+        actions={
+          <Button variant="secondary" onClick={() => {
+            if (tab === 'assets') exportCsv('itsm-assets.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'type', label: 'Type' }, { key: 'status', label: 'Status' }], assets.data?.assets || []);
+            else if (tab === 'changes') exportCsv('itsm-changes.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'status', label: 'Status' }], changes.data?.changes || []);
+            else exportCsv('itsm-capacity.csv', [{ key: '_row_num', label: '#' }, { key: 'resource', label: 'Resource' }, { key: 'currentCapacity', label: 'Current' }, { key: 'plannedCapacity', label: 'Planned' }], capacity.data?.plans || []);
+          }}><DocumentIcon className="h-4 w-4" /> Export CSV</Button>
+        } />
 
       <div className="mb-5 flex gap-2 border-b border-slate-200">
         {TABS.map((t) => (
@@ -181,6 +189,7 @@ function TableWithAdd({ rows, columns, onAdd, onDelete }) {
         <Button size="sm" onClick={onAdd}><PlusIcon className="h-4 w-4" /> Add</Button>
       </div>
       <Table
+        numbered
         columns={[
           ...columns,
           {
