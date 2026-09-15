@@ -103,6 +103,7 @@ export default function PolicyDetail() {
   const [evalResult, setEvalResult] = useState(null);
   const [savingRules, setSavingRules] = useState(false);
   const [rulesError, setRulesError] = useState(null);
+  const [savedForm, setSavedForm] = useState(null); // snapshot of last-saved form
   const fileRef = useRef(null);
 
   const policy = data?.policy;
@@ -110,17 +111,22 @@ export default function PolicyDetail() {
   // Initialise form from loaded policy (only once).
   useEffect(() => {
     if (policy && form === null) {
-      setForm({
+      const initial = {
         title: policy.title,
         description: policy.description || '',
         content: policy.content || '',
         status: policy.status,
         owner: policy.owner || '',
-      });
+      };
+      setForm(initial);
+      setSavedForm(initial);
       // Initialize rules editor from stored rules.
       setRules(policy.rules || { match: 'all', conditions: [] });
     }
   }, [policy]);
+
+  const isDirty = form !== null && savedForm !== null &&
+    JSON.stringify(form) !== JSON.stringify(savedForm);
 
   // When a PDF is attached, fetch it as a blob so the auth cookie is included.
   useEffect(() => {
@@ -147,6 +153,7 @@ export default function PolicyDetail() {
     setSaveError(null);
     try {
       await api.patch(`/policies/${id}`, form);
+      setSavedForm(form); // mark as clean
       refetch();
     } catch (err) {
       setSaveError(err.response?.data?.message || 'Save failed.');
@@ -445,7 +452,7 @@ export default function PolicyDetail() {
           </Card>
 
           {saveError && <p className="text-sm text-rose-600">{saveError}</p>}
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !isDirty} title={!isDirty ? 'No changes to save' : undefined}>
             {saving ? 'Saving...' : 'Save changes'}
           </Button>
         </form>
