@@ -60,7 +60,7 @@ export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
       >
         {value ? (
           <div
-            className="prose prose-sm pointer-events-none max-w-none text-slate-600 line-clamp-4"
+            className="prose prose-slate prose-sm pointer-events-none max-w-none line-clamp-4"
             dangerouslySetInnerHTML={{ __html: marked.parse(value) }}
           />
         ) : (
@@ -117,7 +117,7 @@ export default function MarkdownEditor({ value = '', onChange, rows = 18 }) {
       {/* Content */}
       {preview ? (
         <div
-          className="prose prose-sm max-w-none p-4 text-slate-700"
+          className="prose prose-slate prose-sm max-w-none p-4"
           dangerouslySetInnerHTML={{ __html: marked.parse(value || '') }}
         />
       ) : (
