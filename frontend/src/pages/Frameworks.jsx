@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 export default function Frameworks() {
   const { data, loading, refetch, silentRefetch, setData } = useGet('/frameworks?pageSize=100');
@@ -19,6 +20,18 @@ export default function Frameworks() {
   const navigate = useNavigate();
 
   const frameworks = data?.frameworks || [];
+
+  const list = useListState(50);
+
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    frameworks,
+    list,
+    (f, q, filters) => {
+      if (filters.enabled === 'true' && f.enabled !== true) return false;
+      if (filters.enabled === 'false' && f.enabled !== false) return false;
+      return !q || f.name.toLowerCase().includes(q) || (f.description && f.description.toLowerCase().includes(q));
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -150,7 +163,7 @@ export default function Frameworks() {
               {seeding ? <Spinner className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
               {seeding ? 'Seeding…' : 'Seed catalog'}
             </Button>
-            <Button variant="secondary" onClick={() => exportCsv('frameworks.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' }, { key: 'version', label: 'Version' }, { key: 'enabled', label: 'Enabled', format: (f) => f.enabled ? 'Yes' : 'No' }], frameworks)}>
+            <Button variant="secondary" onClick={() => exportCsv('frameworks.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' }, { key: 'version', label: 'Version' }, { key: 'enabled', label: 'Enabled', format: (f) => f.enabled ? 'Yes' : 'No' }], filtered)}>
               <DocumentIcon className="h-4 w-4" /> Export CSV
             </Button>
             <Button onClick={openCreate}>
@@ -164,6 +177,13 @@ export default function Frameworks() {
       )}
 
       <Card>
+        <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="framework" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+          <select value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="">All</option>
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </FilterBar>
         {loading ? (
           <TableSkeleton columns={7} />
         ) : (
@@ -226,13 +246,15 @@ export default function Frameworks() {
                 ),
               },
             ]}
-            rows={frameworks}
+            rows={paginated}
             empty="No frameworks yet."
             onRowClick={(f) => navigate(`/frameworks/${f.id}`)}
             rowClassName="cursor-pointer hover:bg-slate-50 transition-colors"
           />
         )}
       </Card>
+
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}

@@ -5,6 +5,7 @@ import { exportCsv } from '../lib/csv';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 function PlanDrawer({ plan, onClose, onChanged }) {
   const detail = useGet(`/audit-program/${plan.id}`);
@@ -80,6 +81,15 @@ export default function AuditProgram() {
   const [error, setError] = useState(null);
 
   const plans = data?.plans || [];
+  const list = useListState(50);
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    plans,
+    list,
+    (p, q, filters) => {
+      if (filters.status && p.status !== filters.status) return false;
+      return !q || p.title.toLowerCase().includes(q) || (p.scope || '').toLowerCase().includes(q);
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -125,9 +135,15 @@ export default function AuditProgram() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Audit Program" description="Audit plans, nonconformities and corrective actions."
-        actions={<><Button variant="secondary" onClick={() => exportCsv('audit-program.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'scope', label: 'Scope' }, { key: 'status', label: 'Status' }], plans)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New plan</Button></>} />
+        actions={<><Button variant="secondary" onClick={() => exportCsv('audit-program.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'scope', label: 'Scope' }, { key: 'status', label: 'Status' }], filtered)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New plan</Button></>} />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="audit plan" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
+          <option value="">All statuses</option>
+          {['planned', 'in_progress', 'complete'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </FilterBar>
       <Card>
         {loading ? (
           <TableSkeleton columns={5} />
@@ -150,11 +166,12 @@ export default function AuditProgram() {
                 ),
               },
             ]}
-            rows={plans}
+            rows={paginated}
             empty="No audit plans yet."
           />
         )}
       </Card>
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       {selected && <PlanDrawer plan={selected} onClose={() => setSelected(null)} onChanged={refetch} />}
 

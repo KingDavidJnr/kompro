@@ -5,6 +5,7 @@ import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusCol
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, FlagIcon, EyeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 function scoreOf(r) {
   return r.score != null ? r.score : (Number(r.likelihood) || 0) * (Number(r.impact) || 0);
@@ -112,6 +113,15 @@ export default function Risk() {
   const [error, setError] = useState(null);
 
   const risks = data?.risks || [];
+  const list = useListState(50);
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    risks,
+    list,
+    (r, q, filters) => {
+      if (filters.status && r.status !== filters.status) return false;
+      return !q || r.title.toLowerCase().includes(q) || (r.category || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q);
+    }
+  );
 
   const levelCounts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
   let scoreSum = 0;
@@ -176,7 +186,7 @@ export default function Risk() {
       <PageHeader
         title="Risk"
         description="Risk register with scenarios, indicators and treatments."
-        actions={<><Button variant="secondary" onClick={() => exportCsv('risks.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'category', label: 'Category' }, { key: 'score', label: 'Score', format: (r) => String(r.score ?? (r.likelihood || 1) * (r.impact || 1)) }, { key: 'status', label: 'Status' }], risks)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New risk</Button></>}
+        actions={<><Button variant="secondary" onClick={() => exportCsv('risks.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Title' }, { key: 'category', label: 'Category' }, { key: 'score', label: 'Score', format: (r) => String(r.score ?? (r.likelihood || 1) * (r.impact || 1)) }, { key: 'status', label: 'Status' }], filtered)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New risk</Button></>}
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
@@ -192,6 +202,12 @@ export default function Risk() {
         <Heatmap risks={risks} />
       </Card>
 
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="risk" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
+          <option value="">All statuses</option>
+          {['open', 'mitigated', 'closed'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </FilterBar>
       <Card>
         {loading ? (
           <TableSkeleton columns={6} />
@@ -215,11 +231,12 @@ export default function Risk() {
                 ),
               },
             ]}
-            rows={risks}
+            rows={paginated}
             empty="No risks yet."
           />
         )}
       </Card>
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       {selected && <RiskDrawer risk={selected} onClose={() => setSelected(null)} onChanged={refetch} />}
 

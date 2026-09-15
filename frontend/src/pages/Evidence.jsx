@@ -7,6 +7,7 @@ import {
 } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, DocumentIcon, EyeIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const SOURCES = ['manual', 'upload', 'documentation', 'policy', 'integration', 'automated_check', 'infrastructure', 'other'];
 
@@ -165,6 +166,18 @@ export default function Evidence() {
 
   const evidence = data?.evidence || [];
 
+  const list = useListState(50);
+
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    evidence,
+    list,
+    (e, q, filters) => {
+      if (filters.source && e.source !== filters.source) return false;
+      if (filters.status && e.status !== filters.status) return false;
+      return !q || e.title.toLowerCase().includes(q) || (e.description && e.description.toLowerCase().includes(q));
+    }
+  );
+
   function openCreate() {
     setError(null);
     setModal({ title: '', description: '', source: 'manual', content: '', controlIds: [], policyIds: [], file: null });
@@ -276,7 +289,7 @@ export default function Evidence() {
               { key: 'source', label: 'Source' },
               { key: 'status', label: 'Status' },
               { key: 'collectedAt', label: 'Collected' },
-            ], evidence)}>
+            ], filtered)}>
               <DocumentIcon className="h-4 w-4" /> Export CSV
             </Button>
             <Button onClick={openCreate}>
@@ -288,6 +301,16 @@ export default function Evidence() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <Card>
+        <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="evidence" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+          <select value={list.filters.source || ''} onChange={(e) => list.setFilter('source', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="">All sources</option>
+            {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="">All statuses</option>
+            {['submitted', 'accepted', 'rejected', 'requested'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </FilterBar>
         {loading ? (
           <TableSkeleton columns={6} />
         ) : (
@@ -338,11 +361,13 @@ export default function Evidence() {
                 ),
               },
             ]}
-            rows={evidence}
+            rows={paginated}
             empty="No evidence yet."
           />
         )}
       </Card>
+
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       {/* Detail drawer */}
       {viewing && (

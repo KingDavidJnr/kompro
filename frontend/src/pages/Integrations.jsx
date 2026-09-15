@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, TableSkeleton, Spinner } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PlugIcon, ClockIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const TYPES = [
   {
@@ -66,6 +67,17 @@ export default function Integrations() {
   const [runningId, setRunningId] = useState(null);
 
   const collectors = data?.collectors || [];
+  const list = useListState(50);
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    collectors,
+    list,
+    (c, q, filters) => {
+      if (filters.type && c.type !== filters.type) return false;
+      if (filters.enabled === 'enabled' && !c.enabled) return false;
+      if (filters.enabled === 'disabled' && c.enabled) return false;
+      return !q || c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q);
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -189,7 +201,7 @@ export default function Integrations() {
         title="Integrations"
         description="Automated evidence collectors that pull data from databases, REST APIs and files on a schedule."
         actions={
-          <><Button variant="secondary" onClick={() => exportCsv('integrations.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'type', label: 'Type' }, { key: 'enabled', label: 'Enabled', format: (c) => c.enabled ? 'Yes' : 'No' }, { key: 'lastStatus', label: 'Last Status' }, { key: 'lastRunAt', label: 'Last Run' }], collectors)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}>
+          <><Button variant="secondary" onClick={() => exportCsv('integrations.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'type', label: 'Type' }, { key: 'enabled', label: 'Enabled', format: (c) => c.enabled ? 'Yes' : 'No' }, { key: 'lastStatus', label: 'Last Status' }, { key: 'lastRunAt', label: 'Last Run' }], filtered)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}>
             <PlusIcon className="h-4 w-4" /> New collector
           </Button></>
         }
@@ -197,6 +209,17 @@ export default function Integrations() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
       {message && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>}
 
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="collector" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.type || ''} onChange={(e) => list.setFilter('type', e.target.value)}>
+          <option value="">All types</option>
+          {TYPES.map((t) => <option key={t.value} value={t.value}>{t.value}</option>)}
+        </select>
+        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)}>
+          <option value="">All</option>
+          <option value="enabled">Enabled</option>
+          <option value="disabled">Disabled</option>
+        </select>
+      </FilterBar>
       <Card>
         {loading ? (
           <TableSkeleton columns={6} />
@@ -265,11 +288,12 @@ export default function Integrations() {
                 ),
               },
             ]}
-            rows={collectors}
+            rows={paginated}
             empty="No collectors yet. Add one to start automating evidence collection."
           />
         )}
       </Card>
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}

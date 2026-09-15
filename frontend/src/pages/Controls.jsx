@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton } from '../components/ui';
-import { PlusIcon, PencilIcon, TrashIcon, CubeIcon, DocumentIcon, SearchIcon } from '../components/icons';
+import { PlusIcon, PencilIcon, TrashIcon, CubeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 export default function Controls() {
   const { data, loading, silentRefetch, setData } = useGet('/controls?pageSize=100');
@@ -14,39 +14,17 @@ export default function Controls() {
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
 
-  // Client-side search, filter, pagination state.
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-
+  const list = useListState(50);
   const controls = data?.controls || [];
 
-  // Filtered list (search + status filter).
-  const filtered = useMemo(() => {
-    let list = controls;
-    if (statusFilter) list = list.filter((c) => c.status === statusFilter);
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.title.toLowerCase().includes(q) ||
-          (c.category && c.category.toLowerCase().includes(q)) ||
-          (c.description && c.description.toLowerCase().includes(q))
-      );
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    controls,
+    list,
+    (c, q, filters) => {
+      if (filters.status && c.status !== filters.status) return false;
+      return !q || c.title.toLowerCase().includes(q) || (c.category && c.category.toLowerCase().includes(q));
     }
-    return list;
-  }, [controls, search, statusFilter]);
-
-  // Paginated slice.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-
-  // Reset to page 1 whenever filters change.
-  function handleSearch(v) { setSearch(v); setPage(1); }
-  function handleStatusFilter(v) { setStatusFilter(v); setPage(1); }
-  function handlePageSize(v) { setPageSize(Number(v)); setPage(1); }
+  );
 
   function openCreate() {
     setError(null);
@@ -106,39 +84,16 @@ export default function Controls() {
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
-      {/* Search + filter bar */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search controls..."
-            className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300"
-          />
-        </div>
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="control" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
         <select
-          value={statusFilter}
-          onChange={(e) => handleStatusFilter(e.target.value)}
+          value={list.filters.status || ''}
+          onChange={(e) => list.setFilter('status', e.target.value)}
           className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
         >
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        {(search || statusFilter) && (
-          <button
-            onClick={() => { setSearch(''); setStatusFilter(''); setPage(1); }}
-            className="text-xs text-brand-600 hover:underline"
-          >
-            Clear filters
-          </button>
-        )}
-        <span className="ml-auto text-xs text-slate-400">
-          {filtered.length} {filtered.length === 1 ? 'control' : 'controls'}
-          {(search || statusFilter) ? ' matching' : ' total'}
-        </span>
-      </div>
+      </FilterBar>
 
       <Card>
         {loading ? (
@@ -174,71 +129,12 @@ export default function Controls() {
               },
             ]}
             rows={paginated}
-            empty={search || statusFilter ? 'No controls match your filters.' : 'No controls yet.'}
+            empty={list.hasFilters ? 'No controls match your filters.' : 'No controls yet.'}
           />
         )}
       </Card>
 
-      {/* Pagination bar */}
-      {!loading && filtered.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          {/* Left: page info + page size selector */}
-          <div className="flex items-center gap-3 text-sm text-slate-500">
-            <span>
-              {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs">Show</span>
-              <select
-                value={pageSize}
-                onChange={(e) => handlePageSize(e.target.value)}
-                className="h-7 rounded border border-slate-200 bg-white px-2 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-300"
-              >
-                {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <span className="text-xs">per page</span>
-            </div>
-          </div>
-
-          {/* Right: prev/next + page numbers */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-sm text-slate-500 disabled:opacity-40 hover:bg-slate-50"
-            >
-              ‹
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-              .reduce((acc, p, idx, arr) => {
-                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, i) =>
-                p === '…' ? (
-                  <span key={`ellipsis-${i}`} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition ${safePage === p ? 'border-brand-500 bg-brand-50 font-semibold text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-sm text-slate-500 disabled:opacity-40 hover:bg-slate-50"
-            >
-              ›
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}

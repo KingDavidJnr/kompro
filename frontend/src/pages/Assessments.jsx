@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton, FrameworkSelect } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const STATUSES = ['draft', 'in_progress', 'complete'];
 
@@ -16,6 +17,15 @@ export default function Assessments() {
   const [error, setError] = useState(null);
 
   const assessments = data?.assessments || [];
+  const list = useListState(50);
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    assessments,
+    list,
+    (a, q, filters) => {
+      if (filters.status && a.status !== filters.status) return false;
+      return !q || a.name.toLowerCase().includes(q) || (a.description || '').toLowerCase().includes(q);
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -69,10 +79,16 @@ export default function Assessments() {
       <PageHeader
         title="Assessments"
         description="Evaluations of controls and their supporting evidence."
-        actions={<><Button variant="secondary" onClick={() => exportCsv('assessments.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'status', label: 'Status' }, { key: 'dueDate', label: 'Due' }], assessments)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New assessment</Button></>}
+        actions={<><Button variant="secondary" onClick={() => exportCsv('assessments.csv', [{ key: '_row_num', label: '#' }, { key: 'name', label: 'Name' }, { key: 'status', label: 'Status' }, { key: 'dueDate', label: 'Due' }], filtered)}><DocumentIcon className="h-4 w-4" /> Export CSV</Button><Button onClick={openCreate}><PlusIcon className="h-4 w-4" /> New assessment</Button></>}
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="assessment" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
+          <option value="">All statuses</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </FilterBar>
       <Card>
         {loading ? (
           <TableSkeleton columns={6} />
@@ -115,11 +131,12 @@ export default function Assessments() {
                 ),
               },
             ]}
-            rows={assessments}
+            rows={paginated}
             empty="No assessments yet."
           />
         )}
       </Card>
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}
