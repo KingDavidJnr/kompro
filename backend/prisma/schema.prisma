@@ -213,20 +213,28 @@ model EvidencePolicy {
 model Assessment {
   id             String             @id @default(cuid())
   controlId      String
-  result         String
+  frameworkId    String?
+  requirementId  String?
+  result         String?
+  status         String             @default("pending")
   notes          String?
   assessorId     String?
-  assessmentDate DateTime?          @default(now())
+  assessmentDate DateTime?
   dueDate        DateTime?
   overdueNotified Boolean           @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   control        Control            @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  framework      Framework?         @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  requirement    FrameworkRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
   assessor       User?              @relation(fields: [assessorId], references: [id], onDelete: SetNull)
   evidenceLinks  AssessmentEvidence[]
 
   @@index([controlId])
+  @@index([frameworkId])
+  @@index([requirementId])
   @@index([result])
+  @@index([status])
   @@index([dueDate])
 }
 
@@ -248,6 +256,7 @@ model Framework {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   requirements FrameworkRequirement[]
+  assessments  Assessment[]
 
   @@index([enabled])
 }
@@ -262,6 +271,7 @@ model FrameworkRequirement {
   updatedAt   DateTime @updatedAt
   framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   controlMappings Mapping[]
+  assessments     Assessment[]
 
   @@index([frameworkId])
 }

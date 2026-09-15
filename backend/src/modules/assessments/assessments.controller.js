@@ -22,6 +22,9 @@ async function list(req, res, next) {
       page: req.query.page,
       pageSize: req.query.pageSize,
       controlId: req.query.controlId,
+      frameworkId: req.query.frameworkId,
+      requirementId: req.query.requirementId,
+      status: req.query.status,
       result: req.query.result,
     });
     res.json({ message: 'Assessments retrieved', data: result });
@@ -55,6 +58,7 @@ async function get(req, res, next) {
  */
 async function create(req, res, next) {
   try {
+    // Default assessor to the current user if not explicitly assigned.
     const assessorId = req.body.assessorId || req.user.id;
     const assessment = await assessmentService.createAssessment({ ...req.body, assessorId });
     await auditService.recordFromRequest(req, {
@@ -64,7 +68,16 @@ async function create(req, res, next) {
       before: null,
       after: assessment,
     });
-    res.status(201).json({ message: 'Assessment created', data: { assessment } });
+    res.status(201).json({ message: 'Assessment scheduled', data: { assessment } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function controlsForRequirement(req, res, next) {
+  try {
+    const controls = await assessmentService.getControlsForRequirement(req.params.requirementId);
+    res.json({ message: 'Controls retrieved', data: { controls } });
   } catch (err) {
     next(err);
   }
@@ -118,4 +131,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, remove };
+module.exports = { list, get, create, update, remove, controlsForRequirement };
