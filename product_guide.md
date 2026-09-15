@@ -245,7 +245,7 @@ Controls are the central object in Kompro's compliance model:
 
 ### 3.3 Policies
 
-Policies are your organization's formal documents that define rules, standards, and procedures. Kompro supports a full policy lifecycle including a rich text editor, file attachments with inline preview, user-controlled versioning, change requests, reviews, and exceptions.
+Policies are your organization's formal documents that define rules, standards, and procedures. Kompro supports a full policy lifecycle including a rich text editor, file attachments with inline preview, user-controlled versioning, policy-as-code rule evaluation, change requests, reviews, and exceptions.
 
 #### Creating a Policy
 
@@ -259,7 +259,7 @@ Click **New policy** and fill in the creation modal:
 | Status | No | Defaults to "draft" |
 | Owner | No | Searchable user picker |
 
-After clicking **Create**, you are taken directly to the policy detail page where you can add content, upload a document, and manage the full lifecycle.
+After clicking **Create**, you are taken directly to the policy detail page where you can add content, upload a document, define compliance rules, and manage the full lifecycle.
 
 #### Policy Statuses
 
@@ -273,13 +273,17 @@ When a policy transitions to **active** (either on creation or update), all acti
 
 #### Policy Detail Page
 
-The detail page is organized into five tabs:
+The detail page is organized into six tabs:
 
 **Content tab:**
 - Title, Description, Status, and Owner fields
 - A **Markdown editor** for writing policy content with formatting. The editor is collapsed by default -- click it to expand. The toolbar supports: Bold, Italic, H1, H2, Horizontal rule, Unordered list, Ordered list, Blockquote, Inline code. An Edit/Preview toggle renders the Markdown live. A Collapse button minimizes the editor again.
 - A **Document attachment** section for uploading PDF, Word, or text files. Supports drag-and-drop or click-to-browse. When a PDF is attached, it renders inline in the page. Non-PDF files show a download link. The Download button fetches the file with authentication. Replace file or Remove file buttons manage the attachment.
 - A **Save changes** button that saves metadata and content together.
+
+**Rules tab (Policy-as-Code):**
+
+See the full [Policy-as-Code](#policy-as-code) section below for complete documentation.
 
 **Versions tab:**
 - Lists all version snapshots in reverse order showing version label, status, timestamp, and the rendered Markdown content
@@ -301,11 +305,172 @@ The detail page is organized into five tabs:
 - Fields: Reason, Expiration date
 - Status defaults to "active"
 
+#### Compliance Badge
+
+The policies list shows a **Compliance** column with the result of the latest rule evaluation for each policy:
+
+| Badge | Meaning |
+|-------|---------|
+| Compliant X% | All rules pass |
+| Partial X% | Some rules pass |
+| Non-compliant X% | No rules pass |
+| Not evaluated | Rules have never been run |
+
+The policy detail header also shows the compliance badge alongside the status and version badges.
+
 #### How Policies Connect to Other Features
 
 - **Evidence**: Evidence records can be linked to one or more policies. A single piece of evidence (e.g., a document) can prove adherence to multiple policies simultaneously.
+- **Policy-as-code**: The Rules tab lets you define automated compliance checks that are evaluated against live evidence, control, and assessment data.
 - **Dashboard**: Policy count is displayed as a stat card.
 - **Trust Portal**: Active policy titles and descriptions can be exposed on the public trust portal.
+
+---
+
+### Policy-as-Code
+
+Kompro includes a built-in policy-as-code engine that lets you define machine-evaluable compliance rules on any policy. Instead of manually reviewing whether a policy is being followed, you define conditions and the engine evaluates them against live data automatically.
+
+#### How It Works
+
+1. Open a policy and go to the **Rules** tab
+2. Define one or more conditions using the visual rule builder
+3. Choose whether **ALL** or **ANY** conditions must pass (AND vs OR)
+4. Click **Save rules** to persist the rule configuration
+5. Click **Evaluate now** to run the engine against current data
+6. View the per-condition result with actual vs expected values
+7. The evaluation is saved to history and the compliance badge updates
+
+#### The Rule Builder
+
+Each condition has three parts:
+
+| Part | Description |
+|------|-------------|
+| Field | What to check (e.g., evidence count, assessment result) |
+| Operator | How to compare (equals, at least, contains, etc.) |
+| Value | What value to expect |
+
+**Available operators:**
+
+| Operator | Meaning |
+|----------|---------|
+| `= equals` | Exact match |
+| `≠ not equals` | Does not match |
+| `≥ at least` | Number is greater than or equal |
+| `≤ at most` | Number is less than or equal |
+| `> greater than` | Number is strictly greater |
+| `< less than` | Number is strictly less |
+| `contains` | String contains the value |
+| `exists` | Field has any non-empty value |
+| `does not exist` | Field is empty or null |
+
+#### Available Fields
+
+**Evidence fields** (based on evidence linked to this policy):
+
+| Field | Description |
+|-------|-------------|
+| `evidence.count` | Total evidence records linked to this policy |
+| `evidence.accepted.count` | Evidence records with status "accepted" |
+| `evidence.source` | Check whether any evidence has a specific source (e.g., "documentation") |
+| `evidence.status` | Check whether any evidence has a specific status |
+| `evidence.hasFile` | Whether any evidence has a file attachment (true/false) |
+| `evidence.collectedWithin` | Most recent evidence was collected within N days |
+
+**Control fields** (based on controls linked via evidence):
+
+| Field | Description |
+|-------|-------------|
+| `control.count` | Number of distinct controls linked via evidence |
+| `control.status` | Whether any linked control has a specific status |
+| `control.implemented.count` | Number of linked controls with status "implemented" |
+
+**Assessment fields** (based on assessments of linked controls):
+
+| Field | Description |
+|-------|-------------|
+| `assessment.count` | Total assessments across linked controls |
+| `assessment.result` | Whether any assessment has a specific result |
+| `assessment.satisfied.count` | Number of assessments with result "satisfied" |
+| `assessment.latestResult` | The single most recent assessment result across all linked controls |
+
+**Policy fields:**
+
+| Field | Description |
+|-------|-------------|
+| `policy.hasContent` | Whether the policy has written Markdown content (true/false) |
+| `policy.hasFile` | Whether the policy has a file attachment (true/false) |
+| `policy.status` | The policy lifecycle status (draft/active/retired) |
+| `policy.version` | The policy version string |
+
+#### Evaluation Results
+
+| Result | Meaning |
+|--------|---------|
+| `pass` | All conditions passed (or at least one, in "any" mode) |
+| `partial` | Some conditions passed (only in "all" mode) |
+| `fail` | No conditions passed |
+| `not_configured` | No rules have been defined |
+
+The result detail shows each condition with:
+- A green checkmark or red cross
+- The field and operator
+- The expected value
+- The **actual value** found in the data
+
+#### Evaluation History
+
+Every time you click "Evaluate now", the result is saved to an immutable history. The history shows up to 20 past evaluations with timestamps, scores, and pass/fail counts. This gives you a compliance trend over time.
+
+The evaluation action is also recorded in the audit log with the policy ID, result, and score.
+
+#### Example Rules
+
+**"This policy requires at least 1 accepted evidence with a file:"**
+- Match: ALL
+- Conditions:
+  - `evidence.accepted.count` ≥ `1`
+  - `evidence.hasFile` = `true`
+
+**"Any linked control must be implemented OR assessed as satisfied:"**
+- Match: ANY
+- Conditions:
+  - `control.status` = `implemented`
+  - `assessment.latestResult` = `satisfied`
+
+**"Policy must be active, have content, and have been evidenced within 90 days:"**
+- Match: ALL
+- Conditions:
+  - `policy.status` = `active`
+  - `policy.hasContent` = `true`
+  - `evidence.collectedWithin` ≤ `90`
+
+#### Raw JSON Format
+
+The rules are stored as JSON in the policy's `rules` field. You can also send them directly via the API:
+
+```json
+{
+  "match": "all",
+  "conditions": [
+    { "field": "evidence.count", "op": "gte", "value": 1 },
+    { "field": "evidence.accepted.count", "op": "gte", "value": 1 },
+    { "field": "evidence.hasFile", "op": "eq", "value": "true" },
+    { "field": "assessment.latestResult", "op": "eq", "value": "satisfied" },
+    { "field": "policy.hasContent", "op": "eq", "value": "true" }
+  ]
+}
+```
+
+#### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/policies/:id/evaluate` | Run evaluation against live data and save result |
+| `GET` | `/api/policies/:id/evaluations` | List evaluation history (last 20) |
+| `POST` | `/api/policies/:id/validate-rules` | Validate rules JSON and preview result without saving |
+| `PATCH` | `/api/policies/:id` | Save rules by including `"rules": {...}` in the body |
 
 ---
 
