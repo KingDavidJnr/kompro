@@ -27,7 +27,16 @@ async function getSummary() {
     prisma.framework.count({ where: { enabled: true } }),
     prisma.control.count(),
     prisma.control.count({ where: { status: 'implemented' } }),
-    prisma.control.count({ where: { evidences: { some: {} } } }),
+    // Count controls that have at least one evidence linked via either the
+    // legacy controlId FK or the EvidenceControl many-to-many join table.
+    prisma.control.count({
+      where: {
+        OR: [
+          { evidences: { some: {} } },
+          { evidenceLinks: { some: {} } },
+        ],
+      },
+    }),
     prisma.assessment.count(),
     prisma.assessment.count({ where: { result: 'satisfied' } }),
     prisma.evidence.count(),

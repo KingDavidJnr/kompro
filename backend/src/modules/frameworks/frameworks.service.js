@@ -364,13 +364,35 @@ async function computeReadiness(frameworkId) {
   // Every control linked by any requirement in this framework.
   const controlIds = [...new Set(framework.requirements.flatMap((r) => r.controlMappings.map((m) => m.control.id)))];
 
-  // Evidence attached to those controls (grouped so we can count per control).
+  // Evidence attached to those controls -- check both the legacy controlId FK
+  // and the EvidenceControl many-to-many join table introduced for multi-linking.
   const evidenceGroups = controlIds.length
-    ? await prisma.evidence.groupBy({ by: ['controlId'], where: { controlId: { in: controlIds } }, _count: true })
+    ? await prisma.evidence.groupBy({
+        by: ['controlId'],
+        where: { controlId: { in: controlIds } },
+        _count: true,
+      })
     : [];
-  const evidenceByControl = new Map(evidenceGroups.map((g) => [g.controlId, g._count]));
-  const totalEvidence = evidenceGroups.reduce((sum, g) => sum + g._count, 0);
-  const controlsWithEvidence = evidenceGroups.length;
+
+  // Also count evidence linked via the join table (may not have controlId set).
+  const joinEvidence = controlIds.length
+    ? await prisma.evidenceControl.groupBy({
+        by: ['controlId'],
+        where: { controlId: { in: controlIds } },
+        _count: true,
+      })
+    : [];
+
+  // Merge both sources: a control counts as "having evidence" if it appears in either.
+  const evidenceByControl = new Map();
+  for (const g of evidenceGroups) {
+    evidenceByControl.set(g.controlId, (evidenceByControl.get(g.controlId) || 0) + g._count);
+  }
+  for (const g of joinEvidence) {
+    evidenceByControl.set(g.controlId, (evidenceByControl.get(g.controlId) || 0) + g._count);
+  }
+  const totalEvidence = [...evidenceByControl.values()].reduce((sum, n) => sum + n, 0);
+  const controlsWithEvidence = evidenceByControl.size;
 
   const breakdown = {
     satisfied: 0,
