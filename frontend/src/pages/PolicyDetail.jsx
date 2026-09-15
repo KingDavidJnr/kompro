@@ -91,6 +91,7 @@ export default function PolicyDetail() {
   const [uploadError, setUploadError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmFileAction, setConfirmFileAction] = useState(null); // 'remove' | 'replace'
   const [savingVersion, setSavingVersion] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
   const [versionError, setVersionError] = useState(null);
@@ -392,11 +393,16 @@ export default function PolicyDetail() {
                 {policy.filePath && (
                   <>
                     <Button variant="secondary" type="button" onClick={downloadFile}>Download</Button>
-                    <Button variant="secondary" type="button" onClick={removeFile}>Remove file</Button>
+                    <Button variant="secondary" type="button" onClick={() => setConfirmFileAction('remove')}>Remove file</Button>
                   </>
                 )}
                 <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileUpload} />
-                <Button variant="secondary" type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => policy.filePath ? setConfirmFileAction('replace') : fileRef.current?.click()}
+                  disabled={uploading}
+                >
                   {uploading ? 'Uploading...' : policy.filePath ? 'Replace file' : 'Attach file'}
                 </Button>
               </div>
@@ -668,6 +674,37 @@ export default function PolicyDetail() {
           />
         </Card>
       )}
+
+      {/* File action confirmation */}
+      <Modal
+        open={!!confirmFileAction}
+        onClose={() => setConfirmFileAction(null)}
+        title={confirmFileAction === 'remove' ? 'Remove file attachment' : 'Replace file attachment'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmFileAction(null)}>Cancel</Button>
+            <Button
+              variant={confirmFileAction === 'remove' ? 'danger' : 'primary'}
+              onClick={() => {
+                setConfirmFileAction(null);
+                if (confirmFileAction === 'remove') {
+                  removeFile();
+                } else {
+                  fileRef.current?.click();
+                }
+              }}
+            >
+              {confirmFileAction === 'remove' ? 'Remove file' : 'Choose new file'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          {confirmFileAction === 'remove'
+            ? 'This will permanently delete the attached file from storage. The policy content will be unaffected. This cannot be undone.'
+            : 'This will replace the current attachment. The existing file will be permanently deleted from storage.'}
+        </p>
+      </Modal>
 
       {/* Delete confirmation */}
       <Modal
