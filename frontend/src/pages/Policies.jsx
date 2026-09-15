@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, TableSkeleton, statusColor, UserSelect } from '../components/ui';
 import { PlusIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const STATUSES = ['draft', 'active', 'retired'];
 
@@ -15,6 +16,17 @@ export default function Policies() {
   const navigate = useNavigate();
 
   const policies = data?.policies || [];
+
+  const list = useListState(50);
+
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    policies,
+    list,
+    (p, q, filters) => {
+      if (filters.status && p.status !== filters.status) return false;
+      return !q || p.title.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.owner && p.owner.toLowerCase().includes(q));
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -53,7 +65,7 @@ export default function Policies() {
               { key: 'owner', label: 'Owner' },
               { key: 'version', label: 'Version' },
               { key: 'status', label: 'Status' },
-            ], policies)}>
+            ], filtered)}>
               <DocumentIcon className="h-4 w-4" /> Export CSV
             </Button>
             <Button onClick={openCreate}>
@@ -65,6 +77,12 @@ export default function Policies() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <Card>
+        <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="policy" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+          <select value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="">All statuses</option>
+            {['draft', 'active', 'retired'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </FilterBar>
         {loading ? (
           <TableSkeleton columns={7} />
         ) : (
@@ -90,11 +108,13 @@ export default function Policies() {
                 },
               },
             ]}
-            rows={policies}
+            rows={paginated}
             empty="No policies yet. Click New policy to create one."
           />
         )}
       </Card>
+
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}

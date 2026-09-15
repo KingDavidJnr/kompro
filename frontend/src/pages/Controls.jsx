@@ -4,16 +4,27 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, TableSkeleton } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, CubeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
+import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
 
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
 export default function Controls() {
-  const { data, loading, refetch, silentRefetch, setData } = useGet('/controls?pageSize=100');
+  const { data, loading, silentRefetch, setData } = useGet('/controls?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
 
+  const list = useListState(50);
   const controls = data?.controls || [];
+
+  const { filtered, paginated, totalPages, safePage } = applyList(
+    controls,
+    list,
+    (c, q, filters) => {
+      if (filters.status && c.status !== filters.status) return false;
+      return !q || c.title.toLowerCase().includes(q) || (c.category && c.category.toLowerCase().includes(q));
+    }
+  );
 
   function openCreate() {
     setError(null);
@@ -62,7 +73,7 @@ export default function Controls() {
         description="Security, operational and compliance controls mapped to frameworks."
         actions={
           <>
-            <Button variant="secondary" onClick={() => exportCsv('controls.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Name' }, { key: 'category', label: 'Category' }, { key: 'status', label: 'Status' }], controls)}>
+            <Button variant="secondary" onClick={() => exportCsv('controls.csv', [{ key: '_row_num', label: '#' }, { key: 'title', label: 'Name' }, { key: 'category', label: 'Category' }, { key: 'status', label: 'Status' }], filtered)}>
               <DocumentIcon className="h-4 w-4" /> Export CSV
             </Button>
             <Button onClick={openCreate}>
@@ -72,6 +83,17 @@ export default function Controls() {
         }
       />
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+
+      <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="control" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
+        <select
+          value={list.filters.status || ''}
+          onChange={(e) => list.setFilter('status', e.target.value)}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
+        >
+          <option value="">All statuses</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </FilterBar>
 
       <Card>
         {loading ? (
@@ -106,11 +128,13 @@ export default function Controls() {
                 ),
               },
             ]}
-            rows={controls}
-            empty="No controls yet."
+            rows={paginated}
+            empty={list.hasFilters ? 'No controls match your filters.' : 'No controls yet.'}
           />
         )}
       </Card>
+
+      <PaginationBar page={list.page} setPage={list.setPage} pageSize={list.pageSize} setPageSize={list.setPageSize} totalPages={totalPages} safePage={safePage} filteredCount={filtered.length} />
 
       <Modal
         open={!!modal}
@@ -118,9 +142,7 @@ export default function Controls() {
         title={modal?.id ? 'Edit control' : 'New control'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button>
             <Button onClick={save}>Save</Button>
           </>
         }
@@ -136,12 +158,8 @@ export default function Controls() {
             <input className="input" value={modal?.category || ''} onChange={(e) => setModal({ ...modal, category: e.target.value })} placeholder="e.g. Access Control" />
           </Field>
           <Field label="Status">
-            <select className="input" value={modal?.status || 'planned'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+            <select className="input" value={modal?.status || 'not_implemented'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
+              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -154,17 +172,13 @@ export default function Controls() {
         title="Delete control"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirm(null)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={remove}>
-              Delete
-            </Button>
+            <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
+            <Button variant="danger" onClick={remove}>Delete</Button>
           </>
         }
       >
         <p className="text-sm text-slate-600">
-          Delete <span className="font-medium">{confirm?.name}</span>? This cannot be undone.
+          Delete <span className="font-medium">{confirm?.title}</span>? This cannot be undone.
         </p>
       </Modal>
     </div>
