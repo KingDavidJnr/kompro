@@ -585,7 +585,7 @@ export default function PolicyDetail() {
                   </div>
                   {v.content && (
                     <div
-                      className="prose prose-sm mt-3 max-w-none rounded-lg bg-slate-50 p-3 text-slate-600"
+                      className="prose prose-slate prose-sm mt-3 max-w-none rounded-lg bg-slate-50 p-3"
                       dangerouslySetInnerHTML={{ __html: marked.parse(v.content) }}
                     />
                   )}
