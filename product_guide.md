@@ -556,55 +556,99 @@ When evidence is accepted or rejected, the original uploader receives an email n
 
 ### 3.5 Assessments
 
-Assessments are evaluations of your controls. Each assessment targets one control and produces a result indicating how well that control is performing. Assessment results are the primary driver of framework readiness calculations.
+Assessments are evaluations of a specific control against a specific framework requirement. They answer the question: "Does this control actually satisfy this requirement?" They are the primary driver of framework readiness calculations.
 
-#### Creating an Assessment
+#### Why Requirement-Level Context Matters
 
-An assessment requires:
+A single control can be mapped to requirements across multiple frameworks, and each framework may have different standards. For example:
+
+- "Encryption at Rest" vs GDPR Art.32 -- **satisfied** (basic encryption suffices)
+- "Encryption at Rest" vs ISO 27001 A.8.24 -- **partially satisfied** (requires specific cipher standards)
+
+These are two separate assessments of the same control, each evaluated in context of a different requirement. That is why each assessment is tied to both a control and a specific requirement.
+
+#### Assessment Lifecycle
+
+Assessments have two phases:
+
+**Phase 1 -- Schedule** (status: `pending`)
+
+Click **Schedule assessment** and fill in:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| Control | Yes | Which control is being assessed |
-| Result | Yes | The assessment outcome |
-| Notes | No | Observations, findings, recommendations |
-| Evidence IDs | No | Array of evidence records reviewed during the assessment |
-| Assessment date | No | When the assessment was conducted (defaults to now) |
-| Due date | No | Deadline for completing the assessment |
+| Framework | No | Which compliance framework this is for |
+| Requirement | No | The specific requirement being assessed (filtered to the selected framework) |
+| Control | Yes | Which control is being evaluated -- only controls already mapped to the selected requirement are shown |
+| Assessor | No | Who will conduct the assessment (searchable user picker, defaults to you) |
+| Due date | No | When the assessment must be completed |
 
-The assessor defaults to the currently authenticated user.
+The assessment is created with status `pending` and no result. The assigned assessor receives an email notification.
+
+**Phase 2 -- Complete** (status: `complete`)
+
+Click the checkmark icon on any pending or in-progress assessment to open the completion drawer. The drawer shows the full context (control, requirement, framework, assessor, due date) at the top so the assessor always knows exactly what they are evaluating.
+
+The assessor fills in:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Result | Yes | The verdict (see results below) |
+| Notes & Findings | No | Full narrative: what was reviewed, gaps found, recommendations |
+| Assessment date | No | When the assessment was conducted (auto-fills to today) |
+| Evidence reviewed | No | Checkboxes of evidence linked to the control -- tick what was actually reviewed |
+
+Clicking **Submit Assessment** sets status to `complete` and records the date.
+
+The assessor can also click **Mark In Progress** to signal they have started reviewing without yet recording a final verdict. This sets status to `in_progress`.
+
+#### Assessment Statuses
+
+| Status | Meaning |
+|--------|---------|
+| pending | Scheduled and assigned, not yet started |
+| in_progress | Assessor has started reviewing |
+| complete | Result recorded, assessment closed |
 
 #### Assessment Results
 
 | Result | Meaning |
 |--------|---------|
-| satisfied | The control fully meets its objectives |
-| partially_satisfied | The control partially meets its objectives |
-| unsatisfied | The control does not meet its objectives |
-| needs_review | The control requires further evaluation |
+| satisfied | The control fully meets the requirement |
+| partially_satisfied | The control partially meets the requirement -- gaps exist |
+| unsatisfied | The control does not meet the requirement |
+| needs_review | More investigation is needed before a verdict can be made |
 
 #### Assessment vs. Control Status
 
-These are two separate concepts:
+These are two entirely separate things:
 
-- **Control status** is a self-declared implementation state set by your team ("we implemented it")
-- **Assessment result** is an evaluator's independent verdict ("we verified it works")
+- **Control status** (`not_implemented`, `partial`, `implemented`, `needs_review`) is a self-declared implementation state set by your team
+- **Assessment result** is an evaluator's independent verdict after reviewing the evidence
 
-Framework readiness percentages are derived from **assessment results**, not control statuses. Both values are shown side by side on the framework detail page so you can compare what you claim versus what has been verified.
+Framework readiness percentages are derived from **assessment results**, not control statuses. A control can claim `implemented` but still show 0% readiness if it has never been assessed or the assessment result was `unsatisfied`.
 
-#### Evidence Linking
+#### The Table
 
-When creating or updating an assessment, you can provide an array of `evidenceIds`. The system validates that all referenced evidence exists, then replaces the existing evidence links with the new set. This creates a clear audit trail of which evidence was considered during each assessment.
+The assessments list shows: Control, Requirement (with framework name in brackets), Status badge, Result badge (empty when pending), Assessor, Due date (turns red when overdue).
+
+**Filters:** Status (pending/in_progress/complete) and Result. Search across control name, requirement title, and framework name.
+
+#### Overdue Assessments
+
+When a due date has passed and the assessment is not yet complete, the due date cell turns red in the table.
 
 #### Email Notifications
 
-When an assessment is created or when the assessor is changed, the assigned assessor receives an email notification with the control title and due date (if set).
+When an assessment is scheduled (or the assessor is changed), the assigned assessor receives an email with the control name, requirement context, and due date.
 
 #### How Assessments Connect to Other Features
 
-- **Controls**: Each assessment evaluates exactly one control. A control can have many assessments over time, creating a history.
-- **Evidence**: Assessments link to evidence via a many-to-many join table, documenting what was reviewed.
-- **Frameworks**: Assessment results drive the framework status derivation and readiness calculations. The aggregation logic checks all controls mapped to a requirement and uses the worst-case assessment result.
-- **Dashboard**: The assessment pass rate (satisfied / total) is one of the four readiness score components.
+- **Controls**: Each assessment evaluates one control. A control can have many assessments over time, each in context of a different requirement.
+- **Requirements**: Assessment results drive the framework readiness calculation for each requirement. The worst-case result across all mapped controls determines the requirement's status.
+- **Evidence**: Assessors can link the evidence they reviewed during the assessment, creating an auditable record of what proof was considered.
+- **Dashboard**: The assessment pass rate (satisfied / total complete assessments) is one of the four readiness score components.
+- **Frameworks**: Readiness percentages and the breakdown bar are derived entirely from assessment results across all requirements in the framework.
 
 ---
 
@@ -1355,6 +1399,22 @@ Creating, updating, and deleting records updates the UI immediately without wait
 - Updating a record reflects the change in the list instantly
 - Deleting a record removes it from the list instantly
 - No full-page flash or spinner appears during these operations
+
+### Search, Filters and Pagination on All List Pages
+
+Every feature page (Controls, Frameworks, Policies, Evidence, Assessments, Risk, Incidents, Integrations, Audit Program) has:
+
+- A **search box** that filters the list instantly as you type (client-side, no API call)
+- One or more **filter dropdowns** appropriate to each page (status, result, type, severity, etc.)
+- A **result count** showing "X records total" or "X records matching" when filters are active
+- A **Clear filters** link when any filter is active
+- **Client-side pagination** with default 50 items per page, configurable to 25 or 100 using the "Show N per page" selector
+- A **pagination bar** showing the current range ("1–50 of 55"), page number buttons with ellipsis for large page counts, and prev/next arrows
+- The **Export CSV** button exports only the currently filtered set, not the full list
+
+### Modal Behaviour
+
+Modals and drawers do not close when clicking the backdrop behind them. The only ways to close are the **X** button in the header and the **Cancel** button in the footer. This prevents accidental data loss when filling in complex forms.
 
 ### Smart Dropdowns
 
