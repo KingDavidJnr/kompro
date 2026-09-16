@@ -83,7 +83,6 @@ export default function AuditLogs() {
     setFilters({ from: '', to: '', entity: '', action: '' });
   }
 
-  const exportHref = `${API_URL}/audit/export?format=csv&${buildQuery(filters, 1)}`;
   const totalPages = Math.max(1, Math.ceil(total / 50));
 
   async function exportCsvFile() {
