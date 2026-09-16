@@ -10,7 +10,7 @@ import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from 
 const STATUSES = ['draft', 'active', 'retired'];
 
 export default function Policies() {
-  const { data, loading, refetch, setData } = useGet('/policies');
+  const { data, loading, refetch, setData } = useGet('/policies?pageSize=100');
   const [modal, setModal] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();

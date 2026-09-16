@@ -7,7 +7,10 @@
 const prisma = require('../../lib/prisma');
 const { NotFoundError } = require('../../utils/errors');
 
+const MAX_PAGE_SIZE = 100;
+
 async function listRisks({ status, category, page = 1, pageSize = 25 } = {}) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const where = {};
   if (status) where.status = status;
   if (category) where.category = category;
@@ -15,13 +18,13 @@ async function listRisks({ status, category, page = 1, pageSize = 25 } = {}) {
     prisma.risk.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * safeSize,
+      take: safeSize,
       include: { scenarios: true, kris: true, treatments: true },
     }),
     prisma.risk.count({ where }),
   ]);
-  return { risks, total, page, pageSize };
+  return { risks, total, page, pageSize: safeSize };
 }
 
 async function getRisk(id) {

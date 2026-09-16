@@ -48,6 +48,7 @@ router.patch(
   body('content').optional().isString(),
   body('status').optional().isIn(POLICY_STATUSES).withMessage(`Status must be one of: ${POLICY_STATUSES.join(', ')}`),
   body('owner').optional().isString(),
+  body('rules').optional(),
   validate,
   controller.update
 );

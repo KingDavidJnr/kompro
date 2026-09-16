@@ -64,14 +64,16 @@ function Heatmap({ risks }) {
 function RiskDrawer({ risk, onClose, onChanged }) {
   const detail = useGet(`/risks/${risk.id}`);
   const r = detail.data?.risk || risk;
+  const [drawerError, setDrawerError] = useState(null);
 
-  async function add(path, body, refetchKey) {
+  async function add(path, body) {
+    setDrawerError(null);
     try {
       await api.post(path, body);
       detail.refetch();
       onChanged();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed');
+      setDrawerError(e.response?.data?.message || 'Failed to save.');
     }
   }
 
@@ -81,6 +83,7 @@ function RiskDrawer({ risk, onClose, onChanged }) {
         <Spinner className="h-8 w-8" />
       ) : (
         <div className="space-y-6">
+          {drawerError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{drawerError}</div>}
           <div className="flex items-center gap-2">
             <Badge color={statusColor(r.status)}>{r.status}</Badge>
             <Badge color={riskLevel(scoreOf(r)).color}>{riskLevel(scoreOf(r)).label} · {scoreOf(r)}</Badge>

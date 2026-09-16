@@ -5,15 +5,18 @@
 const prisma = require('../../lib/prisma');
 const { NotFoundError } = require('../../utils/errors');
 
+const MAX_PAGE_SIZE = 100;
+
 async function listAssets({ type, status, page = 1, pageSize = 25 } = {}) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const where = {};
   if (type) where.type = type;
   if (status) where.status = status;
   const [assets, total] = await Promise.all([
-    prisma.asset.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
+    prisma.asset.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * safeSize, take: safeSize }),
     prisma.asset.count({ where }),
   ]);
-  return { assets, total, page, pageSize };
+  return { assets, total, page, pageSize: safeSize };
 }
 
 async function getAsset(id) {
@@ -57,13 +60,14 @@ async function deleteAsset(id) {
 }
 
 async function listChanges({ status, page = 1, pageSize = 25 } = {}) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const where = {};
   if (status) where.status = status;
   const [changes, total] = await Promise.all([
-    prisma.change.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
+    prisma.change.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * safeSize, take: safeSize }),
     prisma.change.count({ where }),
   ]);
-  return { changes, total, page, pageSize };
+  return { changes, total, page, pageSize: safeSize };
 }
 
 async function createChange(body) {
@@ -97,11 +101,12 @@ async function deleteChange(id) {
 }
 
 async function listCapacityPlans(page = 1, pageSize = 25) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const [plans, total] = await Promise.all([
-    prisma.capacityPlan.findMany({ orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
+    prisma.capacityPlan.findMany({ orderBy: { createdAt: 'desc' }, skip: (page - 1) * safeSize, take: safeSize }),
     prisma.capacityPlan.count(),
   ]);
-  return { plans, total, page, pageSize };
+  return { plans, total, page, pageSize: safeSize };
 }
 
 async function createCapacityPlan(body) {

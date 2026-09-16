@@ -330,7 +330,7 @@ export default function Integrations() {
               <input type="checkbox" checked={!!modal?.enabled} onChange={(e) => setModal({ ...modal, enabled: e.target.checked })} className="mt-2 h-4 w-4" />
             </Field>
             <Field label="Cadence (minutes)" optional>
-              <input type="number" min="1" className="input" value={modal?.cadenceMinutes ?? 360} onChange={(e) => setModal({ ...modal, cadenceMinutes: e.target.value })} />
+              <input type="number" min="1" className="input" value={modal?.cadenceMinutes ?? 360} onChange={(e) => setModal({ ...modal, cadenceMinutes: e.target.value === '' ? '' : Number(e.target.value) })} />
             </Field>
           </div>
           <Field label="Parameters (JSON)" optional>

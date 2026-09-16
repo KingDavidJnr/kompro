@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useGet } from '../lib/hooks';
+import { useConfirm } from '../lib/useConfirm.jsx';
 import api from '../lib/api';
 import { PageHeader, Card, Badge, Spinner, Button, SearchableSelect } from '../components/ui';
 import { ShieldIcon, ArrowLeftIcon, DocumentIcon, PlusIcon, XIcon, SearchIcon } from '../components/icons';
@@ -48,8 +49,10 @@ export default function FrameworkDetail() {
   const { data, loading, error, setData, silentRefetch } = useGet(`/frameworks/${id}/readiness`);
   const [mappingReqId, setMappingReqId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [mapError, setMapError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const { confirm: ask, dialog } = useConfirm();
 
   const controlLabel = (c) => `${c.title}${c.category ? ` · ${c.category}` : ''}`;
   const loadControls = async (q) => {
@@ -60,6 +63,7 @@ export default function FrameworkDetail() {
   async function mapControl(requirementId, controlId) {
     if (!controlId) return;
     setBusy(true);
+    setMapError(null);
     try {
       await api.post(`/requirements/${requirementId}/mappings`, { controlId });
       setMappingReqId(null);
@@ -89,15 +93,25 @@ export default function FrameworkDetail() {
       // Background sync to get accurate counts.
       silentRefetch();
     } catch (err) {
-      // silently ignore (e.g. duplicate mapping)
+      const msg = err.response?.data?.message || '';
+      // Duplicate mapping is an expected non-error; surface anything else.
+      if (!msg.toLowerCase().includes('duplicate') && !msg.toLowerCase().includes('already')) {
+        setMapError(msg || 'Failed to map control.');
+      }
     } finally {
       setBusy(false);
     }
   }
 
   async function unmapControl(requirementId, controlId) {
-    if (!window.confirm('Remove this control mapping?')) return;
+    const ok = await ask({
+      title: 'Remove mapping?',
+      message: 'Remove this control mapping? This cannot be undone.',
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
     setBusy(true);
+    setMapError(null);
     try {
       await api.delete(`/requirements/${requirementId}/mappings/${controlId}`);
       setData((prev) => {
@@ -111,7 +125,7 @@ export default function FrameworkDetail() {
       });
       silentRefetch();
     } catch (err) {
-      // silently ignore
+      setMapError(err.response?.data?.message || 'Failed to remove mapping.');
     } finally {
       setBusy(false);
     }
@@ -162,6 +176,9 @@ export default function FrameworkDetail() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      {mapError && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{mapError}</div>
+      )}
       <PageHeader
         title={
           <span className="flex items-center gap-2">
@@ -375,6 +392,7 @@ export default function FrameworkDetail() {
           </ul>
         </Card>
       )}
+      {dialog}
     </div>
   );
 }

@@ -172,7 +172,14 @@ export default function ITSM() {
               <Field label="Title" required><input required className="input" value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
               <Field label="Description" optional><textarea className="input" rows={2} value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
               <Field label="Risk" optional><input className="input" value={modal.risk} onChange={(e) => setModal({ ...modal, risk: e.target.value })} /></Field>
-              <Field label="Asset id" optional><input className="input" value={modal.assetId} onChange={(e) => setModal({ ...modal, assetId: e.target.value })} /></Field>
+              <Field label="Asset" optional>
+                <select className="input" value={modal.assetId} onChange={(e) => setModal({ ...modal, assetId: e.target.value })}>
+                  <option value="">None</option>
+                  {(assets.data?.assets || []).map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Status" required>
                 <select className="input" value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
                   {['requested', 'approved', 'implemented', 'closed', 'rejected'].map((s) => <option key={s} value={s}>{s}</option>)}

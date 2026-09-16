@@ -10,23 +10,26 @@ import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from 
 function PlanDrawer({ plan, onClose, onChanged }) {
   const detail = useGet(`/audit-program/${plan.id}`);
   const p = detail.data?.plan || plan;
+  const [drawerError, setDrawerError] = useState(null);
 
   async function addNc(body) {
+    setDrawerError(null);
     try {
       await api.post(`/audit-program/${plan.id}/nonconformities`, body);
       detail.refetch();
       onChanged();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed');
+      setDrawerError(e.response?.data?.message || 'Failed to save.');
     }
   }
   async function addCa(nid, body) {
+    setDrawerError(null);
     try {
       await api.post(`/audit-program/${plan.id}/nonconformities/${nid}/corrective-actions`, body);
       detail.refetch();
       onChanged();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed');
+      setDrawerError(e.response?.data?.message || 'Failed to save.');
     }
   }
 
@@ -36,6 +39,7 @@ function PlanDrawer({ plan, onClose, onChanged }) {
         <Spinner className="h-8 w-8" />
       ) : (
         <div className="space-y-4">
+          {drawerError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{drawerError}</div>}
           <div className="flex items-center gap-2">
             <Badge color={statusColor(p.status)}>{p.status}</Badge>
             {p.scope && <Badge color="neutral">{p.scope}</Badge>}

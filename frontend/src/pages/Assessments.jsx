@@ -60,7 +60,9 @@ function CompleteDrawer({ assessment, onClose, onUpdated }) {
     try {
       const res = await api.patch(`/assessments/${assessment.id}`, { status: 'in_progress' });
       onUpdated(res.data.data.assessment);
-    } catch {}
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update status.');
+    }
   }
 
   function toggleEvidence(id) {
