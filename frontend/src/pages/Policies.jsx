@@ -128,14 +128,14 @@ export default function Policies() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title">
+          <Field label="Title" required>
             <input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} placeholder="e.g. Information Security Policy" />
           </Field>
-          <Field label="Description" hint="Short summary shown in the policies list.">
+          <Field label="Description" hint="Short summary shown in the policies list." optional>
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} placeholder="What this policy covers" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Initial version" hint='e.g. "1.0" or "2.1.3"'>
+            <Field label="Initial version" hint='e.g. "1.0" or "2.1.3"' required>
               <input
                 required
                 className="input"
@@ -144,13 +144,13 @@ export default function Policies() {
                 placeholder="1.0"
               />
             </Field>
-            <Field label="Status">
+            <Field label="Status" required>
               <select className="input" value={modal?.status || 'draft'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
                 {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
           </div>
-          <Field label="Owner">
+          <Field label="Owner" optional>
             <UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}

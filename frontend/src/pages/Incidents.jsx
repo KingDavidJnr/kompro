@@ -164,20 +164,20 @@ export default function Incidents() {
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.id ? 'Edit incident' : 'New incident'}
         footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title"><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
-          <Field label="Description"><textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
-          <Field label="Severity">
+          <Field label="Title" required><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
+          <Field label="Description" optional><textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
+          <Field label="Severity" required>
             <select className="input" value={modal?.severity || 'low'} onChange={(e) => setModal({ ...modal, severity: e.target.value })}>
               {['low', 'medium', 'high', 'critical'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Classification"><input className="input" value={modal?.classification || ''} onChange={(e) => setModal({ ...modal, classification: e.target.value })} /></Field>
-          <Field label="Status">
+          <Field label="Classification" optional><input className="input" value={modal?.classification || ''} onChange={(e) => setModal({ ...modal, classification: e.target.value })} /></Field>
+          <Field label="Status" required>
             <select className="input" value={modal?.status || 'open'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {['open', 'contained', 'resolved'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
+          <Field label="Owner" optional><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

@@ -63,7 +63,7 @@ export default function Settings() {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>
           )}
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
-          <Field label="Current password">
+          <Field label="Current password" required>
             <input
               type="password"
               required
@@ -73,7 +73,7 @@ export default function Settings() {
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
           </Field>
-          <Field label="New password">
+          <Field label="New password" required>
             <input
               type="password"
               required
@@ -83,7 +83,7 @@ export default function Settings() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
-          <Field label="Confirm new password">
+          <Field label="Confirm new password" required>
             <input
               type="password"
               required

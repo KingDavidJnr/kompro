@@ -134,10 +134,10 @@ export default function Roles() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Name">
+          <Field label="Name" required>
             <input className="input" required value={modal?.name || ''} disabled={!!modal?.id} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
           </Field>
-          <Field label="Description">
+          <Field label="Description" optional>
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
           <div>

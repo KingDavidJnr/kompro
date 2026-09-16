@@ -144,16 +144,16 @@ export default function Controls() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Name">
+          <Field label="Name" required>
             <input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} />
           </Field>
-          <Field label="Description">
+          <Field label="Description" optional>
             <textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
-          <Field label="Category">
+          <Field label="Category" optional>
             <input className="input" value={modal?.category || ''} onChange={(e) => setModal({ ...modal, category: e.target.value })} placeholder="e.g. Access Control" />
           </Field>
-          <Field label="Status">
+          <Field label="Status" required>
             <select className="input" value={modal?.status || 'not_implemented'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>

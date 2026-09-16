@@ -270,13 +270,13 @@ export default function Frameworks() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Name">
+          <Field label="Name" required>
             <input required className="input" value={modal?.name || ''} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
           </Field>
-          <Field label="Description">
+          <Field label="Description" optional>
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
-          <Field label="Version">
+          <Field label="Version" optional>
             <input className="input" value={modal?.version || ''} onChange={(e) => setModal({ ...modal, version: e.target.value })} />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -330,14 +330,14 @@ export default function Frameworks() {
             {reqModal.adding && (
               <form onSubmit={addRequirement} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Code">
+                  <Field label="Code" optional>
                     <input className="input" value={reqModal.form.code} onChange={(e) => reqUpdate({ form: { ...reqModal.form, code: e.target.value } })} placeholder="e.g. A.1" />
                   </Field>
-                  <Field label="Title">
+                  <Field label="Title" required>
                     <input required className="input" value={reqModal.form.title} onChange={(e) => reqUpdate({ form: { ...reqModal.form, title: e.target.value } })} placeholder="Requirement title" />
                   </Field>
                 </div>
-                <Field label="Description">
+                <Field label="Description" optional>
                   <textarea className="input" rows={2} value={reqModal.form.description} onChange={(e) => reqUpdate({ form: { ...reqModal.form, description: e.target.value } })} />
                 </Field>
                 {reqModal.addError && <p className="text-sm text-rose-600">{reqModal.addError}</p>}

@@ -309,13 +309,13 @@ export default function Integrations() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Name">
+          <Field label="Name" required>
             <input required className="input" value={modal?.name || ''} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
           </Field>
-          <Field label="Description">
+          <Field label="Description" optional>
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
-          <Field label="Type">
+          <Field label="Type" required>
             <select className="input" value={modal?.type || 'sql'} onChange={(e) => setModal({ ...modal, type: e.target.value })}>
               {TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -326,17 +326,17 @@ export default function Integrations() {
             <p className="mt-1 text-xs text-slate-500">{TYPES.find((t) => t.value === modal?.type)?.hint}</p>
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Enabled">
+            <Field label="Enabled" optional>
               <input type="checkbox" checked={!!modal?.enabled} onChange={(e) => setModal({ ...modal, enabled: e.target.checked })} className="mt-2 h-4 w-4" />
             </Field>
-            <Field label="Cadence (minutes)">
+            <Field label="Cadence (minutes)" optional>
               <input type="number" min="1" className="input" value={modal?.cadenceMinutes ?? 360} onChange={(e) => setModal({ ...modal, cadenceMinutes: e.target.value })} />
             </Field>
           </div>
-          <Field label="Parameters (JSON)">
+          <Field label="Parameters (JSON)" optional>
             <textarea className="input font-mono text-xs" rows={6} value={modal?.paramsText || ''} onChange={(e) => setModal({ ...modal, paramsText: e.target.value })} />
           </Field>
-          <Field label="Secrets (JSON)" hint={modal?.id ? 'Leave blank to keep the existing encrypted secrets.' : 'Credentials referenced from parameters, e.g. {"token":"…"}. Stored encrypted.'}>
+          <Field label="Secrets (JSON)" hint={modal?.id ? 'Leave blank to keep the existing encrypted secrets.' : 'Credentials referenced from parameters, e.g. {"token":"…"}. Stored encrypted.'} optional>
             <textarea className="input font-mono text-xs" rows={4} value={modal?.secretsText || ''} onChange={(e) => setModal({ ...modal, secretsText: e.target.value })} placeholder='{ "token": "…" }' />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}

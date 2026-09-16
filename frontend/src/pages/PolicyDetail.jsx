@@ -360,23 +360,23 @@ export default function PolicyDetail() {
           <Card className="p-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="sm:col-span-2">
-                <Field label="Title">
+                <Field label="Title" required>
                   <input required className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 </Field>
               </div>
-              <Field label="Status">
+              <Field label="Status" required>
                 <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
             </div>
             <div className="mt-4">
-              <Field label="Description">
+              <Field label="Description" optional>
                 <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short summary of what this policy covers" />
               </Field>
             </div>
             <div className="mt-4">
-              <Field label="Owner">
+              <Field label="Owner" optional>
                 <input className="input" value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} placeholder="Policy owner name or email" />
               </Field>
             </div>

@@ -60,13 +60,13 @@ export default function Organization() {
       />
       <Card className="p-6">
         <form onSubmit={save} className="space-y-5">
-          <Field label="Organization name">
+          <Field label="Organization name" required>
             <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
-          <Field label="Display name">
+          <Field label="Display name" optional>
             <input className="input" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
           </Field>
-          <Field label="Settings (JSON)" hint="Arbitrary configuration stored for this organization.">
+          <Field label="Settings (JSON)" hint="Arbitrary configuration stored for this organization." optional>
             <textarea
               className="input font-mono text-xs"
               rows={6}

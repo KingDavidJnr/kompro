@@ -243,20 +243,20 @@ export default function Risk() {
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.id ? 'Edit risk' : 'New risk'}
         footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title"><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
-          <Field label="Description"><textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
+          <Field label="Title" required><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
+          <Field label="Description" optional><textarea className="input" rows={3} value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Likelihood (1-5)"><input type="number" min="1" max="5" className="input" value={modal?.likelihood ?? 3} onChange={(e) => setModal({ ...modal, likelihood: e.target.value })} /></Field>
-            <Field label="Impact (1-5)"><input type="number" min="1" max="5" className="input" value={modal?.impact ?? 3} onChange={(e) => setModal({ ...modal, impact: e.target.value })} /></Field>
+            <Field label="Likelihood (1-5)" optional><input type="number" min="1" max="5" className="input" value={modal?.likelihood ?? 3} onChange={(e) => setModal({ ...modal, likelihood: e.target.value })} /></Field>
+            <Field label="Impact (1-5)" optional><input type="number" min="1" max="5" className="input" value={modal?.impact ?? 3} onChange={(e) => setModal({ ...modal, impact: e.target.value })} /></Field>
           </div>
           <p className="text-xs text-slate-500">Computed risk score: <span className="font-semibold text-slate-700">{(Number(modal?.likelihood) || 0) * (Number(modal?.impact) || 0)}</span> ({riskLevel((Number(modal?.likelihood) || 0) * (Number(modal?.impact) || 0)).label})</p>
-          <Field label="Category"><input className="input" value={modal?.category || ''} onChange={(e) => setModal({ ...modal, category: e.target.value })} /></Field>
-          <Field label="Status">
+          <Field label="Category" optional><input className="input" value={modal?.category || ''} onChange={(e) => setModal({ ...modal, category: e.target.value })} /></Field>
+          <Field label="Status" required>
             <select className="input" value={modal?.status || 'open'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {['open', 'mitigated', 'closed'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Owner"><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
+          <Field label="Owner" optional><UserSelect value={modal?.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

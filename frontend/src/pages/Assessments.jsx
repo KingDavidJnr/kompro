@@ -109,7 +109,7 @@ function CompleteDrawer({ assessment, onClose, onUpdated }) {
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Result" hint="Your verdict on this control's effectiveness.">
+          <Field label="Result" hint="Your verdict on this control's effectiveness." required>
             <div className="grid grid-cols-2 gap-2">
               {RESULTS.map((r) => (
                 <button
@@ -125,7 +125,7 @@ function CompleteDrawer({ assessment, onClose, onUpdated }) {
             </div>
           </Field>
 
-          <Field label="Notes & Findings" hint="Describe what was reviewed, any gaps found, and recommendations.">
+          <Field label="Notes & Findings" hint="Describe what was reviewed, any gaps found, and recommendations." optional>
             <textarea
               className="input"
               rows={5}
@@ -135,7 +135,7 @@ function CompleteDrawer({ assessment, onClose, onUpdated }) {
             />
           </Field>
 
-          <Field label="Assessment date">
+          <Field label="Assessment date" optional>
             <input
               type="date"
               className="input"
@@ -145,7 +145,7 @@ function CompleteDrawer({ assessment, onClose, onUpdated }) {
           </Field>
 
           {/* Evidence reviewed */}
-          <Field label="Evidence reviewed" hint="Select the evidence records you reviewed for this assessment.">
+          <Field label="Evidence reviewed" hint="Select the evidence records you reviewed for this assessment." optional>
             {evidenceRes.loading ? (
               <div className="flex items-center gap-2 text-sm text-slate-400"><Spinner className="h-4 w-4" /> Loading evidence...</div>
             ) : allEvidence.length === 0 ? (
@@ -247,7 +247,7 @@ function ScheduleModal({ onClose, onCreated }) {
       }
     >
       <form onSubmit={save} className="space-y-4">
-        <Field label="Framework" hint="Which compliance framework is this assessment for?">
+        <Field label="Framework" hint="Which compliance framework is this assessment for?" optional>
           <select
             className="input"
             value={form.frameworkId}
@@ -258,7 +258,7 @@ function ScheduleModal({ onClose, onCreated }) {
           </select>
         </Field>
 
-        <Field label="Requirement" hint="The specific requirement being assessed.">
+        <Field label="Requirement" hint="The specific requirement being assessed." optional>
           {loadingReqs ? (
             <div className="flex items-center gap-2 text-sm text-slate-400"><Spinner className="h-4 w-4" /> Loading...</div>
           ) : (
@@ -278,7 +278,7 @@ function ScheduleModal({ onClose, onCreated }) {
           )}
         </Field>
 
-        <Field label="Control" hint="Only controls already mapped to this requirement are shown.">
+        <Field label="Control" hint="Only controls already mapped to this requirement are shown." required>
           {loadingControls ? (
             <div className="flex items-center gap-2 text-sm text-slate-400"><Spinner className="h-4 w-4" /> Loading...</div>
           ) : (
@@ -301,7 +301,7 @@ function ScheduleModal({ onClose, onCreated }) {
           )}
         </Field>
 
-        <Field label="Assessor" hint="Who will conduct this assessment. Defaults to you.">
+        <Field label="Assessor" hint="Who will conduct this assessment. Defaults to you." optional>
           <UserSelect
             value={form.assessorId || null}
             onChange={(v) => setForm((p) => ({ ...p, assessorId: v }))}
@@ -310,7 +310,7 @@ function ScheduleModal({ onClose, onCreated }) {
           />
         </Field>
 
-        <Field label="Due date">
+        <Field label="Due date" optional>
           <input
             type="date"
             className="input"

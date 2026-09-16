@@ -76,10 +76,16 @@ export function EmptyState({ icon, title, description, action }) {
   );
 }
 
-export function Field({ label, children, hint }) {
+export function Field({ label, children, hint, required, optional }) {
   return (
     <label className="block">
-      {label && <span className="label">{label}</span>}
+      {label && (
+        <span className="label flex items-center gap-1.5">
+          {label}
+          {required && <span className="text-rose-500 text-xs font-normal">*</span>}
+          {optional && !required && <span className="text-slate-400 text-xs font-normal">(optional)</span>}
+        </span>
+      )}
       {children}
       {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
     </label>

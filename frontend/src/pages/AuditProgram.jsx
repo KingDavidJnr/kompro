@@ -178,14 +178,14 @@ export default function AuditProgram() {
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.id ? 'Edit plan' : 'New audit plan'}
         footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title"><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
-          <Field label="Scope"><input className="input" value={modal?.scope || ''} onChange={(e) => setModal({ ...modal, scope: e.target.value })} /></Field>
-          <Field label="Status">
+          <Field label="Title" required><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
+          <Field label="Scope" optional><input className="input" value={modal?.scope || ''} onChange={(e) => setModal({ ...modal, scope: e.target.value })} /></Field>
+          <Field label="Status" required>
             <select className="input" value={modal?.status || 'planned'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {['planned', 'in_progress', 'complete'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Scheduled date"><input type="date" className="input" value={modal?.scheduledAt || ''} onChange={(e) => setModal({ ...modal, scheduledAt: e.target.value })} /></Field>
+          <Field label="Scheduled date" optional><input type="date" className="input" value={modal?.scheduledAt || ''} onChange={(e) => setModal({ ...modal, scheduledAt: e.target.value })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>
