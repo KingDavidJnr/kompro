@@ -395,21 +395,23 @@ export function SearchableSelect({
 }
 
 /**
- * Searchable picker for users. Stores the selected user's display name into
- * the (free-text) `owner`-style field, so no schema change is required.
+ * Searchable picker for users.
+ * - valueKey="name" (default): stores the user's display name — for free-text `owner` fields.
+ * - valueKey="id": stores the user's UUID — for FK `assessorId`-style fields.
  */
-export function UserSelect({ value, onChange, placeholder = 'Unassigned', allowClear = true }) {
+export function UserSelect({ value, onChange, placeholder = 'Unassigned', allowClear = true, valueKey = 'name' }) {
   const loadOptions = async (q) => {
     const res = await api.get(`/users?pageSize=50${q ? `&search=${encodeURIComponent(q)}` : ''}`);
     return (res.data.data.users || []).map((u) => ({
-      value: u.name,
+      value: u[valueKey],
       label: u.name ? `${u.name}${u.email ? ` · ${u.email}` : ''}` : u.email,
     }));
   };
-  const loadValue = async (name) => {
-    const res = await api.get(`/users?search=${encodeURIComponent(name)}&pageSize=50`);
-    const u = (res.data.data.users || []).find((x) => x.name === name);
-    return u ? { value: u.name, label: `${u.name} · ${u.email}` } : { value: name, label: name };
+  const loadValue = async (val) => {
+    const res = await api.get(`/users?search=${encodeURIComponent(val)}&pageSize=50`);
+    const users = res.data.data.users || [];
+    const u = users.find((x) => x[valueKey] === val);
+    return u ? { value: u[valueKey], label: `${u.name} · ${u.email}` } : { value: val, label: val };
   };
   return (
     <SearchableSelect
