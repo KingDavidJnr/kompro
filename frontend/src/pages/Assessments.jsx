@@ -306,6 +306,7 @@ function ScheduleModal({ onClose, onCreated }) {
             value={form.assessorId || null}
             onChange={(v) => setForm((p) => ({ ...p, assessorId: v }))}
             placeholder="Assign to me (default)"
+            valueKey="id"
           />
         </Field>
 
