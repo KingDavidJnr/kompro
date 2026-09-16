@@ -191,7 +191,7 @@ export default function AppLayout() {
       )}
 
       {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-16 flex-none items-center justify-between border-b border-slate-200 bg-white px-6">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <button
@@ -237,7 +237,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-6 py-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-8">
           <Outlet />
         </main>
       </div>

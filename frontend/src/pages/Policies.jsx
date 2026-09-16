@@ -5,7 +5,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, TableSkeleton, statusColor, UserSelect } from '../components/ui';
 import { PlusIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 const STATUSES = ['draft', 'active', 'retired'];
 
@@ -78,10 +78,10 @@ export default function Policies() {
 
       <Card>
         <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="policy" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-          <select value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+          <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
             <option value="">All statuses</option>
             {['draft', 'active', 'retired'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          </FilterSelect>
         </FilterBar>
         {loading ? (
           <TableSkeleton columns={7} />

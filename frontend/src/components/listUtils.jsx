@@ -13,6 +13,29 @@ import { SearchIcon } from './icons';
 export const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 /**
+ * A styled select for use inside FilterBar. Renders with a custom chevron so
+ * the native OS arrow never overlaps the option text on any screen size.
+ */
+export function FilterSelect({ value, onChange, children }) {
+  return (
+    <div className="relative flex-none">
+      <select
+        value={value}
+        onChange={onChange}
+        className="h-9 min-w-[120px] appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
+      >
+        {children}
+      </select>
+      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-slate-400">
+        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z" clipRule="evenodd" />
+        </svg>
+      </span>
+    </div>
+  );
+}
+
+/**
  * Hook that owns all list-view state: search, generic filters object,
  * current page, and page size.
  *
@@ -126,13 +149,20 @@ export function PaginationBar({ page, setPage, pageSize, setPageSize, totalPages
         <span>{start}–{end} of {filteredCount}</span>
         <div className="flex items-center gap-1.5">
           <span className="text-xs">Show</span>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(e.target.value)}
-            className="h-7 rounded border border-slate-200 bg-white px-2 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-300"
-          >
-            {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
+          <div className="relative">
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(e.target.value)}
+              className="h-7 appearance-none rounded border border-slate-200 bg-white pl-2 pr-6 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-300"
+            >
+              {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-slate-400">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z" clipRule="evenodd" />
+              </svg>
+            </span>
+          </div>
           <span className="text-xs">per page</span>
         </div>
       </div>

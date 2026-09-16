@@ -6,7 +6,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ShieldIcon, CheckIcon, ChevronRightIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 export default function Frameworks() {
   const { data, loading, refetch, silentRefetch, setData } = useGet('/frameworks?pageSize=100');
@@ -178,11 +178,11 @@ export default function Frameworks() {
 
       <Card>
         <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="framework" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-          <select value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+          <FilterSelect value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)}>
             <option value="">All</option>
             <option value="true">Enabled</option>
             <option value="false">Disabled</option>
-          </select>
+          </FilterSelect>
         </FilterBar>
         {loading ? (
           <TableSkeleton columns={7} />

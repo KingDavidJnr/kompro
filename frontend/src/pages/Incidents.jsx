@@ -5,7 +5,7 @@ import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusCol
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 function IncidentDrawer({ incident, onClose, onChanged }) {
   const detail = useGet(`/incidents/${incident.id}`);
@@ -121,14 +121,14 @@ export default function Incidents() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="incident" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.severity || ''} onChange={(e) => list.setFilter('severity', e.target.value)}>
+        <FilterSelect value={list.filters.severity || ''} onChange={(e) => list.setFilter('severity', e.target.value)}>
           <option value="">All severities</option>
           {['low', 'medium', 'high', 'critical'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
+        </FilterSelect>
+        <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
           <option value="">All statuses</option>
           {['open', 'contained', 'resolved'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </FilterSelect>
       </FilterBar>
       <Card>
         {loading ? (

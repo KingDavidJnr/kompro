@@ -7,7 +7,7 @@ import {
 } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, DocumentIcon, EyeIcon, CheckIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 const RESULTS = ['satisfied', 'partially_satisfied', 'unsatisfied', 'needs_review'];
 const RESULT_COLOR = {
@@ -402,24 +402,16 @@ export default function Assessments() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="assessment" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-        <select
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
-          value={list.filters.status || ''}
-          onChange={(e) => list.setFilter('status', e.target.value)}
-        >
+        <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
           <option value="in_progress">In progress</option>
           <option value="complete">Complete</option>
-        </select>
-        <select
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
-          value={list.filters.result || ''}
-          onChange={(e) => list.setFilter('result', e.target.value)}
-        >
+        </FilterSelect>
+        <FilterSelect value={list.filters.result || ''} onChange={(e) => list.setFilter('result', e.target.value)}>
           <option value="">All results</option>
           {RESULTS.map((r) => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
-        </select>
+        </FilterSelect>
       </FilterBar>
 
       <Card>

@@ -134,7 +134,7 @@ export function Drawer({ open, onClose, title, children, footer }) {
 
 export function TableSkeleton({ columns = 4, rows = 5 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50">
           <tr>
@@ -166,7 +166,7 @@ export function Table({ columns, rows, empty, onRowClick, rowClassName, numbered
     ? [{ key: '_row_num', label: '#', render: (_row, _col, index) => index + 1 }, ...columns]
     : columns;
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50">
           <tr>

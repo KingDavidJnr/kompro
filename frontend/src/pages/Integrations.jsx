@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, TableSkeleton, Spinner } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PlugIcon, ClockIcon, DocumentIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 const TYPES = [
   {
@@ -210,15 +210,15 @@ export default function Integrations() {
       {message && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>}
 
       <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="collector" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.type || ''} onChange={(e) => list.setFilter('type', e.target.value)}>
+        <FilterSelect value={list.filters.type || ''} onChange={(e) => list.setFilter('type', e.target.value)}>
           <option value="">All types</option>
           {TYPES.map((t) => <option key={t.value} value={t.value}>{t.value}</option>)}
-        </select>
-        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)}>
+        </FilterSelect>
+        <FilterSelect value={list.filters.enabled || ''} onChange={(e) => list.setFilter('enabled', e.target.value)}>
           <option value="">All</option>
           <option value="enabled">Enabled</option>
           <option value="disabled">Disabled</option>
-        </select>
+        </FilterSelect>
       </FilterBar>
       <Card>
         {loading ? (
