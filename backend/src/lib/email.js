@@ -14,12 +14,12 @@ const config = require('../config');
 /**
  * Builds the envelope "From" as a named sender. nodemailer accepts an object
  * form `{ name, address }`, which renders as `"<name>" <address>` — this is the
- * supported way to attach a display name (the config only stored the address
- * before). The name defaults to "Kompro" and is overridable via MAIL_FROM_NAME.
+ * supported way to attach a display name. The name is taken from MAIL_FROM_NAME,
+ * then falls back to the organisation name (ORG_NAME), then to "Kompro".
  * @returns {{ name: string, address: string }} Named sender.
  */
 function sender() {
-  return { name: config.smtp.fromName || 'Kompro', address: config.smtp.from };
+  return { name: config.smtp.fromName || config.orgName || 'Kompro', address: config.smtp.from };
 }
 
 /**
@@ -73,7 +73,7 @@ function buildBrandedEmail({ heading, paragraphs, buttonText, buttonUrl, footerN
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;padding:32px;box-sizing:border-box;">
             <tr>
               <td style="text-align:center;padding-bottom:24px;">
-                <img src="${logo}" alt="Kompro" width="200" style="max-width:200px;height:auto;display:block;margin:0 auto;border:0;" />
+                <img src="${logo}" alt="Kompro" width="120" style="max-width:120px;height:auto;display:block;margin:0 auto;border:0;" />
               </td>
             </tr>
             <tr>
