@@ -312,8 +312,14 @@ async function sendNotification({ to, heading, paragraphs, buttonText, buttonUrl
     html: buildBrandedEmail(content),
   };
   if (Array.isArray(to)) {
-    mail.bcc = to;
-    mail.to = smtp.from;
+    // Send individual emails so each recipient appears in the TO field
+    // and cannot see other recipients.
+    await Promise.all(
+      to.map((recipient) =>
+        transporter.sendMail({ ...mail, to: recipient }),
+      ),
+    );
+    return;
   } else {
     mail.to = to;
   }
