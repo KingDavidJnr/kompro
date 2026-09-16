@@ -22,7 +22,7 @@ export function FilterSelect({ value, onChange, children }) {
       <select
         value={value}
         onChange={onChange}
-        style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
+        style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
         className="h-9 min-w-[120px] rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300"
       >
         {children}
@@ -154,7 +154,7 @@ export function PaginationBar({ page, setPage, pageSize, setPageSize, totalPages
             <select
               value={pageSize}
               onChange={(e) => setPageSize(e.target.value)}
-              style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
+              style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
               className="h-7 rounded border border-slate-200 bg-white pl-2 pr-6 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-300"
             >
               {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
