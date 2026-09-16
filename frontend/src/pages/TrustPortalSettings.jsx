@@ -7,7 +7,7 @@ export default function TrustPortalSettings() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState(null); // { type: 'success' | 'error', text }
 
   useEffect(() => {
     api.get('/trust/settings')
@@ -28,9 +28,9 @@ export default function TrustPortalSettings() {
     try {
       const res = await api.patch('/trust/settings', settings);
       setSettings(res.data.data.trustPortal);
-      setMessage('Settings saved.');
+      setMessage({ type: 'success', text: 'Settings saved.' });
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Save failed.');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Save failed.' });
     } finally {
       setSaving(false);
     }
@@ -235,7 +235,11 @@ export default function TrustPortalSettings() {
           <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save settings'}
           </Button>
-          {message && <span className="text-sm text-slate-600">{message}</span>}
+          {message && (
+            <span className={`text-sm ${message.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {message.text}
+            </span>
+          )}
         </div>
       </form>
     </div>

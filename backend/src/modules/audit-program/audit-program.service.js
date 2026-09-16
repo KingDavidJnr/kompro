@@ -6,14 +6,17 @@
 const prisma = require('../../lib/prisma');
 const { NotFoundError } = require('../../utils/errors');
 
+const MAX_PAGE_SIZE = 100;
+
 async function listPlans({ status, page = 1, pageSize = 25 } = {}) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const where = {};
   if (status) where.status = status;
   const [plans, total] = await Promise.all([
-    prisma.auditPlan.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize, include: { nonconformities: true } }),
+    prisma.auditPlan.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * safeSize, take: safeSize, include: { nonconformities: true } }),
     prisma.auditPlan.count({ where }),
   ]);
-  return { plans, total, page, pageSize };
+  return { plans, total, page, pageSize: safeSize };
 }
 
 async function getPlan(id) {

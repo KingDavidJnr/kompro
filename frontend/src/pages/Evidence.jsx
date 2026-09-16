@@ -29,11 +29,12 @@ function EvidenceDrawer({ evidenceId, onClose, onEdit }) {
   useEffect(() => {
     if (!ev?.filePath) { setBlobUrl(null); return; }
     setFileLoading(true);
+    let objectUrl = null;
     api.get(`/evidence/${evidenceId}/file`, { responseType: 'blob' })
-      .then((res) => setBlobUrl(URL.createObjectURL(res.data)))
+      .then((res) => { objectUrl = URL.createObjectURL(res.data); setBlobUrl(objectUrl); })
       .catch(() => setBlobUrl(null))
       .finally(() => setFileLoading(false));
-    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [ev?.filePath]);
 
   async function downloadFile() {

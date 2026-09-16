@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { exportCsv } from '../lib/csv';
-import { API_URL } from '../config';
 import { PageHeader, Card, Badge, Button, Table, Modal, TableSkeleton, Spinner, statusColor } from '../components/ui';
-import { ClipboardIcon, TrashIcon } from '../components/icons';
+import { ClipboardIcon, TrashIcon, DocumentIcon } from '../components/icons';
 import { usePermission } from '../auth/AuthContext';
 
 const ENTITIES = [
@@ -87,6 +86,20 @@ export default function AuditLogs() {
   const exportHref = `${API_URL}/audit/export?format=csv&${buildQuery(filters, 1)}`;
   const totalPages = Math.max(1, Math.ceil(total / 50));
 
+  async function exportCsvFile() {
+    try {
+      const res = await api.get(`/audit/export?format=csv&${buildQuery(filters, 1)}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'audit-log.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Export failed.');
+    }
+  }
+
   async function purge() {
     setPurging(true);
     setPurgeError(null);
@@ -114,9 +127,9 @@ export default function AuditLogs() {
                 <TrashIcon className="h-4 w-4" /> Purge old logs
               </Button>
             )}
-            <a href={exportHref}>
-              <Button variant="secondary">Export CSV</Button>
-            </a>
+            <Button variant="secondary" onClick={exportCsvFile}>
+                <DocumentIcon className="h-4 w-4" /> Export CSV
+              </Button>
           </div>
         }
       />
@@ -238,6 +251,7 @@ export default function AuditLogs() {
             <input
               type="number"
               min={1}
+              max={3650}
               className="input"
               value={purgeDays}
               onChange={(e) => setPurgeDays(Number(e.target.value))}

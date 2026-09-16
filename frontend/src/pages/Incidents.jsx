@@ -10,14 +10,16 @@ import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from 
 function IncidentDrawer({ incident, onClose, onChanged }) {
   const detail = useGet(`/incidents/${incident.id}`);
   const inc = detail.data?.incident || incident;
+  const [drawerError, setDrawerError] = useState(null);
 
   async function addAction(body) {
+    setDrawerError(null);
     try {
       await api.post(`/incidents/${incident.id}/actions`, body);
       detail.refetch();
       onChanged();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed');
+      setDrawerError(e.response?.data?.message || 'Failed to save.');
     }
   }
 
@@ -27,9 +29,10 @@ function IncidentDrawer({ incident, onClose, onChanged }) {
         <Spinner className="h-8 w-8" />
       ) : (
         <div className="space-y-6">
+          {drawerError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{drawerError}</div>}
           <div className="flex flex-wrap items-center gap-2">
             <Badge color={statusColor(inc.status)}>{inc.status}</Badge>
-            <Badge color={inc.severity === 'high' ? 'danger' : inc.severity === 'medium' ? 'warning' : 'neutral'}>{inc.severity}</Badge>
+            <Badge color={inc.severity === 'critical' || inc.severity === 'high' ? 'danger' : inc.severity === 'medium' ? 'warning' : 'neutral'}>{inc.severity}</Badge>
             {inc.classification && <Badge color="brand">{inc.classification}</Badge>}
             {inc.owner && <Badge color="neutral">{inc.owner}</Badge>}
           </div>
@@ -138,7 +141,7 @@ export default function Incidents() {
             numbered
             columns={[
               { key: 'title', label: 'Title', render: (i) => <span className="flex items-center gap-2 font-medium text-slate-900"><ClipboardIcon className="h-4 w-4 text-charcoal-500" /> {i.title}</span> },
-              { key: 'severity', label: 'Severity', render: (i) => <Badge color={i.severity === 'high' ? 'danger' : i.severity === 'medium' ? 'warning' : 'neutral'}>{i.severity}</Badge> },
+              { key: 'severity', label: 'Severity', render: (i) => <Badge color={i.severity === 'critical' || i.severity === 'high' ? 'danger' : i.severity === 'medium' ? 'warning' : 'neutral'}>{i.severity}</Badge> },
               { key: 'status', label: 'Status', render: (i) => <Badge color={statusColor(i.status)}>{i.status}</Badge> },
               {
                 key: 'actions',

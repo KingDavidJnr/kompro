@@ -87,9 +87,12 @@ export function useAuth() {
 
 /**
  * Returns true if the current user has the given permission string.
- * Relies on the role.permissions array included in the /auth/me response.
+ * Uses a Set built from role.permissions for O(1) lookup.
  */
 export function usePermission(permission) {
   const { user } = useAuth();
-  return Boolean(user?.role?.permissions?.includes(permission));
+  const perms = user?.role?.permissions;
+  if (!perms) return false;
+  const set = Array.isArray(perms) ? new Set(perms) : perms;
+  return set.has(permission);
 }

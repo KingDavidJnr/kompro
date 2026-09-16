@@ -6,7 +6,10 @@
 const prisma = require('../../lib/prisma');
 const { NotFoundError } = require('../../utils/errors');
 
+const MAX_PAGE_SIZE = 100;
+
 async function listIncidents({ status, severity, page = 1, pageSize = 25 } = {}) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(pageSize) || 25));
   const where = {};
   if (status) where.status = status;
   if (severity) where.severity = severity;
@@ -14,13 +17,13 @@ async function listIncidents({ status, severity, page = 1, pageSize = 25 } = {})
     prisma.incident.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * safeSize,
+      take: safeSize,
       include: { actions: true },
     }),
     prisma.incident.count({ where }),
   ]);
-  return { incidents, total, page, pageSize };
+  return { incidents, total, page, pageSize: safeSize };
 }
 
 async function getIncident(id) {

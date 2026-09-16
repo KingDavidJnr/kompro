@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { useGet } from '../lib/hooks';
 import api from '../lib/api';
 import { PageHeader, Badge, Button, Card, Field, Modal, Spinner, statusColor } from '../components/ui';
@@ -77,7 +78,7 @@ function Section({ title, loading, items, onAdd, fields, render }) {
 export default function PolicyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data, loading, refetch } = useGet(`/policies/${id}`);
+  const { data, loading, refetch, error: loadError } = useGet(`/policies/${id}`);
   const versionsRes = useGet(`/policies/${id}/versions`);
   const changesRes = useGet(`/policies/${id}/change-requests`);
   const reviewsRes = useGet(`/policies/${id}/reviews`);
@@ -135,16 +136,12 @@ export default function PolicyDetail() {
       return;
     }
     setPdfLoading(true);
+    let objectUrl = null;
     api.get(`/policies/${id}/file`, { responseType: 'blob' })
-      .then((res) => {
-        const url = URL.createObjectURL(res.data);
-        setPdfBlobUrl(url);
-      })
+      .then((res) => { objectUrl = URL.createObjectURL(res.data); setPdfBlobUrl(objectUrl); })
       .catch(() => setPdfBlobUrl(null))
       .finally(() => setPdfLoading(false));
-    return () => {
-      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
-    };
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [policy?.filePath, policy?.mimeType]);
 
   async function save(e) {
@@ -278,7 +275,7 @@ export default function PolicyDetail() {
     }
   }
 
-  if (loading || form === null) {
+  if (loading || (!loadError && form === null)) {
     return (
       <div className="flex justify-center py-24">
         <Spinner className="h-8 w-8" />
@@ -286,10 +283,11 @@ export default function PolicyDetail() {
     );
   }
 
-  if (!policy) {
+  if (loadError || !policy) {
     return (
       <div className="mx-auto max-w-md py-24 text-center">
-        <p className="text-sm font-semibold text-rose-700">Policy not found</p>
+        <p className="text-sm font-semibold text-rose-700">{loadError ? 'Could not load policy' : 'Policy not found'}</p>
+        {loadError && <p className="mt-1 text-sm text-slate-500">{loadError}</p>}
         <Link to="/policies" className="mt-4 inline-block text-sm font-medium text-charcoal-700 hover:underline">Back to policies</Link>
       </div>
     );
@@ -599,7 +597,7 @@ export default function PolicyDetail() {
                   {v.content && (
                     <div
                       className="prose prose-slate prose-sm mt-3 max-w-none rounded-lg bg-slate-50 p-3"
-                      dangerouslySetInnerHTML={{ __html: marked.parse(v.content) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(v.content)) }}
                     />
                   )}
                 </div>

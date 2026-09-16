@@ -7,10 +7,12 @@ const requirePermission = require('../../middleware/requirePermission');
 const { ASSESSMENT_RESULTS, ASSESSMENT_STATUSES } = require('./assessments.service');
 
 router.get('/', requireAuth, requirePermission('assessments:read'), controller.list);
-router.get('/:id', requireAuth, requirePermission('assessments:read'), controller.get);
 
 // Returns the controls mapped to a requirement -- used to populate the control picker.
+// Must be declared before /:id to prevent Express matching 'requirement' as an id param.
 router.get('/requirement/:requirementId/controls', requireAuth, requirePermission('assessments:read'), controller.controlsForRequirement);
+
+router.get('/:id', requireAuth, requirePermission('assessments:read'), controller.get);
 
 // Schedule a new assessment (Phase 1 -- no result yet).
 router.post(

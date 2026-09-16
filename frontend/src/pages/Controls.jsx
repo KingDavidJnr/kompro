@@ -9,7 +9,7 @@ import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from 
 const STATUSES = ['not_implemented', 'partial', 'implemented', 'needs_review'];
 
 export default function Controls() {
-  const { data, loading, silentRefetch, setData } = useGet('/controls?pageSize=100');
+  const { data, loading, error: loadError, silentRefetch, setData } = useGet('/controls?pageSize=100');
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [error, setError] = useState(null);
@@ -38,13 +38,15 @@ export default function Controls() {
   async function save(e) {
     e.preventDefault();
     setError(null);
+    const { title, description, category, status } = modal;
+    const body = { title, description: description || undefined, category: category || undefined, status };
     try {
       if (modal.id) {
-        const res = await api.patch(`/controls/${modal.id}`, modal);
+        const res = await api.patch(`/controls/${modal.id}`, body);
         const updated = res.data.data.control;
         setData((prev) => ({ ...prev, controls: (prev.controls || []).map((c) => c.id === updated.id ? updated : c) }));
       } else {
-        const res = await api.post('/controls', modal);
+        const res = await api.post('/controls', body);
         const created = res.data.data.control;
         setData((prev) => ({ ...prev, controls: [...(prev.controls || []), created] }));
       }
@@ -82,7 +84,7 @@ export default function Controls() {
           </>
         }
       />
-      {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+      {(loadError || error) && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{loadError || error}</div>}
 
       <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="control" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
         <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
