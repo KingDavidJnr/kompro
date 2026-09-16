@@ -146,14 +146,14 @@ export default function Users() {
       >
         <form onSubmit={save} className="space-y-4">
           {!modal?.id && (
-            <Field label="Email">
+            <Field label="Email" required>
               <input type="email" required className="input" value={modal?.email || ''} onChange={(e) => setModal({ ...modal, email: e.target.value })} />
             </Field>
           )}
-          <Field label="Name">
+          <Field label="Name" optional>
             <input className="input" value={modal?.name || ''} onChange={(e) => setModal({ ...modal, name: e.target.value })} />
           </Field>
-          <Field label="Role">
+          <Field label="Role" optional>
             <RoleSelect value={modal?.roleId || null} onChange={(id) => setModal({ ...modal, roleId: id })} />
           </Field>
           <label className="flex items-center gap-2 text-sm text-slate-600">

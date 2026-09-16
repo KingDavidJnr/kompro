@@ -5,7 +5,7 @@ import { exportCsv } from '../lib/csv';
 import { PageHeader, Button, Card, Badge, Modal, Field, Table, Drawer, statusColor, Spinner, TableSkeleton } from '../components/ui';
 import { AddList } from '../components/SubList';
 import { PlusIcon, PencilIcon, TrashIcon, ClipboardIcon, EyeIcon, DocumentIcon } from '../components/icons';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 function PlanDrawer({ plan, onClose, onChanged }) {
   const detail = useGet(`/audit-program/${plan.id}`);
@@ -139,10 +139,10 @@ export default function AuditProgram() {
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
       <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="audit plan" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-        <select className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300" value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
+        <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
           <option value="">All statuses</option>
           {['planned', 'in_progress', 'complete'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </FilterSelect>
       </FilterBar>
       <Card>
         {loading ? (
@@ -178,14 +178,14 @@ export default function AuditProgram() {
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.id ? 'Edit plan' : 'New audit plan'}
         footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title"><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
-          <Field label="Scope"><input className="input" value={modal?.scope || ''} onChange={(e) => setModal({ ...modal, scope: e.target.value })} /></Field>
-          <Field label="Status">
+          <Field label="Title" required><input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
+          <Field label="Scope" optional><input className="input" value={modal?.scope || ''} onChange={(e) => setModal({ ...modal, scope: e.target.value })} /></Field>
+          <Field label="Status" required>
             <select className="input" value={modal?.status || 'planned'} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
               {['planned', 'in_progress', 'complete'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
-          <Field label="Scheduled date"><input type="date" className="input" value={modal?.scheduledAt || ''} onChange={(e) => setModal({ ...modal, scheduledAt: e.target.value })} /></Field>
+          <Field label="Scheduled date" optional><input type="date" className="input" value={modal?.scheduledAt || ''} onChange={(e) => setModal({ ...modal, scheduledAt: e.target.value })} /></Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </form>
       </Modal>

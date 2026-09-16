@@ -155,12 +155,12 @@ export default function ITSM() {
         <form onSubmit={save} className="space-y-4">
           {modal?.type === 'assets' && (
             <>
-              <Field label="Name"><input required className="input" value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} /></Field>
-              <Field label="Type"><input className="input" value={modal.atype || ''} onChange={(e) => setModal({ ...modal, atype: e.target.value })} /></Field>
-              <Field label="Description"><input className="input" value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
-              <Field label="Owner"><UserSelect value={modal.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
-              <Field label="Location"><input className="input" value={modal.location} onChange={(e) => setModal({ ...modal, location: e.target.value })} /></Field>
-              <Field label="Status">
+              <Field label="Name" required><input required className="input" value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} /></Field>
+              <Field label="Type" optional><input className="input" value={modal.atype || ''} onChange={(e) => setModal({ ...modal, atype: e.target.value })} /></Field>
+              <Field label="Description" optional><input className="input" value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
+              <Field label="Owner" optional><UserSelect value={modal.owner || null} onChange={(v) => setModal({ ...modal, owner: v })} /></Field>
+              <Field label="Location" optional><input className="input" value={modal.location} onChange={(e) => setModal({ ...modal, location: e.target.value })} /></Field>
+              <Field label="Status" required>
                 <select className="input" value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
                   {['active', 'retired', 'disposed'].map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -169,11 +169,11 @@ export default function ITSM() {
           )}
           {modal?.type === 'changes' && (
             <>
-              <Field label="Title"><input required className="input" value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
-              <Field label="Description"><textarea className="input" rows={2} value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
-              <Field label="Risk"><input className="input" value={modal.risk} onChange={(e) => setModal({ ...modal, risk: e.target.value })} /></Field>
-              <Field label="Asset id"><input className="input" value={modal.assetId} onChange={(e) => setModal({ ...modal, assetId: e.target.value })} /></Field>
-              <Field label="Status">
+              <Field label="Title" required><input required className="input" value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} /></Field>
+              <Field label="Description" optional><textarea className="input" rows={2} value={modal.description} onChange={(e) => setModal({ ...modal, description: e.target.value })} /></Field>
+              <Field label="Risk" optional><input className="input" value={modal.risk} onChange={(e) => setModal({ ...modal, risk: e.target.value })} /></Field>
+              <Field label="Asset id" optional><input className="input" value={modal.assetId} onChange={(e) => setModal({ ...modal, assetId: e.target.value })} /></Field>
+              <Field label="Status" required>
                 <select className="input" value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
                   {['requested', 'approved', 'implemented', 'closed', 'rejected'].map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -182,11 +182,11 @@ export default function ITSM() {
           )}
           {modal?.type === 'capacity' && (
             <>
-              <Field label="Resource"><input required className="input" value={modal.resource} onChange={(e) => setModal({ ...modal, resource: e.target.value })} /></Field>
-              <Field label="Unit"><input className="input" value={modal.unit} onChange={(e) => setModal({ ...modal, unit: e.target.value })} /></Field>
-              <Field label="Current capacity"><input type="number" className="input" value={modal.currentCapacity} onChange={(e) => setModal({ ...modal, currentCapacity: e.target.value })} /></Field>
-              <Field label="Planned capacity"><input type="number" className="input" value={modal.plannedCapacity} onChange={(e) => setModal({ ...modal, plannedCapacity: e.target.value })} /></Field>
-              <Field label="Notes"><textarea className="input" rows={2} value={modal.notes} onChange={(e) => setModal({ ...modal, notes: e.target.value })} /></Field>
+              <Field label="Resource" required><input required className="input" value={modal.resource} onChange={(e) => setModal({ ...modal, resource: e.target.value })} /></Field>
+              <Field label="Unit" optional><input className="input" value={modal.unit} onChange={(e) => setModal({ ...modal, unit: e.target.value })} /></Field>
+              <Field label="Current capacity" optional><input type="number" className="input" value={modal.currentCapacity} onChange={(e) => setModal({ ...modal, currentCapacity: e.target.value })} /></Field>
+              <Field label="Planned capacity" optional><input type="number" className="input" value={modal.plannedCapacity} onChange={(e) => setModal({ ...modal, plannedCapacity: e.target.value })} /></Field>
+              <Field label="Notes" optional><textarea className="input" rows={2} value={modal.notes} onChange={(e) => setModal({ ...modal, notes: e.target.value })} /></Field>
             </>
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}

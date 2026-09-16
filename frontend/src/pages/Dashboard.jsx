@@ -85,7 +85,7 @@ export default function Dashboard() {
   const controls = useGet('/controls?pageSize=1');
   const policies = useGet('/policies?pageSize=1');
   const evidence = useGet('/evidence?pageSize=1');
-  const risks = useGet('/risk?pageSize=1');
+  const risks = useGet('/risks?pageSize=1');
   const incidents = useGet('/incidents?pageSize=1');
   const activity = useGet('/audit?pageSize=6');
   const summary = useGet('/dashboard/summary');

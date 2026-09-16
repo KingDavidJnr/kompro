@@ -7,7 +7,7 @@ import {
 } from '../components/ui';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, DocumentIcon, EyeIcon } from '../components/icons';
 import { exportCsv } from '../lib/csv';
-import { useListState, applyList, FilterBar, PaginationBar } from '../components/listUtils';
+import { useListState, applyList, FilterBar, FilterSelect, PaginationBar } from '../components/listUtils';
 
 const SOURCES = ['manual', 'upload', 'documentation', 'policy', 'integration', 'automated_check', 'infrastructure', 'other'];
 
@@ -302,14 +302,14 @@ export default function Evidence() {
 
       <Card>
         <FilterBar search={list.search} onSearch={list.setSearch} totalLabel="evidence" filteredCount={filtered.length} hasFilters={list.hasFilters} onReset={list.reset}>
-          <select value={list.filters.source || ''} onChange={(e) => list.setFilter('source', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+          <FilterSelect value={list.filters.source || ''} onChange={(e) => list.setFilter('source', e.target.value)}>
             <option value="">All sources</option>
             {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+          </FilterSelect>
+          <FilterSelect value={list.filters.status || ''} onChange={(e) => list.setFilter('status', e.target.value)}>
             <option value="">All statuses</option>
             {['submitted', 'accepted', 'rejected', 'requested'].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          </FilterSelect>
         </FilterBar>
         {loading ? (
           <TableSkeleton columns={6} />
@@ -391,20 +391,20 @@ export default function Evidence() {
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Title">
+          <Field label="Title" required>
             <input required className="input" value={modal?.title || ''} onChange={(e) => setModal({ ...modal, title: e.target.value })} />
           </Field>
-          <Field label="Description">
+          <Field label="Description" optional>
             <input className="input" value={modal?.description || ''} onChange={(e) => setModal({ ...modal, description: e.target.value })} />
           </Field>
-          <Field label="Source">
+          <Field label="Source" required>
             <select className="input" value={modal?.source || 'manual'} onChange={(e) => setModal({ ...modal, source: e.target.value })}>
               {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
 
           {/* File upload */}
-          <Field label="File attachment" hint="Upload an image, PDF, or document as evidence.">
+          <Field label="File attachment" hint="Upload an image, PDF, or document as evidence." optional>
             <div
               className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center hover:border-brand-300 hover:bg-white transition cursor-pointer"
               onClick={() => fileRef.current?.click()}
@@ -453,10 +453,10 @@ export default function Evidence() {
             </div>
           </Field>
 
-          <Field label="Content / notes">
+          <Field label="Content / notes" optional>
             <textarea className="input" rows={3} value={modal?.content || ''} onChange={(e) => setModal({ ...modal, content: e.target.value })} />
           </Field>
-          <Field label="Controls" hint="Link this evidence to one or more controls.">
+          <Field label="Controls" hint="Link this evidence to one or more controls." optional>
             <MultiSelect
               values={modal?.controlIds || []}
               onChange={(ids) => setModal({ ...modal, controlIds: ids })}
@@ -465,7 +465,7 @@ export default function Evidence() {
               placeholder="Search controls to link…"
             />
           </Field>
-          <Field label="Policies" hint="Link this evidence to one or more policies.">
+          <Field label="Policies" hint="Link this evidence to one or more policies." optional>
             <MultiSelect
               values={modal?.policyIds || []}
               onChange={(ids) => setModal({ ...modal, policyIds: ids })}

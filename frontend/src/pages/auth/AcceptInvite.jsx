@@ -85,7 +85,7 @@ export default function AcceptInvite() {
             </div>
           )}
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            <Field label="Password">
+            <Field label="Password" required>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -105,7 +105,7 @@ export default function AcceptInvite() {
                 </button>
               </div>
             </Field>
-            <Field label="Confirm password">
+            <Field label="Confirm password" required>
               <div className="relative">
                 <input
                   type={showConfirm ? 'text' : 'password'}

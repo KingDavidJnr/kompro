@@ -76,10 +76,16 @@ export function EmptyState({ icon, title, description, action }) {
   );
 }
 
-export function Field({ label, children, hint }) {
+export function Field({ label, children, hint, required, optional }) {
   return (
     <label className="block">
-      {label && <span className="label">{label}</span>}
+      {label && (
+        <span className="label flex items-center gap-1.5">
+          {label}
+          {required && <span className="text-rose-500 text-xs font-normal">*</span>}
+          {optional && !required && <span className="text-slate-400 text-xs font-normal">(optional)</span>}
+        </span>
+      )}
       {children}
       {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
     </label>
@@ -134,7 +140,7 @@ export function Drawer({ open, onClose, title, children, footer }) {
 
 export function TableSkeleton({ columns = 4, rows = 5 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50">
           <tr>
@@ -166,7 +172,7 @@ export function Table({ columns, rows, empty, onRowClick, rowClassName, numbered
     ? [{ key: '_row_num', label: '#', render: (_row, _col, index) => index + 1 }, ...columns]
     : columns;
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
       <table className="min-w-full divide-y divide-slate-100">
         <thead className="bg-slate-50">
           <tr>

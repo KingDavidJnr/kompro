@@ -72,7 +72,7 @@ export default function ResetPassword() {
                 <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
               )}
               <form onSubmit={submitReset} className="mt-4 space-y-4">
-                <Field label="New password">
+                <Field label="New password" required>
                   <input
                     type="password"
                     required
@@ -82,7 +82,7 @@ export default function ResetPassword() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </Field>
-                <Field label="Confirm new password">
+                <Field label="Confirm new password" required>
                   <input
                     type="password"
                     required
@@ -108,7 +108,7 @@ export default function ResetPassword() {
                 <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
               )}
               <form onSubmit={requestReset} className="mt-4 space-y-4">
-                <Field label="Work email">
+                <Field label="Work email" required>
                   <input
                     type="email"
                     required

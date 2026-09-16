@@ -120,7 +120,7 @@ export default function Login() {
 
           {SHOW_PASSWORD_LOGIN && (
             <form onSubmit={onSubmit} className="space-y-4">
-              <Field label="Work email">
+              <Field label="Work email" required>
                 <input
                   type="email"
                   required
@@ -131,7 +131,7 @@ export default function Login() {
                   className="input"
                 />
               </Field>
-              <Field label="Password">
+              <Field label="Password" required>
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
